@@ -383,3 +383,8 @@ body{overflow-x:hidden}
 .story-card{background:linear-gradient(180deg,rgba(14,18,54,.82),rgba(14,18,54,.94)),url(../img/vagues.webp) center/cover no-repeat,var(--panel)}
 .card.celebrate{background:linear-gradient(180deg,rgba(14,18,54,.55),rgba(14,18,54,.88)),url(../img/etoiles.webp) center/cover no-repeat,var(--panel)}
 .story-cover{display:block;width:100%;max-width:min(300px,58vw);height:auto;margin:6px auto 12px;border-radius:18px;box-shadow:0 20px 50px -18px rgba(109,77,255,.8)}
+/* accueil : le joueur de dos qui sort du tunnel ; scène « terrain » : la frappe sous la pluie, cadrée sur le ballon et le but */
+.hero{background:
+  linear-gradient(180deg,rgba(8,10,34,.72) 0%,rgba(8,10,34,.08) 34%,rgba(8,10,34,.05) 58%,rgba(8,10,34,.94) 100%),
+  url(../img/tunnel.webp) center 32%/cover no-repeat,#0a0e33}
+.scene-photo[src$="terrain.webp"]{object-position:center 64%}
