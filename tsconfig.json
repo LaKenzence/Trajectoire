@@ -1,0 +1,15 @@
+{
+  // Vérification des scripts du jeu par TypeScript, sans rien compiler : noms inconnus, fautes de frappe,
+  // mauvais nombre d'arguments. Les scripts partagent un seul espace global, comme dans le navigateur.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "skipLibCheck": true
+  },
+  "include": ["js/**/*.js", "types/*.d.ts"]
+}
