@@ -265,7 +265,7 @@ function worldNews(){
   ];
   return shuffle(pool).slice(0,3);
 }
-const newsHtml = n=>`<div class="card"><h3>🌐 Ailleurs dans le monde du foot</h3><ul class="log">${n.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
+const newsHtml = n=>`<div class="card news"><h3>🌐 Ailleurs dans le monde du foot</h3><ul class="log">${n.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
 
 /* ============ Calendrier : la saison match par match ============ */
 // 38 journées cohérentes avec le classement final : victoires, nuls, défaites, tes matchs joués et tes buts (ou clean sheets)

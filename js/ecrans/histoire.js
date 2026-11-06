@@ -109,6 +109,7 @@ function storyHome(){
   p = null;
   $("#app").innerHTML = `<div class="fade" style="padding-top:20px">
     <div class="muted">Mode Histoire</div><h1><span class="emo" aria-hidden="true">📖</span> La trajectoire de Noah Diallo</h1>
+    <img class="story-cover" src="img/histoire.webp" alt="Un joueur en maillot bleu frappe le ballon, sous un ciel étoilé au-dessus du stade" width="620" height="827">
     <p class="story">Un milieu de terrain né dans un quartier populaire, élevé par son père. Cinq chapitres, de ses 16 ans à ses adieux. Les grandes étapes sont écrites, à toi de remplir les pages.</p>
     <div class="card">${STORY.map((c,i)=>`<div class="ach ${i<=storyBest()?"":"off"}"><span class="i">${i<storyBest()?"✅":i===storyBest()?"📖":"🔒"}</span><div><b>Chapitre ${i+1} · ${c.n}</b><small>${c.goal}</small></div></div>`).join("")}</div>
     ${live?`<button class="btn primary" onclick="resume('histoire')">Reprendre l'histoire<small>${saved.age} ans · chapitre ${Math.min(saved.story.ch+1,STORY.length)}</small></button>`:""}

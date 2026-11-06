@@ -369,3 +369,17 @@ body{overflow-x:hidden}
 }
 /* boîtes du bandeau, de l'écran et de la barre du bas (render) : sans effet sur la mise en page, le bandeau reste collé en haut */
 #hudBox,#screen,#navBox{display:contents}
+
+/* --- images d'ambiance : galaxie (Panthéon, Carnet), Terre (tournois, nouvelles du monde),
+   vagues or et violet (titre de carrière, mode Histoire), étoiles (célébrations), couverture du mode Histoire --- */
+.cosmos{position:relative;margin:0 0 14px;padding:56px 18px 18px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(8,10,34,.05) 20%,rgba(8,10,34,.85)),url(../img/galaxie.webp) center 40%/cover no-repeat,#0b0d2a}
+.cosmos h1{margin:2px 0 0;text-shadow:0 2px 18px rgba(0,0,0,.7)}
+.cosmos .muted{color:#d9d5ff}
+.world-banner{height:120px;margin:0 0 10px;border-radius:var(--radius);border:1px solid var(--line);
+  background:linear-gradient(90deg,rgba(8,10,34,.2),rgba(8,10,34,.1) 50%,rgba(8,10,34,.6)),url(../img/monde.webp) center 30%/cover no-repeat,#05060f}
+.card.news{background:linear-gradient(90deg,var(--panel) 45%,rgba(20,26,74,.72)),url(../img/monde.webp) right 30% center/auto 150% no-repeat,var(--panel)}
+.title-card{background:linear-gradient(180deg,rgba(14,18,54,.35),rgba(14,18,54,.8)),url(../img/vagues.webp) center/cover no-repeat,var(--panel)}
+.story-card{background:linear-gradient(180deg,rgba(14,18,54,.82),rgba(14,18,54,.94)),url(../img/vagues.webp) center/cover no-repeat,var(--panel)}
+.card.celebrate{background:linear-gradient(180deg,rgba(14,18,54,.55),rgba(14,18,54,.88)),url(../img/etoiles.webp) center/cover no-repeat,var(--panel)}
+.story-cover{display:block;width:100%;max-width:min(300px,58vw);height:auto;margin:6px auto 12px;border-radius:18px;box-shadow:0 20px 50px -18px rgba(109,77,255,.8)}

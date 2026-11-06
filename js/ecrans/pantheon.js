@@ -77,7 +77,7 @@ function hofScreen(){
   const h = loadHof(), n = Object.keys(h.ach).length;
   p = null;
   $("#app").innerHTML = `<div class="fade" style="padding-top:20px">
-    <div class="muted">Toutes tes carrières</div><h1><span class="emo" aria-hidden="true">🏛️</span> Panthéon</h1>
+    <header class="cosmos"><div class="muted">Toutes tes carrières</div><h1><span class="emo" aria-hidden="true">🏛️</span> Panthéon</h1></header>
     <div class="card"><h3>Succès · ${n}/${ACH.length}</h3>
       ${ACH.map(a=>`<div class="ach ${h.ach[a.id]?"":"off"}"><span class="i">${a.i}</span><div><b>${a.n}</b><small>${a.d}</small></div></div>`).join("")}</div>
     ${titlesHof(h)}

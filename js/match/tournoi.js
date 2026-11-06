@@ -51,7 +51,7 @@ function tourneyScreen(){
     ? `<p class="story">${C.post}</p><button class="btn primary" onclick="tourneyNext()">Suite →</button>`
     : `<p class="story">${T.role==="remplaçant"&&T.stage<3?`Tu entres en jeu à la ${C.min-10}e minute. `:""}${a.txt}</p>
       ${a.o.map((o,i)=>{ const q = o.p+talentBonus(o.t); return `<button class="btn" onclick="tourneyPick(${i})">${choiceLead(o.t,i)}<span class="ctext">${o.t}</span><small>${riskHtml(q)}${miniChip(o)?" · 🎮 à jouer":""}</small></button>`; }).join("")}`;
-  render(`<div class="muted">${flag(p.country)} ${esc(T.name)} · ${STAGES[T.stage]}${T.stage<3?` · ${T.pts} pt${T.pts>1?"s":""}`:""}</div>
+  render(`<div class="world-banner" aria-hidden="true"></div><div class="muted">${flag(p.country)} ${esc(T.name)} · ${STAGES[T.stage]}${T.stage<3?` · ${T.pts} pt${T.pts>1?"s":""}`:""}</div>
     <div class="card"><h2 style="text-align:center">${esc(COUNTRIES[p.country].name)} – ${esc(opp.name)}</h2>${board}
     ${T.res.length?`<ul class="mlog">${T.res.map(r=>`<li>${r}</li>`).join("")}</ul>`:""}${body}</div>
     ${C.post?"":`<button class="btn ghost" onclick="tourneyAuto()">⏩ Simuler le reste du tournoi<small>Le jeu choisit pour toi jusqu'à la fin</small></button>`}`);

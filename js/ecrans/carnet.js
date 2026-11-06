@@ -50,7 +50,7 @@ function carnetScreen(){
       ${list.length>got.length?`<p class="muted" style="margin:8px 0 0">🔒 Encore ${list.length-got.length} à découvrir.</p>`:'<p style="margin:8px 0 0">✅ Tout vu dans cette catégorie !</p>'}</details>`;
   };
   $("#app").innerHTML = `<div class="fade" style="padding-top:20px">
-    <div class="muted">Toutes tes carrières</div><h1><span class="emo" aria-hidden="true">📖</span> Carnet des histoires</h1>
+    <header class="cosmos"><div class="muted">Toutes tes carrières</div><h1><span class="emo" aria-hidden="true">📖</span> Carnet des histoires</h1></header>
     <div class="card"><h3>${c.seen}/${c.all} histoires vécues · ${Math.round(100*c.seen/c.all)} %</h3>
       <p class="muted" style="margin:0">Les histoires que tu n'as jamais vécues sortent plus souvent. Certaines sont rares, d'autres n'arrivent qu'à un poste, dans un certain club ou après un choix précis.</p></div>
     ${pistes.length?`<div class="card"><h3>🔎 Pistes</h3>${pistes.slice(0,8).map(e=>`<div class="ach off"><span class="i">${e.rare?"⭐":"🔒"}</span><div><b>${esc(e.hint)}</b><small>${SCENES[sceneOf(e)].n}${e.rare?" · rare":""}</small></div></div>`).join("")}</div>`:""}
