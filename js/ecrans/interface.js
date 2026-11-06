@@ -60,8 +60,8 @@ function seasonSteps(){
 // le bandeau et la barre du bas restent en place : seul ce qui change est redessiné, et l'animation d'entrée
 // ne joue qu'en changeant d'étape (événement, match, bilan…), pour ne pas donner l'impression d'un rechargement
 let shownHud = null, shownNav = null, lastPhase = null;
-// les écussons portent un identifiant SVG unique à chaque dessin : on l'ignore pour savoir si le bandeau a changé
-const sameUi = (a,b)=>a!=null&&b!=null&&a.replace(/cr\d+/g,"cr")===b.replace(/cr\d+/g,"cr");
+// les écussons et l'avatar portent un identifiant SVG unique à chaque dessin : on l'ignore pour savoir si le bandeau a changé
+const sameUi = (a,b)=>a!=null&&b!=null&&a.replace(/(cr|av)\d+/g,"$1")===b.replace(/(cr|av)\d+/g,"$1");
 function render(html){
   const app = $("#app"), content = takeToast()+`<div class="fade" tabindex="-1">${html}</div>`;
   const hudEl = document.getElementById("hudBox"), scr = document.getElementById("screen"), navEl = document.getElementById("navBox");
@@ -169,7 +169,7 @@ function settingsScreen(){
       <button class="btn" onclick="savesScreen()">💾 Sauvegardes · exporter ou importer</button>
     </div>
     <details class="card credits"><summary>Crédits</summary>
-      <p class="muted">Photos : Pexels (licence Pexels, utilisation libre). Illustrations (accueil, scène « terrain », galaxie, Terre, vagues, étoiles, couverture du mode Histoire) : générées par IA pour Trajectoire. Animations : LottieFiles (Lottie Simple License) · trophée de Mahendra, confettis de Rohith R Krishnan, étoile d'omid. Bibliothèque d'animation : lottie-web (Airbnb, licence MIT).</p></details>
+      <p class="muted">Photos : Pexels (licence Pexels, utilisation libre). Illustrations (accueil, scènes terrain, vestiaire, sélection et rivalité, tribunes, pelouse et ballon des mini-jeux, tirs au but, galaxie, Terre, vagues, étoiles, couverture du mode Histoire) : générées par IA pour Trajectoire. Animations : LottieFiles (Lottie Simple License) · trophée de Mahendra, confettis de Rohith R Krishnan, étoile d'omid. Bibliothèque d'animation : lottie-web (Airbnb, licence MIT).</p></details>
     <button class="btn ghost" onclick="home()">← Retour à l'accueil</button></div>`;
   window.scrollTo(0,0);
 }

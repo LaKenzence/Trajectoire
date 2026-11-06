@@ -2,6 +2,16 @@
 // Moteur repris de Penalty de Minuit (même dessin du but, du gardien et du ballon), adapté aux matchs de carrière.
 // Penalty.play({mode, skill, pressure, title, sub, us, them, youGK, number, weather}) renvoie une promesse {success, us, them, mine}.
 // mode : "shoot" (tu tires), "save" (tu plonges), "shootout" (séance), "fk" (tu tires le coup franc), "fksave" (tu l'arrêtes)
+// Images des mini-jeux (tribunes, ballon, pelouse vue du ciel), partagées avec duel.js : chargées une fois et dessinées
+// dès qu'elles sont prêtes ; sans elles (premier lancement hors ligne, tests), le dessin d'origine prend le relais.
+const MINI_IMG = {};
+function miniImg(name, onload) {
+  if (typeof Image === "undefined") return null;
+  let im = MINI_IMG[name];
+  if (!im) { im = MINI_IMG[name] = new Image(); im.decoding = "async"; im.src = "img/" + name + ".webp"; }
+  if (onload && !im.complete && im.addEventListener) im.addEventListener("load", onload, { once: true });
+  return im.complete && im.naturalWidth ? im : null;
+}
 const Penalty = (() => {
   const W = 800, H = 560;
   const G = { l: 230, r: 570, t: 120, b: 262 };
@@ -168,7 +178,7 @@ const Penalty = (() => {
   // ---------- interface ----------
   function build() {
     const o = S.opts, el = document.createElement("div");
-    el.className = "penmode";
+    el.className = "penmode" + (o.mode === "shootout" ? " shootout" : "");
     el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", o.title);
     const shootHelp = "Choisis ton tir (1, 2 ou 3), puis clique ou appuie sur Espace une fois pour viser, une deuxième fois pour la puissance. Trop fort, et le ballon s'envole. Sous la pression, le viseur tremble.";
     const help = o.mode === "save" ? "Le tireur peut trahir son côté dans ses appuis… ou feinter. Quand il frappe, clique là où part le ballon. Au clavier : ← ↑ →."
@@ -246,11 +256,19 @@ const Penalty = (() => {
     let g = c.createLinearGradient(0, 0, 0, G.b);
     g.addColorStop(0, "#070c18"); g.addColorStop(1, "#17243c");
     c.fillStyle = g; c.fillRect(0, 0, W, G.b);
-    // tribunes aux couleurs des deux clubs
+    // tribunes : la photo du stade, recadrée pour que sa pelouse commence sous les panneaux (à 72 % de sa hauteur) ;
+    // tant qu'elle n'est pas chargée, la foule aux couleurs des deux clubs
+    const stands = miniImg("tribunes", () => { if (S && S.bg) drawBackground(); });
     let s = 11;
     const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
     const crowd = ["#2b3a55", "#3a2f4a", "#4a3a2a", "#24423f", "#55402a", "#3b4660", "#5a3a36"];
-    for (let row = 0; row < 18; row++) {
+    if (stands) {
+      const h = W * stands.naturalHeight / stands.naturalWidth;
+      c.save(); c.beginPath(); c.rect(0, 0, W, G.b); c.clip();
+      c.drawImage(stands, 0, G.b - 4 - h * 0.72, W, h);
+      c.restore();
+    }
+    for (let row = 0; row < (stands ? 0 : 18); row++) {
       const y = 14 + row * 11.5;
       for (let x = -4; x < W + 8; x += 8 + r() * 3) {
         const fan = r();
@@ -382,6 +400,13 @@ const Penalty = (() => {
     ctx.fillStyle = "rgba(0,0,0,.32)";
     ctx.beginPath(); ctx.ellipse(b.x, b.gy, b.r * 1.1, b.r * 0.35, 0, 0, 7); ctx.fill();
     ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(spin);
+    const sprite = miniImg("ballon");
+    if (sprite) {
+      ctx.drawImage(sprite, -b.r, -b.r, b.r * 2, b.r * 2); ctx.restore();
+      ctx.strokeStyle = "rgba(0,0,0,.3)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.stroke();
+      return;
+    }
     ctx.fillStyle = "#f7f7f2";
     ctx.beginPath(); ctx.arc(0, 0, b.r, 0, 7); ctx.fill();
     ctx.fillStyle = "#1b1f27";

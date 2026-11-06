@@ -143,11 +143,15 @@ const Duel = (() => {
   function ball(x, y, h = 0) {
     const c = D.ctx;
     c.fillStyle = "rgba(0,0,0,.35)"; c.beginPath(); c.ellipse(x, y + 6, 6, 3, 0, 0, 7); c.fill();
-    c.fillStyle = "#fff"; c.beginPath(); c.arc(x, y - h, 6 + h / 30, 0, 7); c.fill(); c.strokeStyle = "#111"; c.lineWidth = 1; c.stroke();
+    const r = 6 + h / 30, sprite = miniImg("ballon");
+    if (sprite) { c.drawImage(sprite, x - r, y - h - r, r * 2, r * 2); return; }
+    c.fillStyle = "#fff"; c.beginPath(); c.arc(x, y - h, r, 0, 7); c.fill(); c.strokeStyle = "#111"; c.lineWidth = 1; c.stroke();
   }
   function pitch() {
-    const c = D.ctx;
-    for (let i = 0; i < 10; i++) { c.fillStyle = i % 2 ? "#2f7d4a" : "#2a7343"; c.fillRect(i * 80, 0, 80, H); }
+    const c = D.ctx, grass = miniImg("pelouse-ciel");
+    // la pelouse photographiée du ciel (sans ses tribunes), sinon des bandes vertes
+    if (grass) { const w = grass.naturalWidth, h = grass.naturalHeight; c.drawImage(grass, w * 0.03, h * 0.17, w * 0.94, h * 0.67, 0, 0, W, H); }
+    else for (let i = 0; i < 10; i++) { c.fillStyle = i % 2 ? "#2f7d4a" : "#2a7343"; c.fillRect(i * 80, 0, 80, H); }
     c.strokeStyle = "rgba(255,255,255,.55)"; c.lineWidth = 2;
     c.strokeRect(10, 10, W - 20, H - 20);
     if (D.opts.kind === "aerien" || D.opts.kind === "tacle") { c.strokeRect(10, 90, 130, 240); c.strokeRect(10, 160, 45, 100); c.fillStyle = "rgba(255,255,255,.9)"; c.fillRect(2, 175, 8, 70); }

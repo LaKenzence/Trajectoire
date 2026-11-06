@@ -388,3 +388,5 @@ body{overflow-x:hidden}
   linear-gradient(180deg,rgba(8,10,34,.72) 0%,rgba(8,10,34,.08) 34%,rgba(8,10,34,.05) 58%,rgba(8,10,34,.94) 100%),
   url(../img/tunnel.webp) center 32%/cover no-repeat,#0a0e33}
 .scene-photo[src$="terrain.webp"]{object-position:center 64%}
+/* séance de tirs au but : les joueurs alignés bras dessus bras dessous, derrière le mini-jeu */
+.penmode.shootout{background:linear-gradient(180deg,rgba(5,9,16,.78),rgba(5,9,16,.93) 55%),url(../img/tirs-au-but.webp) center 30%/cover no-repeat,#05090f}
