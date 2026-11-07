@@ -57,7 +57,7 @@ function offseasonScreen(){
   if(p.contract<=0&&!p.renew&&!(p.offers||[]).length&&!defiOn("fidele")) p.offers = [fallbackOffer()];
   const free = p.contract<=0;
   const o = p.offers||[];
-  let h = `${tip("summer")}<div class="muted">Été ${p.year}</div><div class="card"><h2>Intersaison</h2>
+  let h = `${tip("summer")}<div class="mercato-banner" aria-hidden="true"></div><div class="muted">Été ${p.year}</div><div class="card"><h2>Intersaison</h2>
     ${p.note?`<p>${p.note}</p>`:""}
     <p>${free?`Ton contrat avec <b>${esc(p.club.name)}</b> est terminé.`:`Il te reste <b>${p.contract} an(s)</b> de contrat à ${esc(p.club.name)} (${money(p.salary)}/an).`}</p>`;
   if(!free) h += `<button class="btn primary" onclick="stay()">Rester à ${esc(p.club.name)}</button>`;

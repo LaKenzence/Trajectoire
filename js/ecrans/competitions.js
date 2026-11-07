@@ -100,7 +100,7 @@ function cdcPath(c,impact,finalRes){
 }
 function cdcHtml(K){
   const last = K.steps.at(-1);
-  return `<div class="card cdc"><h3>🏆 Coupe des Champions</h3>
+  return `<div class="card cdc"><img class="trophy-img dark" src="img/coupe-champions.webp" alt="" width="520" height="520"><h3>🏆 Coupe des Champions</h3>
     <p>Phase de groupes : <b>${K.pos}${K.pos===1?"er":"e"}</b> du groupe (${K.group.map(g=>esc(g.name)).join(", ")})${K.pos>2?" · éliminés":""}</p>
     ${K.steps.length?`<ul class="parcours">${K.steps.map(s=>`<li class="${s.w?"w":"l"}">${s.w?"✅":"❌"} ${s.r} · ${flag(s.cc)} ${esc(s.opp)}</li>`).join("")}</ul>`:""}
     <p class="muted" style="margin:6px 0 0">${K.won?"Le sommet du football de club. Vous l'avez fait.":last?`Fin du parcours en ${last.r.toLowerCase()}.`:"L'aventure européenne s'arrête dès l'automne."}</p></div>`;
@@ -114,6 +114,7 @@ function ceremonyOpen(){
   document.querySelector(".overlay")?.remove();
   const rev = list.slice(1).reverse();
   openOverlay(`<div class="sheet ceremonie" role="document">
+    <img class="trophy-img" src="img/ballon-etoile.webp" alt="Le trophée du Ballon d'Étoile, un ballon doré constellé d'étoiles" width="520" height="624">
     <p class="cer-eyebrow">🌟 Cérémonie du Ballon d'Étoile ${B.year}</p>
     <h2>Les nommés</h2>
     <ol class="cer-list" reversed>${rev.map((x,i)=>`<li class="cer-r ${x.me?"me":""}" style="--d:${1.2+i*1.5}s"><span>${list.indexOf(x)+1}<sup>e</sup></span>${flag(x.c)} <b>${esc(x.n)}</b>${x.me?" (toi)":x.rival?" ⚔️":""}<small>${esc(x.club)}</small></li>`).join("")}</ol>

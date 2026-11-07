@@ -138,7 +138,7 @@ function endTourney(out){
 }
 function tourneyEndScreen(){
   const T = p.tourney, won = !T.out;
-  render(`<div class="card ${won?"celebrate":""}"><h2>${won?`🏆 ${esc(COUNTRIES[p.country].name)} remporte le ${esc(T.name)} !`:`${esc(T.name)} : ${T.out==="groupes"?"éliminés en phase de groupes":T.out==="finale"?"battus en finale":`éliminés en ${T.out}`}`}</h2>
+  render(`<div class="card ${won?"celebrate":""}">${T.name.startsWith("Championnat du Monde")?`<img class="trophy-img dark${won?"":" lost"}" src="img/coupe-monde.webp" alt="" width="520" height="520">`:""}<h2>${won?`🏆 ${esc(COUNTRIES[p.country].name)} remporte le ${esc(T.name)} !`:`${esc(T.name)} : ${T.out==="groupes"?"éliminés en phase de groupes":T.out==="finale"?"battus en finale":`éliminés en ${T.out}`}`}</h2>
     <p class="story">${won?"Tout un pays dans la rue. Ton nom restera associé à cet été pour toujours.":T.out==="finale"?"Si près du but… La médaille d'argent a un goût amer, mais le pays est fier de vous.":"Le retour au pays est silencieux. Il faudra attendre le prochain tournoi."}</p>
     <ul class="mlog">${T.res.map(r=>`<li>${r}</li>`).join("")}</ul>
     <div class="stats"><div class="stat"><b>${T.res.filter(r=>!r.startsWith("🎉")).length}</b><span>matchs</span></div><div class="stat"><b>${T.myG}</b><span>but(s)</span></div><div class="stat"><b>${T.myA}</b><span>passe(s) déc.</span></div></div>

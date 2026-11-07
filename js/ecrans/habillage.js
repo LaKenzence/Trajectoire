@@ -100,7 +100,7 @@ function choiceLead(t,n){ return `<span class="cic t${n%3}">${ic(choiceIcon(t))}
 const SKY = (a,b)=>`<defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient><radialGradient id="gl"><stop offset="0" stop-color="#fff6d8" stop-opacity=".9"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/></radialGradient></defs><rect width="400" height="170" fill="url(#sk)"/>`;
 const artShirt = (x,y,s,c,n)=>`<g transform="translate(${x} ${y}) scale(${s})"><path d="M-16-20l9-5h14l9 5 9 10-7 7-5-4v30h-26v-30l-5 4-7-7z" fill="${c}"/><text y="10" text-anchor="middle" font-size="16" font-weight="800" fill="#fff" font-family="Barlow Condensed,sans-serif">${n}</text></g>`;
 const person = (x,y,s,c)=>`<g transform="translate(${x} ${y}) scale(${s})"><circle cy="-34" r="11" fill="${c}"/><path d="M-22 10c0-20 9-30 22-30s22 10 22 30z" fill="${c}"/></g>`;
-// photos des scènes : img/<catégorie>.webp (Pexels, licence libre ; terrain, vestiaire, sélection et rivalité générées par IA)
+// photos des scènes : img/<catégorie>.webp (générées par IA pour Trajectoire)
 // pictogramme de chaque catégorie de scène
 const SCENE_IC = {terrain:"ball",vestiaire:"users",medias:"mic",perso:"home",argent:"coins",sante:"cross",selection:"star",rival:"bolt",echo:"clock"};
 const SCENE_PHOTOS = ["terrain","vestiaire","medias","perso","argent","sante","selection","rival","echo"];

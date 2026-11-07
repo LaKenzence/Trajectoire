@@ -390,3 +390,13 @@ body{overflow-x:hidden}
 .scene-photo[src$="terrain.webp"]{object-position:center 64%}
 /* séance de tirs au but : les joueurs alignés bras dessus bras dessous, derrière le mini-jeu */
 .penmode.shootout{background:linear-gradient(180deg,rgba(5,9,16,.78),rgba(5,9,16,.93) 55%),url(../img/tirs-au-but.webp) center 30%/cover no-repeat,#05090f}
+
+/* --- trophées (Ballon d'Étoile détouré ; coupes sur fond noir, fondues dans le fond sombre), mercato, salle de presse --- */
+.trophy-img{display:block;width:auto;height:150px;max-width:70%;margin:0 auto 8px;object-fit:contain;filter:drop-shadow(0 10px 30px rgba(245,197,66,.45))}
+.trophy-img.dark{mix-blend-mode:screen;filter:none}
+.trophy-img.lost{opacity:.35;filter:grayscale(.7)}
+.card.cdc .trophy-img{height:110px}
+.sheet.ceremonie .trophy-img{height:170px}
+.mercato-banner{height:150px;margin:0 0 10px;border-radius:var(--radius);border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(8,10,34,0) 40%,rgba(8,10,34,.75)),url(../img/mercato.webp) center 8%/cover no-repeat,#0a0e33}
+.confmode{background:linear-gradient(180deg,rgba(5,9,16,.72),rgba(5,9,16,.93) 50%),url(../img/conference.webp) center 30%/cover no-repeat,#05090f}
