@@ -118,6 +118,7 @@ function endScreen(){
   const peak = Math.max(...p.seasons.map(s=>s.lvl),p.lvl);
   const grouped = {}; p.trophies.forEach(t=>{const k=t.t.replace(/ \d{4}$/,"");grouped[k]=(grouped[k]||[]).concat(t.y)});
   const stars = p.trophies.filter(t=>t.t.startsWith("Ballon")).length;
+  const gradeCard = gradeHtml();
   const verdict = stars?"Une légende du football mondial.":peak>=88?"Un joueur de classe mondiale.":peak>=80?"Une très belle carrière au plus haut niveau.":peak>=70?"Un pro solide, respecté partout où il est passé.":p.seasons.length<6?"Une carrière trop courte, pleine de regrets.":"Un parcours modeste, mais un rêve vécu.";
   const clubHue = n=>(p.clubsHist.indexOf(n)*67+40)%360;
   const r = p.rival;
@@ -135,7 +136,7 @@ function endScreen(){
   }
   $("#app").innerHTML = `<div class="fade" style="padding-top:20px">
   <div class="muted">Bilan de carrière</div><h1>${esc(p.name)} ${flag(p.country)}</h1>
-  <p class="story">${POS[p.pos].n} · ${TRAITS[p.trait].n} · ${p.seasons.length} saisons · retraite à ${p.age} ans<br><b>${verdict}</b></p>
+  <p class="story">${POS[p.pos].n} · ${TRAITS[p.trait].n} · ${p.seasons.length} saisons · retraite à ${p.age} ans<br><b>${verdict}</b></p>${gradeCard}
   ${titleCard()}
   ${storyEndCard()}
   <div class="stats">

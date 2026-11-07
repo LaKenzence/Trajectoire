@@ -36,6 +36,10 @@ const Penalty = (() => {
 
   // ---------- déroulé ----------
   function play(opts) {
+    const wait = typeof Stade3D !== "undefined" ? Stade3D.whenReady(1200) : Promise.resolve(false);
+    return wait.then(() => start(opts));
+  }
+  function start(opts) {
     return new Promise(resolve => {
       if (S) { const old = S; close(); old.resolve({ success: false, us: 0, them: 0, mine: old.mine }); }
       S = { opts, resolve, us: [], them: [], kickIndex: 0, kick: null, flash: null, netShake: 0, state: "intro", t0: performance.now(), now: performance.now(), aim: null, power: 0,
@@ -68,8 +72,8 @@ const Penalty = (() => {
     if (o.mode === "fk") return { side: "us", ctl: "fk" };
     if (o.mode === "save" || o.mode === "fksave") return { side: "them", ctl: "dive" };
     const usTurn = S.kickIndex % 2 === 0;
-    if (usTurn) return { side: "us", ctl: !o.youGK && S.us.length === (S.myRank || 0) ? "shoot" : !o.youGK && S.us.length >= 5 && S.us.length % 3 === 2 ? "shoot" : "auto" };
-    return { side: "them", ctl: o.youGK ? "dive" : "auto" };
+    if (usTurn) return { side: "us", ctl: "shoot", mine: !o.youGK && (S.us.length === (S.myRank || 0) || (S.us.length >= 5 && S.us.length % 3 === 2)) };
+    return { side: "them", ctl: "dive", mine: !!o.youGK };
   }
 
   const goals = a => a.filter(Boolean).length;
@@ -94,7 +98,7 @@ const Penalty = (() => {
     if (S.opts.mode === "shootout" && !S.opts.youGK && S.myRank == null) { S.state = "rank"; showGroup(".pen-rank", true); hint("Quel tireur veux-tu être ?"); renderBoard(); return; }
     S.turn = turn();
     S.style = "place"; S.tell = 0;
-    if (S.turn.ctl === "shoot") { S.state = "style"; showStyles(true); hint(S.opts.mode === "shootout" ? "À toi de tirer ! Glisse le doigt depuis le ballon, ou choisis ton tir : 1, 2 ou 3." : "Glisse le doigt depuis le ballon vers le but, ou choisis : 1 Placé · 2 En force · 3 Panenka"); }
+    if (S.turn.ctl === "shoot") { S.state = "style"; showStyles(true); hint(S.opts.mode === "shootout" ? (S.turn.mine ? "C'est TON tir ! Glisse le doigt depuis le ballon, ou choisis : 1, 2 ou 3." : `Tir n°${S.us.length + 1} de ton équipe : glisse le doigt depuis le ballon.`) : "Glisse le doigt depuis le ballon vers le but, ou choisis : 1 Placé · 2 En force · 3 Panenka"); }
     else if (S.turn.ctl === "fk") { S.state = "aim"; S.t0 = S.now; hint("Glisse depuis le ballon en courbant le geste pour enrouler, ou clique pour viser"); }
     else {
       S.state = "prep"; S.prepStart = S.now;
@@ -189,7 +193,7 @@ const Penalty = (() => {
       : o.mode === "shoot" ? shootHelp
       : o.mode === "fk" ? "Glisse depuis le ballon en courbant ton geste : la courbe donne l'effet autour du mur, un geste lent lobe le mur. Ou trois clics (ou Espace) : la cible, la puissance, puis l'effet."
       : o.mode === "fksave" ? "Le ballon passe au-dessus ou autour du mur : clique là où il va, ou ← ↑ →. Attention à l'effet !"
-      : o.youGK ? "Tu es dans les cages pour chaque tir adverse : lis les appuis du tireur et clique où part le ballon, ou ← ↑ →." : "Tu tires le premier penalty (et les plus chauds de la mort subite). " + shootHelp;
+      : "Tu tires tous les penalties de ton équipe et tu plonges sur ceux d'en face (clique où part le ballon, ou ← ↑ →). " + shootHelp;
     // aide de la sous-ligne : le rapport du staff sur le tireur adverse, plus ou moins fiable
     let sub = o.sub || "";
     if (o.mode === "save") {
@@ -208,18 +212,19 @@ const Penalty = (() => {
     el.querySelector(".pen-help").textContent = help;
     document.body.appendChild(el);
     S.el = el; S.cv = el.querySelector("canvas"); S.ctx = S.cv.getContext("2d");
+    S.v3 = typeof Stade3D !== "undefined" && Stade3D.ok() ? Stade3D.attach(el.querySelector(".pen-stage"), o) : null;
     // au doigt : glisser depuis le ballon tire (direction = coin, vitesse = puissance, courbe = effet) ; un simple appui joue comme avant
     S.cv.addEventListener("pointerdown", e => {
       const w = toWorld(e);
       if (canSwipe() && Math.hypot(w.x - rest().x, w.y - rest().y) < 150) {
-        S.swipe = { x0: w.x, y0: w.y, t0: performance.now(), pts: [w], cur: w };
+        S.swipe = { x0: w.x, y0: w.y, t0: performance.now(), pts: [w], cur: w, s0: toScreen(e), s1: toScreen(e) };
         try { S.cv.setPointerCapture(e.pointerId); } catch (err) {}
         return;
       }
       act(w.x, w.y);
     });
-    S.cv.addEventListener("pointermove", e => { if (S && S.swipe) { const w = toWorld(e); S.swipe.cur = w; if (S.swipe.pts.length < 60) S.swipe.pts.push(w); } });
-    const up = e => { if (S && S.swipe) { S.swipe.cur = toWorld(e); swipeShoot(); } };
+    S.cv.addEventListener("pointermove", e => { if (S && S.swipe) { const w = toWorld(e); S.swipe.cur = w; S.swipe.s1 = toScreen(e); if (S.swipe.pts.length < 60) S.swipe.pts.push(w); } });
+    const up = e => { if (S && S.swipe) { S.swipe.cur = toWorld(e); S.swipe.s1 = toScreen(e); swipeShoot(); } };
     S.cv.addEventListener("pointerup", up);
     S.cv.addEventListener("pointercancel", () => { if (S) S.swipe = null; });
     el.querySelector(".pen-skip").addEventListener("click", skip);
@@ -244,6 +249,7 @@ const Penalty = (() => {
     if (!S) return;
     cancelAnimationFrame(S.raf);
     removeEventListener("keydown", S.onKey, true);
+    if (S.v3) S.v3.detach();
     S.el.remove();
     if (typeof crowdHush === "function") crowdHush(false);
     S = null;
@@ -255,8 +261,10 @@ const Penalty = (() => {
   // décalage de la caméra (secousse sur un but) et passage écran → monde pour les clics et les glissés
   const shakeAt = () => S.shake > 0 && !reduceMotion ? { x: Math.sin(S.now * 0.09) * 9 * S.shake, y: Math.cos(S.now * 0.11) * 7 * S.shake } : { x: 0, y: 0 };
   function camOrigin() { const sh = shakeAt(); return { x: CAM.x - CAM.x * CAM.s + sh.x, y: CAM.y - CAM.y * CAM.s + sh.y }; }
+  function toScreen(e) { const r = S.cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
   function toWorld(e) {
     const r = S.cv.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W, sy = (e.clientY - r.top) / r.height * H, o = camOrigin();
+    if (S.v3) return S.v3.toWorld(sx, sy, S.state === "flight");
     return { x: (sx - o.x) / CAM.s, y: (sy - o.y) / CAM.s };
   }
   const canSwipe = () => S.turn && (S.turn.ctl === "shoot" || S.turn.ctl === "fk") && (S.state === "style" || S.state === "aim");
@@ -273,7 +281,11 @@ const Penalty = (() => {
     // le talent et la pression décident de la précision du geste
     const err = (1 - S.opts.skill) * 14 + pressureNow() * 18;
     S.aim = { x: cl(b.x + dx * toGoal, 120, 680) + rnd(-err, err), y: G.b - 12 - height * (G.b - G.t - 24) + rnd(-err, err) };
+    // en 3D, le ballon va là où le doigt est lâché (prolongé au ras du sol si on lâche avant le but)
+    if (S.v3) { const g = S.v3.aimFromSwipe(s.s0, s.s1); S.aim = { x: cl(g.x, 120, 680) + rnd(-err, err), y: g.y + rnd(-err, err) }; }
     S.power = p;
+    // en 3D, la puissance se mesure à l'écran : un geste franc donne une bonne frappe, seul un geste brutal s'envole
+    if (S.v3) { const sl = Math.hypot(s.s1.x - s.s0.x, s.s1.y - s.s0.y); S.power = cl((sl / ms - 0.35) / 2.4, 0.15, 1); }
     if (isFk()) {
       // l'effet : de quel côté le geste s'est courbé (écart maximal à la ligne droite)
       let dev = 0;
@@ -563,9 +575,10 @@ const Penalty = (() => {
   function playerShoot() {
     const p = S.power, err = (5 + p * 14) * (force() ? 1.5 : 1);
     let tx = S.aim.x + rnd(-err, err), ty = S.aim.y + rnd(-err, err);
-    if (p > (force() ? 0.84 : 0.9)) ty -= 40 + (p - 0.9) * 900;
+    // seule une frappe vraiment trop appuyée s'envole (plus tôt en force)
+    if (p > (force() ? 0.88 : 0.95)) ty -= 25 + (p - (force() ? 0.88 : 0.95)) * 700;
     shootAt(tx, ty, p, "us", lerp(0.42, 0.2, S.opts.skill), 52);
-    S.kick.player = true;
+    S.kick.player = true; S.kick.mine = S.turn.mine !== false;
   }
 
   // la Panenka : une pichenette au centre. Si le gardien plonge, c'est but ; s'il reste debout, c'est ridicule.
@@ -594,7 +607,7 @@ const Penalty = (() => {
     const p = S.power, err = 5 + p * 16;
     let tx = S.aim.x + rnd(-err, err), ty = S.aim.y + rnd(-err, err);
     if (p > 0.92) ty -= 30 + (p - 0.92) * 700;
-    launchFk(tx, ty, p, S.curl, "us", lerp(0.38, 0.18, S.opts.skill), 52, false).player = true;
+    Object.assign(launchFk(tx, ty, p, S.curl, "us", lerp(0.38, 0.18, S.opts.skill), 52, false), { player: true, mine: true });
   }
 
   // tirs adverses quand tu es dans les cages : décidés au début de l'élan (pour que les appuis puissent les trahir)
@@ -625,8 +638,8 @@ const Penalty = (() => {
 
   function cpuShootAtYou() {
     const k = S.opts.skill, pl = S.planned || planCpuPen();
-    if (isFk()) { launchFk(pl.tx, pl.ty, pl.p, pl.curl, "them", 0, lerp(46, 62, k), true); hint("Plonge !"); return; }
-    S.kick = { side: "them", tx: pl.tx, ty: pl.ty, start: S.now, dur: lerp(1000, 1350, k) * rnd(0.92, 1.08), arc: rnd(10, 28), reach: lerp(46, 62, k), dive: null, youDive: true };
+    if (isFk()) { launchFk(pl.tx, pl.ty, pl.p, pl.curl, "them", 0, lerp(46, 62, k), true).mine = true; hint("Plonge !"); return; }
+    S.kick = { side: "them", tx: pl.tx, ty: pl.ty, start: S.now, dur: lerp(1000, 1350, k) * rnd(0.92, 1.08), arc: rnd(10, 28), reach: lerp(46, 62, k), dive: null, youDive: true, mine: S.turn.mine !== false };
     S.state = "flight"; hint("Plonge !");
   }
 
@@ -660,8 +673,8 @@ const Penalty = (() => {
     (ours ? S.us : S.them).push(scored);
     S.kickIndex++;
     if (scored) S.netShake = 1;
-    if (k.player) { S.mine.shots++; if (scored) S.mine.goals++; }
-    if (k.youDive) { S.mine.faced++; if (!scored) S.mine.saves++; }
+    if (k.player && k.mine !== false) { S.mine.shots++; if (scored) S.mine.goals++; }
+    if (k.youDive && k.mine !== false) { S.mine.faced++; if (!scored) S.mine.saves++; }
     const text = { goal: ours ? "BUT !" : "BUT ADVERSE", saved: ours ? "ARRÊTÉ…" : "ARRÊTÉ !", post: "POTEAU !", bar: "LA BARRE !", over: "AU-DESSUS !", wide: "À CÔTÉ !", wall: "DANS LE MUR !" }[out];
     const good = ours ? scored : !scored;
     S.flash = { text, color: good ? "#f5c542" : "#ff6b6b", start: S.now };
@@ -733,6 +746,7 @@ const Penalty = (() => {
   }
 
   function render() {
+    if (S.v3) return render3d();
     const ctx = S.ctx, o = S.opts, now = S.now, cam = camOrigin(), d = S.dpr;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = "#070c18"; ctx.fillRect(0, 0, S.cv.width, S.cv.height);
@@ -743,7 +757,7 @@ const Penalty = (() => {
     const shooterSide = S.kick ? S.kick.side : tr.side;
     const shooter = shooterSide === "us" ? o.us : o.them, keeper = shooterSide === "us" ? o.them : o.us;
     const youShoot = shooterSide === "us" && (tr.ctl === "shoot" || tr.ctl === "fk");
-    const youKeep = shooterSide === "them" && (o.mode === "save" || o.mode === "fksave" || (o.mode === "shootout" && o.youGK));
+    const youKeep = shooterSide === "them" && (o.mode === "save" || o.mode === "fksave" || o.mode === "shootout");
     const kp = keeperPos(S.kick, now), b = ballAt(S.kick, now), k = S.kick;
     const behindNet = k && k.outcome === "goal" && now > k.start + k.dur;
     // en coup franc, le ballon passe derrière le mur une fois qu'il l'a dépassé
@@ -775,6 +789,10 @@ const Penalty = (() => {
     drawSwipeGuide(now);
     // ce qui suit (météo, jauges, textes) reste à l'échelle de l'écran
     ctx.setTransform(d, 0, 0, d, 0, 0);
+    drawHud(now);
+  }
+  function drawHud(now) {
+    const ctx = S.ctx;
     drawWeather();
     if (["aim", "power", "curl"].includes(S.state) && pressureNow() > 0.15) drawPressure(pressureNow(), now);
     if (S.state === "curl") drawCurl(curlAt(now));
@@ -793,13 +811,47 @@ const Penalty = (() => {
       const age = (now - S.flash.start) / 1000, sc = reduceMotion ? 1 : 1 + Math.max(0, 0.35 - age) * 1.2;
       ctx.save();
       ctx.globalAlpha = cl(1.6 - age, 0, 1);
-      ctx.translate(400, 360); ctx.scale(sc, sc);
+      ctx.translate(400, S.v3 ? 120 : 360); ctx.scale(sc, sc);
       ctx.font = '800 76px "Barlow Condensed", Impact, sans-serif';
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.lineWidth = 8; ctx.strokeStyle = "rgba(8,13,24,.85)"; ctx.strokeText(S.flash.text, 0, 0);
       ctx.fillStyle = S.flash.color; ctx.fillText(S.flash.text, 0, 0);
       ctx.restore();
     }
+  }
+
+  // en 3D : le stade est rendu par Stade3D à partir de l'état du moteur ; ici, seulement le viseur, le geste et l'interface
+  function render3d() {
+    const ctx = S.ctx, o = S.opts, now = S.now, d = S.dpr, k = S.kick, v3 = S.v3;
+    const tr = S.turn || turn(), shooterSide = k ? k.side : tr.side;
+    const youShoot = shooterSide === "us" && (tr.ctl === "shoot" || tr.ctl === "fk");
+    const youKeep = shooterSide === "them" && (o.mode === "save" || o.mode === "fksave" || o.mode === "shootout");
+    v3.draw({ now, dt: S.dt, state: S.state, kick: k, ball: ballAt(k, now), rest: rest(), keeper: keeperPos(k, now), keeperHome: S.kHome,
+      shooterSide, youShoot, youKeep, run: S.state === "prep" ? cl((now - S.prepStart) / 1500, 0, 1) : 1, tell: S.state === "prep" ? S.tell : 0,
+      number: youShoot && tr.mine !== false ? (o.number || 9) : isFk() ? 10 : 7 + ((S.kickIndex - (S.state === "after" ? 1 : 0)) >> 1) % 5 * 2, wall: isFk() ? S.wall : null,
+      ballAtWall: k && k.fk ? fkBall(k, FK.wallU) : null, netShake: S.netShake, shake: S.shake, afterStart: S.afterStart, prepStart: S.prepStart });
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, S.cv.width, S.cv.height);
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+    // traînée : les dernières positions du ballon à l'écran
+    if (S.trailKick !== k) { S.trailKick = k; S.trail = []; }
+    if (k && now >= k.start && !reduceMotion) {
+      if (now <= flightEnd(k) + 250) { S.trail.push(v3.ballScreen()); if (S.trail.length > 14) S.trail.shift(); } else if (S.trail.length) S.trail.shift();
+      S.trail.forEach((q, i) => { const a = (i + 1) / S.trail.length; ctx.fillStyle = `rgba(245,197,66,${0.3 * a})`; ctx.beginPath(); ctx.arc(q.x, q.y, 2 + 5 * a, 0, 7); ctx.fill(); });
+    }
+    drawParts(v3.goalToScreen);
+    if (S.state === "aim" || S.state === "power" || S.state === "curl") {
+      const a0 = S.state === "aim" ? aimPoint(now) : S.aim, a = v3.goalToScreen(a0.x, a0.y);
+      ctx.strokeStyle = "#f5c542"; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(a.x, a.y, 11, 0, 7); ctx.stroke();
+      line(a.x - 17, a.y, a.x - 6, a.y); line(a.x + 6, a.y, a.x + 17, a.y); line(a.x, a.y - 17, a.x, a.y - 6); line(a.x, a.y + 6, a.x, a.y + 17);
+    }
+    if (S.swipe && S.swipe.s1 && S.swipe.s0.y - S.swipe.s1.y > 20) {
+      const g = v3.aimFromSwipe(S.swipe.s0, S.swipe.s1), a = v3.goalToScreen(g.x, g.y);
+      ctx.strokeStyle = "rgba(245,197,66,.95)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(a.x, a.y, 12, 0, 7); ctx.stroke();
+      ctx.fillStyle = "rgba(245,197,66,.35)"; ctx.beginPath(); ctx.arc(a.x, a.y, 5, 0, 7); ctx.fill();
+    }
+    drawSwipeGuide(now, v3.nearToScreen);
+    drawHud(now);
   }
 
   // traînée du ballon en vol : ses dernières positions, de plus en plus pâles
@@ -812,20 +864,22 @@ const Penalty = (() => {
     S.trail.forEach((q, i) => { const a = (i + 1) / S.trail.length; ctx.fillStyle = `rgba(245,197,66,${0.28 * a})`; ctx.beginPath(); ctx.arc(q.x, q.y, q.r * (0.45 + 0.5 * a), 0, 7); ctx.fill(); });
   }
   // paillettes d'un geste réussi : elles retombent en s'éteignant
-  function drawParts() {
+  function drawParts(m) {
     const ctx = S.ctx;
     S.parts = S.parts.filter(q => (q.age += S.dt) < q.life);
     for (const q of S.parts) {
       q.x += q.vx * S.dt; q.y += q.vy * S.dt; q.vy += 0.0006 * S.dt;
-      ctx.globalAlpha = 1 - q.age / q.life; ctx.fillStyle = q.c; ctx.fillRect(q.x - 2, q.y - 2, 4, 4);
+      const pt = m ? m(q.x, q.y) : q;
+      ctx.globalAlpha = 1 - q.age / q.life; ctx.fillStyle = q.c; ctx.fillRect(pt.x - 2, pt.y - 2, 4, 4);
     }
     ctx.globalAlpha = 1;
   }
   // guide du geste : la flèche suit le doigt pendant le glissé ; avant, une flèche pulse au-dessus du ballon
-  function drawSwipeGuide(now) {
-    const ctx = S.ctx, b = rest();
+  function drawSwipeGuide(now, m) {
+    const ctx = S.ctx, b0 = rest(), M = m || ((x, y) => ({ x, y })), b = { ...b0, ...M(b0.x, b0.y) };
     if (S.swipe) {
-      const s = S.swipe, e = s.cur;
+      const s = { ...S.swipe, pts: S.swipe.pts.map(q => M(q.x, q.y)), ...M(S.swipe.x0, S.swipe.y0) }, e = M(S.swipe.cur.x, S.swipe.cur.y);
+      s.x0 = s.x; s.y0 = s.y;
       ctx.strokeStyle = "rgba(245,197,66,.9)"; ctx.lineWidth = 4; ctx.lineCap = "round";
       ctx.beginPath(); s.pts.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); ctx.lineTo(e.x, e.y); ctx.stroke();
       const a = Math.atan2(e.y - s.y0, e.x - s.x0);
@@ -855,12 +909,13 @@ const Penalty = (() => {
     S.raf = requestAnimationFrame(frame);
   }
 
-  return { play, active: () => !!S };
+  // debug : l’état de la séance en cours (pour les essais dans la console)
+  return { play, active: () => !!S, debug: () => S };
 })();
 
 /* ============ Branchements dans la carrière ============ */
 // Niveau de difficulté des penalties : niveau du joueur, forme, moral et talent « Sang-froid »
-function penSkill(){ return clamp((p.lvl-40)/55+(has("sangfroid")?.12:0)+(p.moral-50)/400+(p.form-60)/500,0,1); }
+function penSkill(){ return clamp((p.lvl-40)/55+(has("sangfroid")?.12:0)+(p.moral-50)/400+(p.form-60)/500+(typeof qd==="function"?qd("tec")/150+qd("men")/200:0),0,1); }
 function penTeams(opp){
   const usName = p.match?.type==="monde"?COUNTRIES[p.country].name:p.club.name;
   const us = clubColors(usName), them = clubColors(opp?opp.name:"Adversaire");

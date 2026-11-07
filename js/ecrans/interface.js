@@ -13,7 +13,7 @@ function newPlayer(o){
   if(!o.daily&&!o.friend) unseed();
   const pot = o.hard?RI(60,90):RI(68,94);
   p = {hard:!!o.hard, daily:o.daily||null, friend:o.friend||null, name:o.name, country:o.country, pos:o.pos, trait:o.trait, origin:o.origin, ent:o.ent, life:o.life,
-    age:16, year:o.heir?o.heir.year:2026, lvl:RI(42,50), pot, form:75, moral:60, rep:2, money:0,
+    age:16, year:o.heir?o.heir.year:2026, lvl:RI(42,50), pot, form:75, moral:60, rep:2, money:0, dream:o.dream||null,
     club:null, contract:0, salary:0, seasons:[], trophies:[], moments:[], flags:{}, seeds:[],
     caps:0, intlGoals:0, used:{}, tmp:{play:0}, phase:"goal", evIdx:0, evCount:3, retired:null, talents:[], tp:1,
     look:o.look||randomLook(), agent:o.ent==="parent"?"famille":"aucun", vie:newVie(), pens:newPens(), phone:newPhone(), defi:DEFIS[o.defi]?o.defi:null, start:DEPARTS[o.start]&&!o.heir?o.start:null, world:{}, clubRep:{}};
@@ -171,6 +171,7 @@ function showCard(){
       <span>Sélections <b>${p.caps}</b></span><span>Trophées <b>${p.trophies.length}</b></span>
     </div>
     <div>${defiTag()}${[TRAITS[p.trait].n,ORIGINS[p.origin].n,ENTOURAGES[p.ent]?.n,LIFESTYLES[p.life]?.n].filter(Boolean).map(x=>`<span class="tag">${x}</span>`).join("")}<span class="tag">${agentOf().i} ${agentOf().n}</span><span class="tag">${familyLine()}</span>${(p.talents||[]).map(k=>`<span class="tag">${TALENTS[k].i} ${TALENTS[k].n}</span>`).join("")}</div>
+    <div class="card-quals">${qualsRadar(200)}<div>${persona()?`<p>${PERSONAS[persona()].i} <b>${PERSONAS[persona()].n}</b><br><small class="muted">${PERSONAS[persona()].d}</small></p>`:""}${coachLine()}${dreamProgress()}</div></div>
     ${progressChart()}
     ${pn.tir+pn.face+pn.cf?`<p style="margin:12px 0 4px"><b>Coups de pied arrêtés joués :</b> ${[pn.tir?`penalties ${pn.but}/${pn.tir}`:"",pn.face?`arrêts ${pn.arret}/${pn.face}`:"",pn.cf?`coups francs ${pn.cfBut}/${pn.cf}`:""].filter(Boolean).join(" · ")}</p>`:""}
     ${r?`<p style="margin:12px 0 4px"><b>Rival :</b> ${esc(r.name)} ${flag(r.country)} ${r.retired?"(retraité)":`· ${esc(r.club.name)} · niveau ${r.lvl}`}</p>`:""}
@@ -276,6 +277,8 @@ function createStep(s){
       <label class="toggle"><input type="checkbox" id="hard" ${draft.hard?"checked":""} onchange="draft.hard=this.checked"> <span><b>Mode Légende</b><br><small class="muted">Potentiel plus bas, paris plus risqués, rival plus fort. Pour les vrais.</small></span></label>
       ${draft.heir?"":`<h3 style="margin-top:18px">Point de départ</h3>
       <div class="defis" role="group" aria-label="Point de départ">${Object.entries(DEPARTS).map(([k,d])=>lockBtn(k,d,(draft.start||"classique")===k,"pickStart")).join("")}</div>`}
+      <h3 style="margin-top:18px">Ton rêve <span style="text-transform:none;letter-spacing:0;font-weight:400">(facultatif, il compte dans la note finale)</span></h3>
+      <div class="defis" role="group" aria-label="Rêve de carrière">${Object.entries(DREAMS).map(([k,d])=>`<button class="btn ${draft.dream===k?"sel":""}" aria-pressed="${draft.dream===k}" onclick="pickDream('${k}')">${d.i} ${d.n}<small>${d.d}</small></button>`).join("")}</div>
       <h3 style="margin-top:18px">Défi de départ <span style="text-transform:none;letter-spacing:0;font-weight:400">(facultatif)</span></h3>
       <div class="defis" role="group" aria-label="Défi de départ">${/** @type {[string,any][]} */ ([["",{i:"🎈",n:"Aucun",d:"La carrière classique."}],...Object.entries(DEFIS)]).map(([k,d])=>lockBtn(k,d,(draft.defi||"")===k,"pickDefi")).join("")}</div>
       <button class="btn primary" onclick="nextFrom0()">Continuer</button>`;
@@ -306,6 +309,7 @@ function lockBtn(k,d,sel,fn){
   return `<button class="btn ${sel?"sel":""}" aria-pressed="${sel}" onclick="${fn}('${k}')">${d.i} ${d.n}<small>${d.d}</small></button>`;
 }
 function pickStart(k){ draft.name = $("#nm").value; draft.start = k; draft.keep = true; createStep(0); }
+function pickDream(k){ draft.name = $("#nm").value; draft.dream = draft.dream===k?null:k; draft.keep = true; createStep(0); }
 function pickDefi(k){ draft.name = $("#nm").value; draft.defi = k||null; draft.keep = true; createStep(0); }
 function nextFrom0(){
   draft.name = $("#nm").value.trim() || pick(FIRST)+" "+pick(LAST);
@@ -353,8 +357,8 @@ function eventScreen(){
   if(!p.curEv){ const e = drawEvent(); p.curEv = e.id; ui.seenThisSeason = (ui.seenThisSeason||[]).concat(e.id); save(); }
   const e = EVENTS.find(x=>x.id===p.curEv);
   const opts = e.ch.map((c,i)=>({c,i})).filter(o=>!o.c.cond||o.c.cond());
-  render(`${tip("event")}<div class="card event-card">${sceneHtml(e)}<div class="bubble"><p class="story">${evText(e)}</p></div>${e.rare?'<span class="chip rare">⭐ Histoire rare</span>':""}${isNewStory(e)?'<span class="chip new">✨ Nouvelle histoire</span>':""}<div class="decide"><h3 class="ask">Que fais-tu ?</h3>
-    ${opts.map((o,n)=>`<button class="btn" onclick="choose(${o.i})">${choiceLead(o.c.t,n)}<span class="ctext">${o.c.t}</span>${o.c.mini&&minisOn("pen")?'<span class="chip">🎮 À jouer</span>':o.c.risk?'<span class="chip">🎲 Risqué</span>':""}</button>`).join("")}</div></div>${e.seedOnly?"":quickBtn()}`);
+  render(`${tip("event")}${e.seedOnly?"":raceBanner()}<div class="card event-card">${sceneHtml(e)}<div class="bubble"><p class="story">${evText(e)}</p></div>${e.rare?'<span class="chip rare">⭐ Histoire rare</span>':""}${isNewStory(e)?'<span class="chip new">✨ Nouvelle histoire</span>':""}<div class="decide"><h3 class="ask">Que fais-tu ?</h3>
+    ${opts.map((o,n)=>`<button class="btn" onclick="choose(${o.i})">${choiceLead(o.c.t,n)}<span class="ctext">${o.c.t}</span>${o.c.mini&&minisOn("pen")?'<span class="chip">🎮 À jouer</span>':o.c.risk?'<span class="chip">🎲 Risqué</span>':""}${tagChip(o.c,e)}</button>`).join("")}</div></div>${e.seedOnly?"":quickBtn()}`);
 }
 // scène illustrée en tête de chaque événement : une catégorie, sa couleur et son pictogramme
 const SCENES = {
@@ -428,6 +432,7 @@ function choose(i){
   markSeen(e,evText(e));
   p.used[e.id] = (p.used[e.id]||0)+1;
   phoneAfterChoice(e,deltas);
+  const becomes = personaAfterChoice(e,c,deltas);
   if(e.id==="sifflets"||deltas.some(d=>d.k==="Réputation"&&d.v<=-5)) setTimeout(()=>sfx("boo"),200);
   if(e.seedOnly) p.echoes = (p.echoes||0)+1;
   p.curEv = null; p.evIdx++;
@@ -436,7 +441,7 @@ function choose(i){
   else if(ordinaryWanted()) startOrdinary();
   if(!p.retired&&!p.urgent&&(chance(.1)||(urgentDue("saison")&&chance(.5)))) maybeUrgent("saison");
   save();
-  ui.toast = `<div class="tchoice">Tu as choisi : ${c.t}</div><div>${txt}</div><div class="delta">${deltaHtml(deltas)}</div>${ui.seeded?`<div class="seed">⏳ Ce choix pourrait avoir des suites…</div>`:""}${p.moments.length>nMoments?une(p.moments.at(-1).split(" · ").slice(1).join(" · "),"",p.year):""}`;
+  ui.toast = `<div class="tchoice">Tu as choisi : ${c.t}</div><div>${txt}</div><div class="delta">${deltaHtml(deltas)}</div>${ui.seeded?`<div class="seed">⏳ Ce choix pourrait avoir des suites…</div>`:""}${becomes?`<div class="seed">${PERSONAS[becomes].i} On commence à te voir comme <b>${PERSONAS[becomes].n.toLowerCase()}</b>. ${PERSONAS[becomes].d}</div>`:""}${p.moments.length>nMoments?une(p.moments.at(-1).split(" · ").slice(1).join(" · "),"",p.year):""}`;
   route();
 }
 

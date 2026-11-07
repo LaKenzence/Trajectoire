@@ -6,7 +6,7 @@ const MINIS = {
   save:{n:"Penalty (gardien)",i:"🧤",help:"Regarde les appuis du tireur pendant son élan, puis clique où part le ballon (ou ← ↑ →) au moment de la frappe."},
   fk:{n:"Coup franc",i:"🌀",help:"Trois temps : la cible, la puissance (faible = lobe le mur mais lent), puis l'effet pour enrouler autour du mur."},
   fksave:{n:"Coup franc (gardien)",i:"🧱",help:"Le ballon passe au-dessus ou autour de ton mur : suis-le et plonge au bon endroit."},
-  shootout:{n:"Tirs au but",i:"🎯",help:"Choisis ton rang de tireur, puis enchaîne. Tes coéquipiers et ton gardien font le reste."},
+  shootout:{n:"Tirs au but",i:"🎯",help:"Tu tires tous les penalties de ton équipe et tu plonges sur ceux d'en face. Choisis d'abord ton rang : premier, ou cinquième."},
   dribble:{n:"Dribble",i:"🌪️",help:"Quand le cercle se referme sur le défenseur, appuie sur la flèche indiquée (↑ ou ↓, ou clic en haut ou en bas)."},
   tacle:{n:"Tacle",i:"🦵",help:"Tacle (Espace ou clic) quand l'attaquant entre dans l'anneau jaune. Méfie-toi des feintes."},
   aerien:{n:"Sortie aérienne",i:"🙌",help:"Sors (Espace ou clic) quand le ballon entre dans le cercle, avant que l'attaquant ne saute."},
@@ -49,6 +49,8 @@ const pct = s=>s&&s.n?Math.round(100*s.ok/s.n)+" %":"–";
 const TRAIN_US = {name:"Trajectoire FC",short:"Nous",a:"#2f9a5f",b:"#ffffff"}, TRAIN_THEM = {name:"Sparring",short:"Sparring",a:"#4f6bd8",b:"#ffffff"};
 function trainingScreen(note){
   p = null; unseed();
+  // le stade 3D et le joueur se chargent pendant qu'on choisit
+  if(typeof Stade3D!=="undefined") Stade3D.load();
   const mine = loadMiniStats();
   $("#app").innerHTML = `<div class="fade" tabindex="-1" style="padding-top:20px">
     <div class="muted">Sans enjeu, autant de fois que tu veux</div><h1><span class="emo" aria-hidden="true">🏋️</span> Entraînement</h1>
@@ -62,15 +64,44 @@ function trainingScreen(note){
   globalMiniStats().then(tot=>document.querySelectorAll(".glob").forEach(el=>{ const s = tot&&tot[/** @type {HTMLElement} */ (el).dataset.k];
     el.textContent = !tot?"disponible depuis le lien claude.ai":s&&s.n>=10?`${pct(s)} (${s.players} joueur${s.players>1?"s":""})`:"pas encore assez de parties"; }));
 }
-function trainPlay(k){
-  const done = (ok,skipped)=>{ if(!skipped) recordMini(k,ok); trainingScreen(`${MINIS[k].i} ${MINIS[k].n} : ${ok?"réussi ✅":"raté ❌"}. Encore une fois ?`); };
+// séance en cours sur un mini-jeu : on enchaîne les essais sans repasser par la liste
+/** @type {{k:string,n:number,ok:number,streak:number,best:number}|null} */
+let trainRun = null;
+function trainPlay(k,again){
+  document.querySelector(".train-res")?.remove();
+  if(!trainRun||trainRun.k!==k) trainRun = {k,n:0,ok:0,streak:0,best:0};
   const base = {skill:.55,pressure:.15,title:`Entraînement · ${MINIS[k].n}`,us:TRAIN_US,them:TRAIN_THEM,number:10,look:loadLook()};
-  // la consigne d’abord, comme en match
-  miniBrief(k,base.title,"").then(go=>{
+  const launch = ()=>DUEL_KINDS.includes(k)
+    ? Duel.play({...base,kind:k,sub:"Contre le sparring-partner"})
+    : Penalty.play({...base,mode:k,sub:"Personne ne te regarde. Ou presque.",youGK:k==="save"||k==="fksave"});
+  // le tuto d'abord (sauf quand on rejoue) ; son second bouton ramène à la liste
+  (again?Promise.resolve(true):miniBrief(k,base.title,"",{simLabel:"← Autres mini-jeux"})).then(go=>{
     if(!go) return trainingScreen();
-    if(DUEL_KINDS.includes(k)) return Duel.play({...base,kind:k,sub:"Contre le sparring-partner"}).then(r=>done(r.success,r.skipped));
-    Penalty.play({...base,mode:k,sub:"Personne ne te regarde. Ou presque.",youGK:k==="save"||k==="fksave"}).then(r=>done(r.success,r.skipped));
+    launch().then(r=>{
+      if(!r.skipped){ recordMini(k,r.success); const t = trainRun; t.n++; if(r.success){ t.ok++; t.streak++; t.best = Math.max(t.best,t.streak); } else t.streak = 0; }
+      trainResult(k,r.success,r.skipped);
+    });
   });
+}
+// le résultat par-dessus la liste : Rejouer (Entrée), revoir le tuto, ou revenir (Échap)
+function trainResult(k,ok,skipped){
+  const t = trainRun, steps = MINI_BRIEF[k]?.steps||[];
+  const tip = !ok&&!skipped&&steps.length ? steps[steps.length-1-(t.n-1)%steps.length] : "";
+  const el = document.createElement("div");
+  el.className = "brief train-res"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); el.setAttribute("aria-label","Résultat de l'essai");
+  el.innerHTML = `<div class="brief-card"><p class="brief-eyebrow">Entraînement · ${esc(MINIS[k].n)}</p>
+    <h2 class="${skipped?"":ok?"ok":"ko"}">${skipped?"Simulé":ok?"Réussi !":"Raté…"}</h2>
+    <div class="train-tally"><span><b>${t.ok}/${t.n}</b>cette séance</span><span><b>${t.streak}</b>série en cours</span><span><b>${t.best}</b>meilleure série</span></div>
+    ${tip?`<p class="train-tip"><b>Astuce :</b> ${esc(tip)}</p>`:""}
+    <button class="btn primary" type="button" data-a="again">Rejouer</button>
+    <button class="btn ghost" type="button" data-a="tuto">Revoir le tuto</button>
+    <button class="btn ghost" type="button" data-a="back">← Autres mini-jeux</button></div>`;
+  document.body.appendChild(el);
+  const act = a=>{ removeEventListener("keydown",key,true); el.remove(); if(a==="again") trainPlay(k,true); else if(a==="tuto") trainPlay(k); else { trainRun = null; trainingScreen(); } };
+  const key = e=>{ if(e.key==="Enter"&&!document.activeElement?.closest(".train-res button")){ e.preventDefault(); e.stopPropagation(); act("again"); } else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); act("back"); } };
+  addEventListener("keydown",key,true);
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>act(/** @type {HTMLElement} */ (b).dataset.a)));
+  /** @type {HTMLElement} */ (el.querySelector("[data-a=again]")).focus({preventScroll:true});
 }
 // dernier avatar créé, pour que le joueur de l'entraînement te ressemble
 const loadLook = ()=>{ try{ return JSON.parse(localStorage.getItem("trajectoire_look"))||null; }catch(e){ return null; } };

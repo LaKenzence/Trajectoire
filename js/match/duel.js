@@ -14,6 +14,10 @@ const Duel = (() => {
   let D = null;
 
   function play(opts) {
+    const wait = typeof Stade3D !== "undefined" ? Stade3D.whenReady(1200) : Promise.resolve(false);
+    return wait.then(() => start(opts));
+  }
+  function start(opts) {
     return new Promise(resolve => {
       if (D) close();
       D = { opts, resolve, state: "intro", t0: performance.now(), now: performance.now(), stage: 0, result: null, flash: null };
@@ -43,6 +47,7 @@ const Duel = (() => {
     el.querySelector(".pen-help").textContent = HELP[o.kind];
     document.body.appendChild(el);
     D.el = el; D.cv = el.querySelector("canvas"); D.ctx = D.cv.getContext("2d");
+    D.v3 = typeof Stade3D !== "undefined" && Stade3D.ok() ? Stade3D.attachDuel(el.querySelector(".pen-stage"), { ...o, number: o.number }, CAST[o.kind]) : null;
     D.dpr = Math.min(2, window.devicePixelRatio || 1); D.cv.width = W * D.dpr; D.cv.height = H * D.dpr;
     // au doigt : glisser vers le haut ou le bas fait le crochet ; un simple appui joue selon la moitié touchée (ou tacle, sort, passe)
     D.cv.addEventListener("pointerdown", e => { D.down = { y: e.clientY, half: (e.clientY - D.cv.getBoundingClientRect().top) / D.cv.getBoundingClientRect().height * H < H / 2 ? "up" : "down" }; });
@@ -65,7 +70,7 @@ const Duel = (() => {
     hint({ dribble: "Balle au pied… prépare ton dribble !", tacle: "Il arrive sur toi…", aerien: "Le centre arrive…", passe: "Lève la tête, cherche l'ouverture…" }[o.kind]);
   }
   function hint(t) { if (D) D.el.querySelector(".pen-hint").textContent = t; }
-  function close() { if (!D) return; cancelAnimationFrame(D.raf); removeEventListener("keydown", D.onKey, true); D.el.remove(); D = null; }
+  function close() { if (!D) return; cancelAnimationFrame(D.raf); removeEventListener("keydown", D.onKey, true); if (D.v3) D.v3.detach(); D.el.remove(); D = null; }
 
   function end(success, text) {
     if (D.state === "end") return;
@@ -85,6 +90,7 @@ const Duel = (() => {
   // ---------- entrée du joueur ----------
   function act(dir) {
     if (!D || D.state !== "play") return;
+    D.acted = true;
     const k = D.opts.kind, t = D.now - D.t0;
     if (k === "dribble") {
       const d = D.defs[D.stage]; if (!d || d.cue == null) return;
@@ -182,6 +188,7 @@ const Duel = (() => {
     else { c.strokeRect(W - 140, 90, 130, 240); c.strokeRect(W - 55, 160, 45, 100); c.fillStyle = "rgba(255,255,255,.9)"; c.fillRect(W - 10, 175, 8, 70); }
   }
   function render() {
+    if (D.v3) return render3d();
     const c = D.ctx, o = D.opts, k = o.kind, t = D.now - D.t0, us = o.us.a, them = o.them.a === us ? "#f2f2f2" : o.them.a;
     // caméra qui zoome et suit l'action (plus serrée pour le dribble, plus large pour la passe), avec une secousse sur la fin
     const sh = D.shake > 0 && !reduceMotion ? D.shake : 0, dp = D.dpr;
@@ -244,9 +251,119 @@ const Duel = (() => {
       c.restore();
     }
   }
+  // ---------- en 3D : le même moteur, filmé de côté dans le stade ----------
+  // les acteurs de chaque geste (toi en premier) ; Stade3D les habille aux couleurs des équipes
+  const CAST = {
+    dribble: [{ id: "me", team: "us", you: true }, { id: "d0", team: "them" }, { id: "d1", team: "them" }],
+    tacle: [{ id: "me", team: "us", you: true }, { id: "att", team: "them" }],
+    aerien: [{ id: "me", team: "us", you: true, gk: true }, { id: "att", team: "them" }, { id: "cross", team: "them" }],
+    passe: [{ id: "me", team: "us", you: true }, { id: "mate", team: "us", number: 9 }, { id: "d0", team: "them" }, { id: "d1", team: "them" }, { id: "d2", team: "them" }]
+  };
+  // en fin de geste : depuis combien de secondes, et pourquoi (le texte final dit ce qui s'est passé)
+  const since = () => D.state === "end" ? (D.now - D.endAt) / 1000 : -1;
+  const why = () => D.flash ? D.flash.text : "";
+  function render3d() {
+    const o = D.opts, k = o.kind, t = (D.now - D.t0) / 1000, play = D.state === "play", ended = D.state === "end", e = since();
+    const A = {};
+    let ballP = null, camX = 400;
+    if (k === "dribble") {
+      const lastDir = D.me.y - (D.prevY ?? D.me.y); D.prevY = D.me.y;
+      // raté : s'il t'a taclé (tu n'as rien fait), il glisse et tu tombes ; si tu as joué trop tôt ou du mauvais côté,
+      // il te prend simplement le ballon. Un défenseur effacé ne tombe pas : il se retourne et te regarde filer.
+      const lost = ended && !D.result, tackled = lost && /TACLÉ/.test(why());
+      A.me = { x: D.me.x, y: D.me.y, face: [1, lastDir * 3], anim: tackled && e > .25 ? "chute" : lost ? "attente" : "course", time: tackled ? e - .25 : lost ? e : t * 1.25, loop: !tackled };
+      D.defs.forEach((d, i) => {
+        const cur = lost && i === D.stage, back = d.beaten && D.me.x > d.x;
+        A["d" + i] = { x: d.x, y: d.y, face: back ? [1, (D.me.y - d.y) / 300] : [-1, (D.me.y - d.y) / 300], anim: cur ? (tackled ? "tacle" : "controle") : d.beaten ? "attente" : "gb_attente", time: cur ? (tackled ? e + .1 : 1.2 + e) : t + i * 1.3, loop: !cur };
+      });
+      const stealer = lost ? D.defs[D.stage] : null;
+      ballP = stealer ? { x: lerp(D.me.x + 16, stealer.x - 14, cl(e * 3, 0, 1)), y: lerp(D.me.y + 4, stealer.y + 4, cl(e * 3, 0, 1)), h: 0 } : { x: D.me.x + 16, y: D.me.y + 4, h: 0 };
+      camX = D.me.x + 140;
+    }
+    if (k === "tacle") {
+      const won = ended && D.result, foul = ended && /FAUTE/.test(why()), acted = !!D.acted;
+      // effacé ou trop tard : l'attaquant poursuit sa course ; taclé : il tombe
+      const gone = ended && !won && !foul ? e * 140 : 0;
+      A.att = { x: D.att.x - gone, y: D.att.y, face: [-1, 0], anim: won || foul ? "chute" : "course", time: won || foul ? e : t * 1.25, loop: !(won || foul) };
+      A.me = { x: D.me.x, y: D.me.y, face: [1, (D.att.y - D.me.y) / 200], anim: acted ? "tacle_glisse" : "gb_attente", time: acted ? .5 + e : t, loop: !acted, ip: !acted };
+      ballP = won ? { x: D.me.x + 70 + e * 60, y: D.me.y + 30, h: 0 } : { x: D.att.x - gone - 16, y: D.att.y + 4, h: 0 };
+      camX = (D.me.x + D.att.x) / 2;
+    }
+    if (k === "aerien") {
+      const u = play || ended ? cl((D.now - D.t0) / D.dur, 0, 1) : 0, sx = 650, sy = 40, tx = 175, ty = 220;
+      const caught = ended && D.result;
+      A.cross = { x: sx + 30, y: sy + 10, face: [-1, .3], anim: "frappe2", time: play || ended ? .31 + t : 0 };
+      A.att = { x: D.att.x, y: D.att.y, face: [-1, -.2], anim: u > .7 ? "tete" : "attente", time: u > .7 ? .85 + (u - .7) * D.dur / 1000 : t, loop: u <= .7 };
+      A.me = { x: caught ? lerp(D.me.x, tx - 10, cl(e * 3, 0, 1)) : D.me.x, y: D.me.y, face: [1, 0], anim: caught ? "gb_arret_haut" : ended ? "gb_rate" : "gb_attente", time: caught ? .55 + e : ended ? e + .3 : t, loop: !ended };
+      const hold = caught ? { x: A.me.x + 10, y: D.me.y, h: 62 } : null;
+      camX = 250;
+      if (D.state !== "intro") ballP = hold || { x: lerp(sx, tx, u), y: lerp(sy, ty, u), h: Math.sin(Math.PI * Math.min(u, .98)) * 110 + (1 - u) * 20 };
+    }
+    if (k === "passe") {
+      const m = mate(), dt = 1 / 60;
+      const vel = (fy, fy2) => (fy2 - fy) / dt;
+      const ok = ended && D.result;
+      A.me = { x: D.me.x, y: D.me.y, face: [1, (m.y - D.me.y) / 540], anim: ended ? "frappe2" : "attente", time: ended ? .31 + e : t, loop: !ended };
+      const mv = Math.cos((D.now - D.t0) / 1000 * 1.3);
+      A.mate = { x: m.x, y: m.y, face: [-.3, mv], anim: "course", time: t * 1.1, loop: true };
+      D.defs.forEach((d, i) => { const q = defPos(d), dv = Math.cos((D.now - D.t0) / 1000 * d.sp + d.ph); A["d" + i] = { x: q.x, y: q.y, face: [-.5, dv], anim: "course", time: t + i * .3, loop: true }; });
+      if (ended) { const f = cl(e / .5, 0, 1); const to = ok ? m : defPos(D.defs.reduce((a, d) => Math.abs(defPos(d).y - D.me.y) < Math.abs(defPos(a).y - D.me.y) ? d : a)); ballP = { x: lerp(D.me.x + 16, to.x, e < .12 ? 0 : f), y: lerp(D.me.y + 4, to.y, e < .12 ? 0 : f), h: Math.sin(Math.PI * f) * 8 }; }
+      else ballP = { x: D.me.x + 16, y: D.me.y + 4, h: 0 };
+      camX = 400;
+    }
+    D.v3.drawDuel({ now: D.now, actors: A, ball: ballP, camX, dist: k === "passe" ? 19 : k === "aerien" ? 13.5 : 12.5, shake: D.shake || 0, intro: D.state === "intro" });
+    D.shake = Math.max(0, (D.shake || 0) - 0.03);
+    overlay3d();
+  }
+  // les repères du geste, posés au sol de la scène 3D, puis l'interface à l'échelle de l'écran
+  function overlay3d() {
+    const c = D.ctx, o = D.opts, k = o.kind, P = (x, y, h) => D.v3.toScreen(x, y, h || 0), dp = D.dpr, t = D.now - D.t0;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, D.cv.width, D.cv.height); c.setTransform(dp, 0, 0, dp, 0, 0);
+    const ring = (x, y, r, from = 0, to = Math.PI * 2) => { c.beginPath(); for (let i = 0; i <= 40; i++) { const a = from + (to - from) * i / 40, q = P(x + Math.cos(a) * r, y + Math.sin(a) * r); i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y); } };
+    const label = (txt, x, y, h, col) => { const q = P(x, y, h); c.font = '800 18px "Barlow Condensed", Impact, sans-serif'; c.textAlign = "center"; c.lineWidth = 4; c.strokeStyle = "rgba(8,13,24,.85)"; c.strokeText(txt, q.x, q.y); c.fillStyle = col; c.fillText(txt, q.x, q.y); };
+    if (k === "dribble") {
+      const d = D.defs[D.stage];
+      if (d && d.cue != null && D.state === "play") {
+        const inWin = d.ring <= D.win;
+        ring(d.x, d.y, 18 + D.win); c.fillStyle = inWin ? "rgba(95,211,141,.4)" : "rgba(95,211,141,.16)"; c.fill();
+        ring(d.x, d.y, 18 + d.ring); c.strokeStyle = inWin ? "#5fd38d" : "#f5c542"; c.lineWidth = 4; c.stroke();
+        const q = P(d.x, d.y, 2.6); c.font = '900 48px "Barlow Condensed", Impact, sans-serif'; c.textAlign = "center"; c.lineWidth = 6; c.strokeStyle = "rgba(8,13,24,.85)";
+        c.strokeText(d.dir < 0 ? "↑" : "↓", q.x, q.y); c.fillStyle = inWin ? "#5fd38d" : "#fff"; c.fillText(d.dir < 0 ? "↑" : "↓", q.x, q.y);
+      }
+    }
+    if (k === "tacle" && D.state !== "end") {
+      c.beginPath(); ring(D.me.x, D.me.y, 60, -0.9, 0.9); const outer = []; for (let i = 40; i >= 0; i--) { const a = -0.9 + 1.8 * i / 40; outer.push(P(D.me.x + Math.cos(a) * (60 + D.band), D.me.y + Math.sin(a) * (60 + D.band))); }
+      outer.forEach(q => c.lineTo(q.x, q.y)); c.closePath(); c.fillStyle = "rgba(245,197,66,.45)"; c.fill(); c.strokeStyle = "rgba(245,197,66,.9)"; c.lineWidth = 2; c.stroke();
+    }
+    if (k === "aerien" && D.state !== "end") {
+      const u = cl(t / D.dur, 0, 1), on = D.state === "play" && u >= D.catchU && u <= D.catchU + D.winU;
+      ring(175, 220, 26); c.fillStyle = on ? "rgba(95,211,141,.4)" : "rgba(245,197,66,.12)"; c.fill(); c.strokeStyle = on ? "#5fd38d" : "rgba(245,197,66,.9)"; c.lineWidth = 3; c.stroke();
+    }
+    if (k === "passe" && D.state === "play") {
+      const m = mate(), a = P(D.me.x, D.me.y, .05), b = P(m.x, m.y, .05), open = laneOpen();
+      c.strokeStyle = open ? "rgba(95,211,141,.95)" : "rgba(255,107,107,.8)"; c.lineWidth = 5; c.setLineDash([12, 9]); c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); c.setLineDash([]);
+    }
+    if (D.state !== "end") label("TOI", D.me.x, D.me.y, 2.25, "#f5c542");
+    if (D.parts) {
+      const dt = Math.min(50, D.now - (D.prev || D.now));
+      D.parts = D.parts.filter(q => (q.age += dt) < q.life);
+      for (const q of D.parts) { q.x += q.vx * dt; q.y += q.vy * dt; const s = P(q.x, q.y, 1.2); c.globalAlpha = 1 - q.age / q.life; c.fillStyle = q.c; c.fillRect(s.x - 2, s.y - 2, 4, 4); }
+      c.globalAlpha = 1;
+    }
+    if (k === "passe" && D.state === "play") { c.fillStyle = "rgba(8,13,24,.7)"; c.fillRect(300, 390, 200, 14); c.fillStyle = "#ff6b6b"; c.fillRect(300, 390, 200 * cl(1 - t / D.limit, 0, 1), 14); }
+    if (D.flash) {
+      const age = (D.now - D.flash.start) / 1000, sc = reduceMotion ? 1 : 1 + Math.max(0, 0.3 - age);
+      c.save(); c.globalAlpha = cl(1.6 - age, 0, 1); c.translate(400, 90); c.scale(sc, sc);
+      c.font = '800 64px "Barlow Condensed", Impact, sans-serif'; c.textAlign = "center"; c.textBaseline = "middle";
+      c.lineWidth = 8; c.strokeStyle = "rgba(8,13,24,.85)"; c.strokeText(D.flash.text, 0, 0); c.fillStyle = D.flash.color; c.fillText(D.flash.text, 0, 0);
+      c.restore();
+    }
+  }
+
   function frame(ts) { if (!D) return; D.prev = D.now; D.now = ts; update(); if (!D) return; render(); D.raf = requestAnimationFrame(frame); }
 
-  return { play, active: () => !!D };
+  // debug : l’état du geste en cours (pour les essais dans la console)
+  return { play, active: () => !!D, debug: () => D };
 })();
 
 /* ============ Branchements ============ */

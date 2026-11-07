@@ -4,8 +4,18 @@
     {
       "name": "trajectoire",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["tools/serve.js"],
+      "runtimeArgs": [
+        "tools/serve.js"
+      ],
       "port": 5182
+    },
+    {
+      "name": "mixamo",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/mixamo.js"
+      ],
+      "port": 5183
     }
   ]
 }
