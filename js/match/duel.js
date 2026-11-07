@@ -5,7 +5,7 @@ const Duel = (() => {
   const lerp = (a, b, t) => a + (b - a) * t, cl = (v, a, b) => Math.max(a, Math.min(b, v)), rnd = (a, b) => a + Math.random() * (b - a);
   const snd = n => { if (typeof sfx === "function") sfx(n); };
   const HELP = {
-    dribble: "Deux défenseurs. Quand le cercle se referme sur l'un d'eux, appuie sur la flèche indiquée (↑ ou ↓, ou clique en haut ou en bas du terrain).",
+    dribble: "Deux défenseurs. Quand l'anneau se referme dans la zone verte, glisse le doigt dans le sens de la flèche (ou flèche ↑ ↓, ou appui en haut ou en bas du terrain).",
     tacle: "L'attaquant fonce sur toi. Tacle (Espace ou clic) quand il entre dans l'anneau jaune : trop tôt il t'efface, trop tard c'est la faute.",
     aerien: "Centre dans ta surface. Sors (Espace ou clic) quand le ballon arrive dans le cercle, avant que l'attaquant ne saute.",
     passe: "Trouve l'ouverture : passe (Espace ou clic) quand la ligne vers ton attaquant est verte. Le pressing arrive vite."
@@ -44,7 +44,13 @@ const Duel = (() => {
     document.body.appendChild(el);
     D.el = el; D.cv = el.querySelector("canvas"); D.ctx = D.cv.getContext("2d");
     D.dpr = Math.min(2, window.devicePixelRatio || 1); D.cv.width = W * D.dpr; D.cv.height = H * D.dpr;
-    D.cv.addEventListener("pointerdown", e => { const r = D.cv.getBoundingClientRect(); act((e.clientY - r.top) / r.height * H < H / 2 ? "up" : "down"); });
+    // au doigt : glisser vers le haut ou le bas fait le crochet ; un simple appui joue selon la moitié touchée (ou tacle, sort, passe)
+    D.cv.addEventListener("pointerdown", e => { D.down = { y: e.clientY, half: (e.clientY - D.cv.getBoundingClientRect().top) / D.cv.getBoundingClientRect().height * H < H / 2 ? "up" : "down" }; });
+    D.cv.addEventListener("pointerup", e => {
+      if (!D || !D.down) return;
+      const dy = e.clientY - D.down.y, half = D.down.half; D.down = null;
+      act(Math.abs(dy) > 25 ? (dy < 0 ? "up" : "down") : half);
+    });
     el.querySelector(".pen-skip").addEventListener("click", skip);
     D.onKey = e => {
       if (!D) return;
@@ -65,6 +71,10 @@ const Duel = (() => {
     if (D.state === "end") return;
     D.state = "end"; D.result = success; D.endAt = D.now;
     D.flash = { text, color: success ? "#f5c542" : "#ff6b6b", start: D.now };
+    // geste réussi : paillettes autour de toi et légère secousse ; le téléphone vibre dans les deux cas
+    D.shake = success ? 0.8 : 0.4;
+    if (success && !reduceMotion && D.me) for (let i = 0; i < 50; i++) { const a = rnd(0, Math.PI * 2), v = rnd(0.06, 0.3); (D.parts = D.parts || []).push({ x: D.me.x, y: D.me.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(600, 1100), age: 0, c: Math.random() < 0.6 ? "#f5c542" : "#ffffff" }); }
+    if (!D.skipped && navigator.vibrate) { try { navigator.vibrate(success ? [30, 40, 80] : 160); } catch (e) {} }
     hint(success ? "Réussi !" : "Raté…");
     snd(success ? "goal" : "concede");
     const session = D;
@@ -133,12 +143,26 @@ const Duel = (() => {
   }
 
   // ---------- dessin ----------
-  function player(x, y, color, label, you) {
-    const c = D.ctx;
-    c.fillStyle = "rgba(0,0,0,.3)"; c.beginPath(); c.ellipse(x, y + 12, 14, 5, 0, 0, 7); c.fill();
-    c.fillStyle = color; c.beginPath(); c.arc(x, y, 13, 0, 7); c.fill();
-    c.strokeStyle = you ? "#f5c542" : "rgba(255,255,255,.7)"; c.lineWidth = you ? 3 : 1.5; c.stroke();
-    if (label) { c.fillStyle = "#fff"; c.font = '800 14px "Barlow Condensed", Impact, sans-serif'; c.textAlign = "center"; c.fillText(label, x, y - 20); }
+  // joueur vu de dessus : ombre, épaules aux couleurs du club, bras qui balancent, tête ; face au jeu (droite pour ton équipe)
+  function player(x, y, color, label, you, face = you || label ? 1 : -1) {
+    const c = D.ctx, sw = Math.sin(D.now / 120 + x * 0.05) * 3;
+    c.save(); c.translate(x, y);
+    if (you) { c.fillStyle = "rgba(245,197,66,.25)"; c.beginPath(); c.arc(0, 0, 27, 0, 7); c.fill(); }
+    c.fillStyle = "rgba(0,0,0,.35)"; c.beginPath(); c.ellipse(3, 6, 18, 11, 0, 0, 7); c.fill();
+    c.scale(face, 1);
+    // bras
+    c.strokeStyle = color; c.lineCap = "round"; c.lineWidth = 6;
+    c.beginPath(); c.moveTo(-2, -14); c.lineTo(6 + sw, -19); c.stroke();
+    c.beginPath(); c.moveTo(-2, 14); c.lineTo(6 - sw, 19); c.stroke();
+    // épaules et maillot
+    c.fillStyle = color; c.beginPath(); c.ellipse(0, 0, 11, 16, 0, 0, 7); c.fill();
+    c.fillStyle = "rgba(255,255,255,.18)"; c.beginPath(); c.ellipse(-3, -4, 6, 9, 0, 0, 7); c.fill();
+    c.strokeStyle = you ? "#f5c542" : "rgba(255,255,255,.75)"; c.lineWidth = you ? 2.5 : 1.4; c.beginPath(); c.ellipse(0, 0, 11, 16, 0, 0, 7); c.stroke();
+    // tête
+    c.fillStyle = "#2a1d14"; c.beginPath(); c.arc(1, 0, 7, 0, 7); c.fill();
+    c.fillStyle = "rgba(255,255,255,.15)"; c.beginPath(); c.arc(-1, -2, 3, 0, 7); c.fill();
+    c.restore();
+    if (label) { c.fillStyle = you ? "#f5c542" : "#fff"; c.font = '800 15px "Barlow Condensed", Impact, sans-serif'; c.textAlign = "center"; c.lineWidth = 4; c.strokeStyle = "rgba(8,13,24,.8)"; c.strokeText(label, x, y - 25); c.fillText(label, x, y - 25); }
   }
   function ball(x, y, h = 0) {
     const c = D.ctx;
@@ -159,15 +183,26 @@ const Duel = (() => {
   }
   function render() {
     const c = D.ctx, o = D.opts, k = o.kind, t = D.now - D.t0, us = o.us.a, them = o.them.a === us ? "#f2f2f2" : o.them.a;
-    c.setTransform(D.dpr, 0, 0, D.dpr, 0, 0);
+    // caméra qui zoome et suit l'action (plus serrée pour le dribble, plus large pour la passe), avec une secousse sur la fin
+    const sh = D.shake > 0 && !reduceMotion ? D.shake : 0, dp = D.dpr;
+    const s = { dribble: 1.7, tacle: 1.45, aerien: 1.25, passe: 1.3 }[k];
+    const want = k === "dribble" ? D.me.x + 140 : k === "tacle" ? (D.me.x + D.att.x) / 2 : 390;
+    const hw = W / (2 * s), hh = H / (2 * s);
+    D.camX = D.camX == null || reduceMotion ? want : lerp(D.camX, want, 0.08);
+    const cx = cl(D.camX, hw, W - hw), cy = cl(210, hh, H - hh);
+    c.setTransform(dp * s, 0, 0, dp * s, dp * (W / 2 - cx * s + Math.sin(D.now * 0.09) * 7 * sh), dp * (H / 2 - cy * s + Math.cos(D.now * 0.11) * 5 * sh));
+    D.shake = Math.max(0, (D.shake || 0) - 0.03);
     pitch();
     if (k === "dribble") {
       D.defs.forEach(d => player(d.x, d.y + (d.beaten ? Math.sin(d.spin) * 6 : 0), them, ""));
       const d = D.defs[D.stage];
       if (d && d.cue != null && D.state === "play") {
-        c.strokeStyle = d.ring <= D.win ? "#5fd38d" : "#f5c542"; c.lineWidth = 3; c.beginPath(); c.arc(d.x, d.y, 16 + d.ring, 0, 7); c.stroke();
-        c.strokeStyle = "rgba(255,255,255,.4)"; c.beginPath(); c.arc(d.x, d.y, 16 + D.win, 0, 7); c.stroke();
-        c.fillStyle = "#fff"; c.font = '800 34px "Barlow Condensed", Impact, sans-serif'; c.textAlign = "center"; c.fillText(d.dir < 0 ? "↑" : "↓", d.x, d.y - 40);
+        // la zone verte : le bon moment ; l'anneau se referme dessus
+        const inWin = d.ring <= D.win;
+        c.fillStyle = inWin ? "rgba(95,211,141,.35)" : "rgba(95,211,141,.14)"; c.beginPath(); c.arc(d.x, d.y, 18 + D.win, 0, 7); c.fill();
+        c.strokeStyle = inWin ? "#5fd38d" : "#f5c542"; c.lineWidth = 4; c.beginPath(); c.arc(d.x, d.y, 18 + d.ring, 0, 7); c.stroke();
+        c.fillStyle = inWin ? "#5fd38d" : "#fff"; c.font = '900 42px "Barlow Condensed", Impact, sans-serif'; c.textAlign = "center";
+        c.lineWidth = 5; c.strokeStyle = "rgba(8,13,24,.8)"; c.strokeText(d.dir < 0 ? "↑" : "↓", d.x, d.y - 46); c.fillText(d.dir < 0 ? "↑" : "↓", d.x, d.y - 46);
       }
       player(D.me.x, D.me.y, us, "TOI", true); ball(D.me.x + 16, D.me.y + 4);
     }
@@ -191,9 +226,16 @@ const Duel = (() => {
       D.defs.forEach(d => { const q = defPos(d); player(q.x, q.y, them, ""); });
       player(m.x, m.y, us, "9"); player(D.me.x, D.me.y, us, "TOI", true);
       if (D.state === "end" && D.result) ball(lerp(D.me.x, m.x, cl((D.now - D.endAt) / 500, 0, 1)), lerp(D.me.y, m.y, cl((D.now - D.endAt) / 500, 0, 1))); else ball(D.me.x + 16, D.me.y + 4);
-      // chrono du pressing
-      if (D.state === "play") { c.fillStyle = "rgba(8,13,24,.7)"; c.fillRect(300, 380, 200, 14); c.fillStyle = "#ff6b6b"; c.fillRect(300, 380, 200 * cl(1 - t / D.limit, 0, 1), 14); }
     }
+    if (D.parts) {
+      const dt = Math.min(50, D.now - (D.prev || D.now));
+      D.parts = D.parts.filter(q => (q.age += dt) < q.life);
+      for (const q of D.parts) { q.x += q.vx * dt; q.y += q.vy * dt; c.globalAlpha = 1 - q.age / q.life; c.fillStyle = q.c; c.fillRect(q.x - 2, q.y - 2, 4, 4); }
+      c.globalAlpha = 1;
+    }
+    // la suite (chrono, texte final) reste à l'échelle de l'écran
+    c.setTransform(dp, 0, 0, dp, 0, 0);
+    if (k === "passe" && D.state === "play") { c.fillStyle = "rgba(8,13,24,.7)"; c.fillRect(300, 390, 200, 14); c.fillStyle = "#ff6b6b"; c.fillRect(300, 390, 200 * cl(1 - t / D.limit, 0, 1), 14); }
     if (D.flash) {
       const age = (D.now - D.flash.start) / 1000, sc = reduceMotion ? 1 : 1 + Math.max(0, 0.3 - age);
       c.save(); c.globalAlpha = cl(1.6 - age, 0, 1); c.translate(400, 210); c.scale(sc, sc);

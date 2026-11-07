@@ -21,6 +21,9 @@ const Penalty = (() => {
   // coup franc : ballon décalé, mur à mi-chemin (en profondeur), gardien qui couvre le côté opposé au mur
   const FK = { y: 500, wallY: 425, wallU: 0.36, half: 60, top: 342, curlPx: 120 };
   const STYLES = { place: "Placé", force: "En force", panenka: "Panenka" };
+  // caméra rapprochée derrière le tireur : le monde (but, gardien, ballon) est agrandi autour de ce point,
+  // les jauges et les textes restent à l'échelle de l'écran
+  const CAM = { s: 1.28, x: 400, y: 300 };
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const lerp = (a, b, t) => a + (b - a) * t;
   const cl = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -36,6 +39,7 @@ const Penalty = (() => {
     return new Promise(resolve => {
       if (S) { const old = S; close(); old.resolve({ success: false, us: 0, them: 0, mine: old.mine }); }
       S = { opts, resolve, us: [], them: [], kickIndex: 0, kick: null, flash: null, netShake: 0, state: "intro", t0: performance.now(), now: performance.now(), aim: null, power: 0,
+        shake: 0, trail: [], parts: [], swipe: null, dt: 16,
         style: "place", curl: 0, mine: { shots: 0, goals: 0, faced: 0, saves: 0 }, kHome: HOME,
         pref: Math.random() < 0.5 ? -1 : 1, fkSide: Math.random() < 0.5 ? -1 : 1 };
       if (isFk()) {
@@ -90,8 +94,8 @@ const Penalty = (() => {
     if (S.opts.mode === "shootout" && !S.opts.youGK && S.myRank == null) { S.state = "rank"; showGroup(".pen-rank", true); hint("Quel tireur veux-tu être ?"); renderBoard(); return; }
     S.turn = turn();
     S.style = "place"; S.tell = 0;
-    if (S.turn.ctl === "shoot") { S.state = "style"; showStyles(true); hint(S.opts.mode === "shootout" ? "À toi de tirer ! Choisis ton tir : 1, 2 ou 3." : "Choisis ton tir : 1 Placé · 2 En force · 3 Panenka"); }
-    else if (S.turn.ctl === "fk") { S.state = "aim"; S.t0 = S.now; hint("Vise : contourne le mur ou passe par-dessus"); }
+    if (S.turn.ctl === "shoot") { S.state = "style"; showStyles(true); hint(S.opts.mode === "shootout" ? "À toi de tirer ! Glisse le doigt depuis le ballon, ou choisis ton tir : 1, 2 ou 3." : "Glisse le doigt depuis le ballon vers le but, ou choisis : 1 Placé · 2 En force · 3 Panenka"); }
+    else if (S.turn.ctl === "fk") { S.state = "aim"; S.t0 = S.now; hint("Glisse depuis le ballon en courbant le geste pour enrouler, ou clique pour viser"); }
     else {
       S.state = "prep"; S.prepStart = S.now;
       if (S.turn.ctl === "dive") {
@@ -133,7 +137,7 @@ const Penalty = (() => {
     S.style = st; showStyles(false);
     if (st === "panenka") { S.state = "panenka"; S.t0 = S.now; hint("Panenka… tout en douceur"); return; }
     S.state = "aim"; S.t0 = S.now;
-    hint(st === "force" ? "En force : le viseur file plus vite, vise bien !" : "Vise : clique pour fixer la cible");
+    hint(st === "force" ? "En force : glisse depuis le ballon, ou fixe le viseur qui file plus vite" : "Glisse depuis le ballon vers le but, ou clique pour fixer le viseur");
   }
 
   function finish(w) {
@@ -180,10 +184,10 @@ const Penalty = (() => {
     const o = S.opts, el = document.createElement("div");
     el.className = "penmode" + (o.mode === "shootout" ? " shootout" : "");
     el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", o.title);
-    const shootHelp = "Choisis ton tir (1, 2 ou 3), puis clique ou appuie sur Espace une fois pour viser, une deuxième fois pour la puissance. Trop fort, et le ballon s'envole. Sous la pression, le viseur tremble.";
+    const shootHelp = "Au doigt ou à la souris : glisse depuis le ballon vers le but. La direction choisit le coin, la vitesse donne la puissance, un geste plus long monte le ballon. Ou choisis ton tir (1, 2 ou 3) puis clique (ou Espace) pour viser, puis pour la puissance. Trop fort, et le ballon s'envole.";
     const help = o.mode === "save" ? "Le tireur peut trahir son côté dans ses appuis… ou feinter. Quand il frappe, clique là où part le ballon. Au clavier : ← ↑ →."
       : o.mode === "shoot" ? shootHelp
-      : o.mode === "fk" ? "Trois clics (ou Espace) : la cible, la puissance, puis l'effet. Peu de puissance : le ballon lobe le mur, mais il est lent. L'effet le fait tourner autour du mur."
+      : o.mode === "fk" ? "Glisse depuis le ballon en courbant ton geste : la courbe donne l'effet autour du mur, un geste lent lobe le mur. Ou trois clics (ou Espace) : la cible, la puissance, puis l'effet."
       : o.mode === "fksave" ? "Le ballon passe au-dessus ou autour du mur : clique là où il va, ou ← ↑ →. Attention à l'effet !"
       : o.youGK ? "Tu es dans les cages pour chaque tir adverse : lis les appuis du tireur et clique où part le ballon, ou ← ↑ →." : "Tu tires le premier penalty (et les plus chauds de la mort subite). " + shootHelp;
     // aide de la sous-ligne : le rapport du staff sur le tireur adverse, plus ou moins fiable
@@ -204,7 +208,20 @@ const Penalty = (() => {
     el.querySelector(".pen-help").textContent = help;
     document.body.appendChild(el);
     S.el = el; S.cv = el.querySelector("canvas"); S.ctx = S.cv.getContext("2d");
-    S.cv.addEventListener("pointerdown", e => { const r = S.cv.getBoundingClientRect(); act((e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H); });
+    // au doigt : glisser depuis le ballon tire (direction = coin, vitesse = puissance, courbe = effet) ; un simple appui joue comme avant
+    S.cv.addEventListener("pointerdown", e => {
+      const w = toWorld(e);
+      if (canSwipe() && Math.hypot(w.x - rest().x, w.y - rest().y) < 150) {
+        S.swipe = { x0: w.x, y0: w.y, t0: performance.now(), pts: [w], cur: w };
+        try { S.cv.setPointerCapture(e.pointerId); } catch (err) {}
+        return;
+      }
+      act(w.x, w.y);
+    });
+    S.cv.addEventListener("pointermove", e => { if (S && S.swipe) { const w = toWorld(e); S.swipe.cur = w; if (S.swipe.pts.length < 60) S.swipe.pts.push(w); } });
+    const up = e => { if (S && S.swipe) { S.swipe.cur = toWorld(e); swipeShoot(); } };
+    S.cv.addEventListener("pointerup", up);
+    S.cv.addEventListener("pointercancel", () => { if (S) S.swipe = null; });
     el.querySelector(".pen-skip").addEventListener("click", skip);
     el.querySelectorAll(".pen-rank button").forEach(b => b.addEventListener("click", () => chooseRank(+/** @type {HTMLElement} */ (b).dataset.rank)));
     el.querySelectorAll(".pen-shot button").forEach(b => b.addEventListener("click", () => chooseStyle(/** @type {HTMLElement} */ (b).dataset.style)));
@@ -233,6 +250,38 @@ const Penalty = (() => {
   }
 
   function hint(t) { if (S) S.el.querySelector(".pen-hint").textContent = t; }
+
+  // ---------- caméra et tir au doigt ----------
+  // décalage de la caméra (secousse sur un but) et passage écran → monde pour les clics et les glissés
+  const shakeAt = () => S.shake > 0 && !reduceMotion ? { x: Math.sin(S.now * 0.09) * 9 * S.shake, y: Math.cos(S.now * 0.11) * 7 * S.shake } : { x: 0, y: 0 };
+  function camOrigin() { const sh = shakeAt(); return { x: CAM.x - CAM.x * CAM.s + sh.x, y: CAM.y - CAM.y * CAM.s + sh.y }; }
+  function toWorld(e) {
+    const r = S.cv.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W, sy = (e.clientY - r.top) / r.height * H, o = camOrigin();
+    return { x: (sx - o.x) / CAM.s, y: (sy - o.y) / CAM.s };
+  }
+  const canSwipe = () => S.turn && (S.turn.ctl === "shoot" || S.turn.ctl === "fk") && (S.state === "style" || S.state === "aim");
+  function swipeShoot() {
+    const s = S.swipe; S.swipe = null;
+    if (!canSwipe()) return;
+    const e = s.cur, dx = e.x - s.x0, dy = e.y - s.y0, len = Math.hypot(dx, dy), ms = Math.max(60, performance.now() - s.t0);
+    // trop court ou vers le bas : c'est un appui, il garde son rôle d'origine (choisir le tir placé, fixer le viseur)
+    if (len < 28 || dy > -20) { act(e.x, e.y); return; }
+    if (S.state === "style") { S.style = "place"; showStyles(false); }
+    // le geste est prolongé jusqu'au but, adouci (0,62) pour qu'un geste naturel vise le coin plutôt que le poteau
+    const b = rest(), toGoal = (b.y - 191) / -dy * 0.62;
+    const p = cl((len / ms - 0.22) / 1.1, 0.12, 1), height = cl((len - 70) / 200, 0, 1);
+    // le talent et la pression décident de la précision du geste
+    const err = (1 - S.opts.skill) * 14 + pressureNow() * 18;
+    S.aim = { x: cl(b.x + dx * toGoal, 120, 680) + rnd(-err, err), y: G.b - 12 - height * (G.b - G.t - 24) + rnd(-err, err) };
+    S.power = p;
+    if (isFk()) {
+      // l'effet : de quel côté le geste s'est courbé (écart maximal à la ligne droite)
+      let dev = 0;
+      for (const q of s.pts) { const d = ((q.x - s.x0) * dy - (q.y - s.y0) * dx) / len; if (Math.abs(d) > Math.abs(dev)) dev = d; }
+      S.curl = cl(-dev / 40, -1, 1);
+      playerFk();
+    } else playerShoot();
+  }
 
   function renderBoard() {
     const o = S.opts, el = S.el.querySelector(".pen-board");
@@ -327,28 +376,43 @@ const Penalty = (() => {
     ctx.fillRect(G.l - 6, G.t - 6, G.r - G.l + 12, 7);
   }
 
+  // le gardien, vu de face : fléchi sur ses appuis, il se balance et respire ; en plongeon, il s'étire bras tendus
   function drawKeeper(p, color, you) {
-    const ctx = S.ctx, dx = p.x - HOME.x, ang = cl(dx / 170, -1, 1) * 1.25;
+    const ctx = S.ctx, dx = p.x - HOME.x, ang = cl(dx / 170, -1, 1) * 1.25, k = S.kick;
+    const diving = !!(k && k.dive && S.now >= k.dive.start), breath = diving ? 0 : Math.sin(S.now / 320) * 1.5;
+    const look = you ? S.opts.look : null, skin = look ? lookSkin(look) : "#c9946a", hair = look ? lookHair(look) : "#2a1d14";
     ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,.28)";
-    ctx.beginPath(); ctx.ellipse(p.x, G.b - 2, 26, 5, 0, 0, 7); ctx.fill();
-    ctx.translate(p.x, p.y); ctx.rotate(ang);
-    ctx.strokeStyle = "#d9b48c"; ctx.lineWidth = 6; ctx.lineCap = "round";
-    const spread = S.kick && S.kick.dive ? 46 : 36;
-    line(-12, -20, -30, -20 - spread * 0.55); line(12, -20, 30, -20 - spread * 0.55);
-    ctx.fillStyle = "#f4f6f2";
-    ctx.beginPath(); ctx.arc(-31, -21 - spread * 0.55, 6, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(31, -21 - spread * 0.55, 6, 0, 7); ctx.fill();
-    ctx.strokeStyle = "#1b2233"; ctx.lineWidth = 7;
-    line(-7, 28, -10, 48); line(7, 28, 10, 48);
-    ctx.fillStyle = "#1b2233"; ctx.fillRect(-13, 16, 26, 14);
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.roundRect(-14, -28, 28, 46, 6); ctx.fill();
-    const look = you ? S.opts.look : null;
-    ctx.fillStyle = look ? lookSkin(look) : "#d9b48c";
-    ctx.beginPath(); ctx.arc(0, -38, 10, 0, 7); ctx.fill();
-    if (look && look.hair) { ctx.fillStyle = lookHair(look); ctx.beginPath(); ctx.arc(0, -41, 10, Math.PI, 0); ctx.fill(); }
-    if (you) { ctx.strokeStyle = "#f5c542"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, -10, 40, 0, 7); ctx.stroke(); }
+    ctx.fillStyle = "rgba(0,0,0,.3)";
+    ctx.beginPath(); ctx.ellipse(p.x, G.b - 2, diving ? 34 : 26, 5, 0, 0, 7); ctx.fill();
+    ctx.translate(p.x, p.y + breath); ctx.rotate(ang); ctx.scale(1.12, 1.12);
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    const spread = diving ? 52 : 34, ay = -22 - spread * 0.6, ax = 30 + (diving ? 6 : 0), knee = diving ? 0 : 5;
+    // jambes : chaussettes, genoux fléchis, chaussures
+    ctx.strokeStyle = color; ctx.lineWidth = 7.5;
+    ctx.beginPath(); ctx.moveTo(-7, 24); ctx.lineTo(-10 - knee, 36); ctx.lineTo(-11 - (diving ? 5 : 0), 48); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(7, 24); ctx.lineTo(10 + knee, 36); ctx.lineTo(11 + (diving ? 5 : 0), 48); ctx.stroke();
+    ctx.fillStyle = "#0d1018";
+    ctx.beginPath(); ctx.ellipse(-12 - (diving ? 5 : 0), 49.5, 5.5, 3, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(12 + (diving ? 5 : 0), 49.5, 5.5, 3, 0, 0, 7); ctx.fill();
+    // short
+    ctx.fillStyle = "#151a2a"; ctx.beginPath(); ctx.roundRect(-14.5, 12, 29, 15, 4); ctx.fill();
+    // bras : manches longues ombrées, gants clairs
+    ctx.strokeStyle = color; ctx.lineWidth = 8.5; line(-12, -21, -ax, ay); line(12, -21, ax, ay);
+    ctx.strokeStyle = "rgba(0,0,0,.2)"; line(-12, -21, -ax, ay); line(12, -21, ax, ay);
+    ctx.fillStyle = "#e9f7b0"; ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 1.2;
+    for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sx * (ax + 1), ay - 3, 7, 8.5, sx * 0.3, 0, 7); ctx.fill(); ctx.stroke(); }
+    // maillot avec reflet et bande de poitrine
+    ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(-15.5, -31, 31, 47, 9); ctx.fill();
+    const g = ctx.createLinearGradient(-16, -31, 16, 16);
+    g.addColorStop(0, "rgba(255,255,255,.28)"); g.addColorStop(0.5, "rgba(255,255,255,0)"); g.addColorStop(1, "rgba(0,0,0,.3)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(-15.5, -31, 31, 47, 9); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.2)"; ctx.fillRect(-15.5, -10, 31, 5);
+    // cou, tête, cheveux, yeux
+    ctx.fillStyle = skin; ctx.fillRect(-4, -36, 8, 7);
+    ctx.beginPath(); ctx.arc(0, -43, 10.5, 0, 7); ctx.fill();
+    ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(0, -45, 10.8, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
+    ctx.fillStyle = "#14100c"; ctx.beginPath(); ctx.arc(-3.6, -42, 1.3, 0, 7); ctx.arc(3.6, -42, 1.3, 0, 7); ctx.fill();
+    if (you) { ctx.strokeStyle = "#f5c542"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, -10, 46, 0, 7); ctx.stroke(); }
     ctx.restore();
   }
 
@@ -363,8 +427,14 @@ const Penalty = (() => {
     const stride = Math.sin(run * 14) * 6 * (run < 1 ? 1 : 0);
     line(-7, 0, -9 + stride, 20); line(7, 0, 9 - stride, 20);
     ctx.fillStyle = "#f4f6f2"; ctx.fillRect(-14, -10, 28, 12);
+    // bras qui accompagnent la course
+    ctx.strokeStyle = color; ctx.lineWidth = 7;
+    line(-15, -44, -22 - stride * 0.6, -22); line(15, -44, 22 + stride * 0.6, -22);
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.roundRect(-16, -50, 32, 42, 7); ctx.fill();
+    const sg = ctx.createLinearGradient(-16, -50, 16, -8);
+    sg.addColorStop(0, "rgba(255,255,255,.22)"); sg.addColorStop(1, "rgba(0,0,0,.28)");
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.roundRect(-16, -50, 32, 42, 7); ctx.fill();
     ctx.fillStyle = "rgba(13,21,36,.85)";
     ctx.font = '900 20px "Barlow Condensed", Impact, sans-serif';
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -595,6 +665,10 @@ const Penalty = (() => {
     const text = { goal: ours ? "BUT !" : "BUT ADVERSE", saved: ours ? "ARRÊTÉ…" : "ARRÊTÉ !", post: "POTEAU !", bar: "LA BARRE !", over: "AU-DESSUS !", wide: "À CÔTÉ !", wall: "DANS LE MUR !" }[out];
     const good = ours ? scored : !scored;
     S.flash = { text, color: good ? "#f5c542" : "#ff6b6b", start: S.now };
+    // un but secoue la caméra ; un geste réussi fait jaillir des paillettes là où le ballon a fini ; le téléphone vibre
+    if (scored) S.shake = 1;
+    if (good && !reduceMotion) for (let i = 0; i < 70; i++) { const a = rnd(0, Math.PI * 2), v = rnd(0.08, 0.42); S.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.18, life: rnd(700, 1300), age: 0, c: Math.random() < 0.6 ? "#f5c542" : Math.random() < 0.5 ? "#ffffff" : "#9a7bff" }); }
+    if ((k.player || k.youDive) && navigator.vibrate) { try { navigator.vibrate(good ? [30, 40, 90] : 180); } catch (e) {} }
     snd(good ? (scored ? "goal" : "trophy") : "concede");
     const what = isFk() ? "Le coup franc" : "Le penalty";
     if (S.opts.mode !== "shootout") say({ goal: ours ? `${what} est au fond !` : `${what} est transformé.`, saved: ours ? "Arrêté par le gardien !" : "Quel arrêt !", post: "Sur le poteau !", bar: "Sur la barre !", over: "Au-dessus !", wide: "À côté !", wall: "Dans le mur !" }[out]);
@@ -631,6 +705,7 @@ const Penalty = (() => {
     if (S.state === "flight" && S.kick && now >= flightEnd(S.kick)) resolve();
     if (S.state === "after" && now - S.afterStart > (S.opts.mode === "shootout" ? 1500 : 1700)) nextKick();
     S.netShake = Math.max(0, S.netShake - 0.012);
+    S.shake = Math.max(0, S.shake - 0.03);
   }
 
   // jauge de pression (en haut à gauche) : un cœur qui bat plus vite quand la tension monte
@@ -658,10 +733,12 @@ const Penalty = (() => {
   }
 
   function render() {
-    const ctx = S.ctx, o = S.opts, now = S.now;
+    const ctx = S.ctx, o = S.opts, now = S.now, cam = camOrigin(), d = S.dpr;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#070c18"; ctx.fillRect(0, 0, S.cv.width, S.cv.height);
+    ctx.setTransform(CAM.s, 0, 0, CAM.s, cam.x * d, cam.y * d);
     ctx.drawImage(S.bg, 0, 0);
-    ctx.setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
+    ctx.setTransform(d * CAM.s, 0, 0, d * CAM.s, cam.x * d, cam.y * d);
     const tr = S.turn || turn();
     const shooterSide = S.kick ? S.kick.side : tr.side;
     const shooter = shooterSide === "us" ? o.us : o.them, keeper = shooterSide === "us" ? o.them : o.us;
@@ -686,9 +763,8 @@ const Penalty = (() => {
       drawShooter(shooter.a, youShoot ? (o.number || 9) : 7 + (S.kickIndex % 5) * 2, run, youShoot, S.state === "prep" ? S.tell : 0);
       if (!behindNet) drawBall(b, spin);
     }
-    drawWeather();
-    if (["aim", "power", "curl"].includes(S.state) && pressureNow() > 0.15) drawPressure(pressureNow(), now);
-    if (S.state === "curl") drawCurl(curlAt(now));
+    drawTrail(b, k, now);
+    drawParts();
     if (S.state === "aim" || S.state === "power" || S.state === "curl") {
       const a = S.state === "aim" ? aimPoint(now) : S.aim;
       ctx.strokeStyle = "#f5c542"; ctx.lineWidth = 2.5;
@@ -696,6 +772,12 @@ const Penalty = (() => {
       line(a.x - 20, a.y, a.x - 7, a.y); line(a.x + 7, a.y, a.x + 20, a.y);
       line(a.x, a.y - 20, a.x, a.y - 7); line(a.x, a.y + 7, a.x, a.y + 20);
     }
+    drawSwipeGuide(now);
+    // ce qui suit (météo, jauges, textes) reste à l'échelle de l'écran
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+    drawWeather();
+    if (["aim", "power", "curl"].includes(S.state) && pressureNow() > 0.15) drawPressure(pressureNow(), now);
+    if (S.state === "curl") drawCurl(curlAt(now));
     if (S.state === "power") {
       const p = powerAt(now), x = 712, y = 330, w = 26, h = 190;
       ctx.fillStyle = "rgba(8,13,24,.75)"; ctx.fillRect(x - 6, y - 6, w + 12, h + 12);
@@ -720,9 +802,53 @@ const Penalty = (() => {
     }
   }
 
+  // traînée du ballon en vol : ses dernières positions, de plus en plus pâles
+  function drawTrail(b, k, now) {
+    if (S.trailKick !== k) { S.trailKick = k; S.trail = []; }
+    if (!k || now < k.start || reduceMotion) return;
+    if (now <= flightEnd(k) + 250) { S.trail.push({ x: b.x, y: b.y, r: b.r }); if (S.trail.length > 16) S.trail.shift(); }
+    else if (S.trail.length) S.trail.shift();
+    const ctx = S.ctx;
+    S.trail.forEach((q, i) => { const a = (i + 1) / S.trail.length; ctx.fillStyle = `rgba(245,197,66,${0.28 * a})`; ctx.beginPath(); ctx.arc(q.x, q.y, q.r * (0.45 + 0.5 * a), 0, 7); ctx.fill(); });
+  }
+  // paillettes d'un geste réussi : elles retombent en s'éteignant
+  function drawParts() {
+    const ctx = S.ctx;
+    S.parts = S.parts.filter(q => (q.age += S.dt) < q.life);
+    for (const q of S.parts) {
+      q.x += q.vx * S.dt; q.y += q.vy * S.dt; q.vy += 0.0006 * S.dt;
+      ctx.globalAlpha = 1 - q.age / q.life; ctx.fillStyle = q.c; ctx.fillRect(q.x - 2, q.y - 2, 4, 4);
+    }
+    ctx.globalAlpha = 1;
+  }
+  // guide du geste : la flèche suit le doigt pendant le glissé ; avant, une flèche pulse au-dessus du ballon
+  function drawSwipeGuide(now) {
+    const ctx = S.ctx, b = rest();
+    if (S.swipe) {
+      const s = S.swipe, e = s.cur;
+      ctx.strokeStyle = "rgba(245,197,66,.9)"; ctx.lineWidth = 4; ctx.lineCap = "round";
+      ctx.beginPath(); s.pts.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); ctx.lineTo(e.x, e.y); ctx.stroke();
+      const a = Math.atan2(e.y - s.y0, e.x - s.x0);
+      ctx.fillStyle = "#f5c542"; ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * 12, e.y + Math.sin(a) * 12);
+      ctx.lineTo(e.x + Math.cos(a + 2.4) * 12, e.y + Math.sin(a + 2.4) * 12); ctx.lineTo(e.x + Math.cos(a - 2.4) * 12, e.y + Math.sin(a - 2.4) * 12); ctx.fill();
+      return;
+    }
+    if (!canSwipe()) return;
+    const up = 10 * Math.sin(now / 260);
+    ctx.globalAlpha = 0.55 + 0.35 * Math.sin(now / 260);
+    ctx.strokeStyle = "#f5c542"; ctx.lineWidth = 3; ctx.lineCap = "round";
+    line(b.x, b.y - 26 - up, b.x, b.y - 62 - up); line(b.x - 9, b.y - 52 - up, b.x, b.y - 64 - up); line(b.x + 9, b.y - 52 - up, b.x, b.y - 64 - up);
+    ctx.globalAlpha = 1;
+  }
+
+  // horloge du jeu : elle ralentit dans les derniers mètres de ton tir (ralenti), pas pendant tes plongeons
   function frame(ts) {
     if (!S) return;
-    S.now = ts;
+    const real = Math.min(50, ts - (S.lastTs || ts)), k = S.kick;
+    S.lastTs = ts;
+    const slow = !reduceMotion && S.state === "flight" && k && k.player && (S.now - k.start) / k.dur > 0.72 ? 0.32 : 1;
+    S.dt = real * slow;
+    S.now += S.dt;
     update();
     if (!S) return;
     render();
