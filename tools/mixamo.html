@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Atelier Mixamo</title>
+<style>body{margin:0;background:#111;color:#eee;font:14px system-ui}#ui{position:fixed;top:0;left:0;width:340px;bottom:0;overflow:auto;padding:10px;background:#1a1a22}#ui button{display:block;width:100%;text-align:left;margin:2px 0;background:#2a2a38;color:#eee;border:0;padding:4px 6px;cursor:pointer}#log{white-space:pre-wrap;font:12px monospace;color:#9f9}canvas{position:fixed;left:340px;top:0}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body><div id="ui"><b>Atelier Mixamo</b><div id="log"></div><div id="anims"></div></div>
+<script type="module">
+import * as THREE from "three";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+const log = t => { document.querySelector("#log").textContent += t + "\n"; };
+window.THREE = THREE;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(innerWidth - 340, innerHeight); document.body.appendChild(renderer.domElement);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x334455);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2)); const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(2, 4, 3); scene.add(d);
+const cam = new THREE.PerspectiveCamera(35, (innerWidth - 340) / innerHeight, .1, 100); cam.position.set(0, 1.2, 4);
+const ctl = new OrbitControls(cam, renderer.domElement); ctl.target.set(0, 1, 0);
+scene.add(new THREE.GridHelper(10, 10));
+const loader = new FBXLoader(), clock = new THREE.Clock();
+let char = null, mixer = null;
+window.atelier = { THREE, scene, loader, GLTFExporter, cam, renderer, get char() { return char; }, get mixer() { return mixer; } };
+const files = await (await fetch("/liste-fbx")).json();
+const charFile = files.find(f => /Ch\d+|character/i.test(f) && !/Soccer Game Pack/.test(f)) || files.find(f => /Ch\d+/.test(f));
+log("Personnage : " + charFile);
+char = await loader.loadAsync("/" + charFile);
+char.scale.setScalar(.01); scene.add(char);
+mixer = new THREE.AnimationMixer(char);
+let tris = 0, bones = 0;
+char.traverse(o => { if (o.isMesh) { tris += o.geometry.index ? o.geometry.index.count / 3 : o.geometry.attributes.position.count / 3; const ms = [].concat(o.material); log(`mesh ${o.name} skinned=${!!o.isSkinnedMesh} verts=${o.geometry.attributes.position.count} mats=${ms.map(m => m.name + "[" + (m.map ? m.map.image?.width + "x" + m.map.image?.height : "-") + "]").join(",")}`); } if (o.isBone) bones++; });
+log(`triangles=${tris} os=${bones}`);
+window.atelier.files = files;
+const box = document.querySelector("#anims");
+for (const f of files.filter(f => f !== charFile && !/Ch\d+/.test(f))) {
+  const b = document.createElement("button"); b.textContent = f.split("/").pop(); box.appendChild(b);
+  b.onclick = async () => { const a = await loader.loadAsync("/" + f); const clip = a.animations[0]; mixer.stopAllAction(); mixer.clipAction(clip, char).play(); log(`${f.split("/").pop()} : ${clip.duration.toFixed(2)} s, ${clip.tracks.length} pistes`); };
+}
+// ---------- conversion : personnage + mouvements → img/3d/joueur.glb ----------
+// les mouvements gardés, sous un nom court (le fichier Mixamo d'origine entre parenthèses)
+const CLIPS = {
+  penalty: "soccer penalty kick", frappe: "kick soccerball", frappe2: "kick soccerball (2)", frappe_course: "strike foward jog",
+  course: "jog forward", attente: "offensive idle", transition: "transition",
+  gb_attente: "goalkeeper idle", gb_plongeon_g: "goalkeeper diving save", gb_plongeon_d: "goalkeeper diving save (2)",
+  gb_arret: "goalkeeper catch (2)", gb_arret_haut: "goalkeeper catch (4)", gb_bas: "goalkeeper body block", gb_ramasse: "goalkeeper scoop",
+  gb_pas_g: "goalkeeper sidestep", gb_pas_d: "goalkeeper sidestep (2)", gb_rate: "goalkeeper miss",
+  tete: "header soccerball", tacle: "soccer tackle (3)", tacle_glisse: "soccer tackle (2)", chute: "soccer trip", au_sol: "fallen idle", relevement: "standing up",
+  controle: "receive soccerball", jongle: "stall soccerball", passe: "goalkeeper pass"
+};
+// part de géométrie gardée pour chaque morceau du joueur (le visage et le maillot restent fins)
+const KEEP = { Body: .42, Shirt: .4, Shorts: .35, Socks: .6, Shoes: .35, Hair: .3 };
+async function convertir() {
+  const { mergeVertices } = await import("three/addons/utils/BufferGeometryUtils.js");
+  const { MeshoptSimplifier } = await import("https://cdn.jsdelivr.net/npm/meshoptimizer@0.20.0/meshopt_simplifier.module.js");
+  await MeshoptSimplifier.ready;
+  mixer.stopAllAction();
+  const ch = char; ch.updateMatrixWorld(true);
+  // 1. un seul squelette : chaque os en double est remplacé par l'os principal du même nom
+  const main = {}; ch.traverse(o => { if (o.isBone && !main[o.name]) main[o.name] = o; });
+  const meshes = []; ch.traverse(o => o.isSkinnedMesh && meshes.push(o));
+  for (const m of meshes) {
+    const sk = m.skeleton, bones = [], inv = [];
+    sk.bones.forEach((b, i) => {
+      const M = main[b.name];
+      const Lc = new THREE.Matrix4().copy(M.matrixWorld).invert().multiply(b.matrixWorld);
+      bones.push(M); inv.push(new THREE.Matrix4().multiplyMatrices(Lc, sk.boneInverses[i]));
+    });
+    m.bind(new THREE.Skeleton(bones, inv), m.bindMatrix);
+  }
+  const dups = []; ch.traverse(o => { if (o.isBone && main[o.name] !== o) dups.push(o); });
+  dups.forEach(b => b.parent.remove(b));
+  // 2. géométrie : sommets fusionnés puis simplifiés, cils retirés, sans carte de relief
+  const tex = {};
+  const small = (t, size) => {
+    if (!t) return null; if (tex[t.uuid]) return tex[t.uuid];
+    const c = document.createElement("canvas"); c.width = c.height = size; c.getContext("2d").drawImage(t.image, 0, 0, size, size);
+    const nt = new THREE.CanvasTexture(c); nt.flipY = t.flipY; nt.colorSpace = THREE.SRGBColorSpace; nt.userData.mimeType = "image/jpeg"; nt.name = t.name;
+    return tex[t.uuid] = nt;
+  };
+  let tris = 0;
+  for (const m of meshes) {
+    const part = m.name.replace(/^Ch\d+_/, "");
+    if (!KEEP[part]) { m.parent.remove(m); continue; }
+    let g = m.geometry.clone();
+    for (const k of Object.keys(g.attributes)) if (!["position", "normal", "uv", "skinIndex", "skinWeight"].includes(k)) g.deleteAttribute(k);
+    g = mergeVertices(g, 1e-4);
+    const idx = new Uint32Array(g.index.array), pos = new Float32Array(g.attributes.position.array);
+    const target = Math.floor(idx.length * KEEP[part] / 3) * 3;
+    const [out] = MeshoptSimplifier.simplify(idx, pos, 3, target, 0.02, ["LockBorder"]);
+    // on ne garde que les sommets encore utilisés
+    const remap = new Int32Array(g.attributes.position.count).fill(-1); let n = 0;
+    for (const i of out) if (remap[i] < 0) remap[i] = n++;
+    const ng = new THREE.BufferGeometry();
+    for (const [k, a] of Object.entries(g.attributes)) {
+      const arr = new a.array.constructor(n * a.itemSize);
+      for (let i = 0; i < remap.length; i++) if (remap[i] >= 0) for (let c = 0; c < a.itemSize; c++) arr[remap[i] * a.itemSize + c] = a.array[i * a.itemSize + c];
+      ng.setAttribute(k, new THREE.BufferAttribute(arr, a.itemSize, a.normalized));
+    }
+    ng.setIndex(new THREE.BufferAttribute(n > 65535 ? new Uint32Array(out.length) : new Uint16Array(out.length), 1));
+    for (let i = 0; i < out.length; i++) ng.index.array[i] = remap[out[i]];
+    m.geometry = ng; tris += out.length / 3;
+    const om = m.material;
+    m.material = new THREE.MeshStandardMaterial({ name: part, map: small(om.map, part === "Hair" ? 512 : 1024), roughness: part === "Hair" ? .8 : .72, transparent: part === "Hair", alphaTest: part === "Hair" ? .4 : 0, side: part === "Hair" ? THREE.DoubleSide : THREE.FrontSide });
+    m.name = part;
+    log(`${part} : ${out.length / 3} triangles, ${n} sommets`);
+  }
+  log(`total : ${tris} triangles`);
+  // 3. les mouvements : sans échelle ni doigts au-delà de la première phalange, clés redondantes retirées
+  const clips = [];
+  for (const [id, file] of Object.entries(CLIPS)) {
+    const f = files.find(x => x.endsWith("/" + file + ".fbx")); if (!f) { log("manque : " + file); continue; }
+    const a = await loader.loadAsync("/" + f), c = a.animations[0];
+    c.name = id;
+    c.tracks = c.tracks.filter(t => !/\.scale$/.test(t.name) && !/Hand(Thumb|Index|Middle|Ring|Pinky)[234]/.test(t.name) && (!/\.position$/.test(t.name) || /Hips\.position$/.test(t.name)) && main[t.name.split(".")[0]]);
+    c.optimize(); clips.push(c);
+  }
+  ch.animations = clips;
+  // 4. export binaire
+  const exp = new GLTFExporter();
+  const glb = await exp.parseAsync(ch, { binary: true, animations: clips, onlyVisible: false });
+  const r = await fetch("/enregistrer/joueur.glb", { method: "POST", body: glb });
+  log(`joueur.glb : ${(glb.byteLength / 1024).toFixed(0)} Ko (${await r.text()})`);
+  return glb.byteLength;
+}
+window.atelier.convertir = convertir;
+const btn = document.createElement("button"); btn.textContent = "▶ Convertir en joueur.glb"; btn.style.background = "#4a3"; btn.onclick = convertir; box.prepend(btn);
+(function loop() { requestAnimationFrame(loop); mixer && mixer.update(clock.getDelta()); renderer.render(scene, cam); })();
+</script></body></html>

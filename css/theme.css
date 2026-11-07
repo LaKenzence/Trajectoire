@@ -281,6 +281,17 @@ body{overflow-x:hidden}
 .brief-ic{display:inline-grid;place-items:center;width:64px;height:64px;border-radius:20px;color:#fff;font-size:1.8rem;background:linear-gradient(160deg,var(--primary2),var(--primary));box-shadow:0 12px 28px -10px rgba(109,77,255,.9)}
 .brief-eyebrow{margin:12px 0 0;font:800 .78rem var(--display);letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
 .brief-card h2{margin:4px 0 6px}
+.brief-demo{margin:12px 0 4px;border-radius:16px;overflow:hidden;border:1px solid var(--line2);box-shadow:var(--lift);line-height:0}
+.brief-demo svg{display:block;width:100%;height:auto}
+.brief-card:has(.brief-demo) .brief-ic{display:none}
+.brief-card:has(.brief-demo) .brief-eyebrow{margin-top:0}
+.train-res h2{font:900 2.4rem/1 var(--display);font-style:italic;margin:6px 0 10px}
+.train-res h2.ok{color:var(--good)} .train-res h2.ko{color:var(--bad)}
+.train-tally{display:flex;justify-content:center;gap:8px;margin:0 0 12px;flex-wrap:wrap}
+.train-tally span{padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:.9rem}
+.train-tally b{display:block;font:800 1.4rem/1.1 var(--display);color:var(--text)}
+.train-tip{text-align:left;margin:0 0 14px;padding:10px 12px;border-radius:14px;background:rgba(247,197,72,.1);border:1px solid rgba(247,197,72,.35);font-size:.95rem;line-height:1.4}
+.train-res .btn+.btn{margin-top:8px}
 .brief-steps{text-align:left;margin:14px 0 6px;padding:0;list-style:none;counter-reset:s;display:grid;gap:10px}
 .brief-steps li{counter-increment:s;position:relative;padding:10px 12px 10px 46px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:1rem;line-height:1.4}
 .brief-steps li::before{content:counter(s);position:absolute;left:12px;top:10px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#2a1d00;font:800 .85rem var(--display)}

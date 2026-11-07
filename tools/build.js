@@ -69,7 +69,7 @@ self.addEventListener("fetch", e => {
   const r = e.request;
   if (r.method !== "GET") return;
   e.respondWith(caches.match(r, { ignoreSearch: true }).then(hit => hit || fetch(r).then(res => {
-    if (res.ok && (new URL(r.url).origin === location.origin || /fonts\\.(googleapis|gstatic)\\.com|cdnjs\\.cloudflare\\.com/.test(r.url))) {
+    if (res.ok && (new URL(r.url).origin === location.origin || /fonts\\.(googleapis|gstatic)\\.com|cdnjs\\.cloudflare\\.com|cdn\\.jsdelivr\\.net/.test(r.url))) {
       const copy = res.clone(); caches.open(CACHE).then(c => c.put(r, copy));
     }
     return res;

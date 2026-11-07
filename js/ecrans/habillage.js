@@ -282,28 +282,32 @@ if(typeof MutationObserver!=="undefined"&&typeof document!=="undefined"&&documen
 
 /* ============ Avant un mini-jeu : la consigne, puis « Je suis prêt » et un décompte ============ */
 const MINI_BRIEF = {
-  shoot:{icon:"ball",title:"Penalty pour toi",steps:["Choisis ton tir : placé, en force ou Panenka.","Le viseur bouge dans le but : clique quand il est sur le coin visé.","Une jauge de puissance monte et descend : clique avant le rouge, sinon le ballon passe au-dessus."]},
-  save:{icon:"shield",title:"Penalty contre toi",steps:["Tu es dans les cages. Le tireur prend son élan : regarde ses appuis.","Dès qu'il frappe, clique à l'endroit du but où tu veux plonger.","Plus tu cliques près du ballon, plus tu as de chances de l'arrêter."]},
-  fk:{icon:"target",title:"Coup franc pour toi",steps:["Clique quand le viseur est sur le coin visé.","Puissance : faible pour passer par-dessus le mur, forte pour surprendre le gardien.","Effet : fixe le curseur à gauche ou à droite pour enrouler."]},
-  fksave:{icon:"shield",title:"Coup franc contre toi",steps:["Le tireur s'élance au-dessus du mur.","Dès que le ballon part, clique à l'endroit du but où tu veux plonger."]},
-  shootout:{icon:"ball",title:"Tirs au but",steps:["Chaque équipe tire à tour de rôle.","Quand c'est toi qui tires : viseur, puis puissance, comme un penalty.","Si tu es gardien, clique où plonger dès que le tireur frappe."]},
-  dribble:{icon:"run",title:"Dribble",steps:["Tu fonces balle au pied vers deux défenseurs.","Une flèche apparaît au-dessus de chacun et un cercle se referme.","Quand le cercle devient vert, appuie sur la flèche indiquée (↑ ou ↓), ou clique en haut ou en bas du terrain."]},
+  shoot:{icon:"ball",title:"Penalty pour toi",steps:["Pose le doigt (ou la souris) sur le ballon, glisse vers le coin visé et lâche.","La vitesse du geste donne la puissance, un geste plus long monte le ballon. Trop fort, il s'envole.","Sans glisser : choisis 1 Placé, 2 En force ou 3 Panenka, puis un clic pour viser et un clic pour la puissance."]},
+  save:{icon:"shield",title:"Penalty contre toi",steps:["Tu es dans les cages. Pendant l'élan, regarde de quel côté penche le tireur.","Dès qu'il frappe, touche (ou clique) là où part le ballon. Au clavier : ← ↑ →.","Plus tu touches près du ballon, plus tu as de chances de l'arrêter. Il peut feinter !"]},
+  fk:{icon:"target",title:"Coup franc pour toi",steps:["Glisse depuis le ballon vers le but en courbant ton geste : la courbe enroule le ballon autour du mur.","Un geste lent lobe le mur, un geste rapide surprend le gardien.","Sans glisser : trois clics, la cible, la puissance, puis l'effet."]},
+  fksave:{icon:"shield",title:"Coup franc contre toi",steps:["Le tireur enroule par-dessus ou autour de ton mur.","Suis le ballon et touche là où il va entrer (ou ← ↑ →). Attention à l'effet !"]},
+  shootout:{icon:"ball",title:"Tirs au but",steps:["Tu tires tous les penalties de ton équipe, et tu plonges sur tous ceux d'en face.","Choisis d'abord TON rang : le premier, ou le cinquième, celui qui peut tout décider.","Pour tirer, glisse du ballon vers le coin ; dans les cages, touche là où part le ballon."]},
+  dribble:{icon:"run",title:"Dribble",steps:["Tu fonces balle au pied vers deux défenseurs.","Une flèche apparaît au-dessus de chacun et un cercle se referme.","Quand le cercle devient vert, glisse le doigt dans le sens de la flèche (ou flèche du clavier, ou touche le haut ou le bas du terrain)."]},
   tacle:{icon:"shield",title:"Tacle",steps:["L'attaquant fonce sur toi, et il peut feinter.","Attends qu'il entre dans l'anneau jaune devant toi.","Alors tacle : Espace ou clic. Trop tôt il t'efface, trop tard c'est la faute."]},
   aerien:{icon:"shield",title:"Sortie aérienne",steps:["Un centre arrive dans ta surface.","Suis le ballon jusqu'au cercle devant ton but.","Sors (Espace ou clic) quand le cercle devient vert, avant que l'attaquant ne saute."]},
   passe:{icon:"target",title:"La passe qui tue",steps:["Trois défenseurs bougent entre toi et ton attaquant.","La ligne de passe est rouge quand elle est coupée, verte quand elle est libre.","Passe (Espace ou clic) quand elle est verte. Le pressing arrive : ne traîne pas."]}
 };
 // renvoie une promesse : true pour jouer, false pour laisser le jeu simuler
-function miniBrief(kind,title,sub){
+function miniBrief(kind,title,sub,opts){
   const b = MINI_BRIEF[kind];
   if(!b||typeof document==="undefined"||!document.body) return Promise.resolve(true);
+  // le stade 3D se charge pendant qu’on lit la consigne
+  if(typeof Stade3D!=="undefined"&&["shoot","save","fk","fksave","shootout"].includes(kind)) Stade3D.load();
   return new Promise(res=>{
     const el = document.createElement("div");
     el.className = "brief"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); el.setAttribute("aria-label",title||b.title);
     el.innerHTML = `<div class="brief-card"><span class="brief-ic">${ic(b.icon)}</span><p class="brief-eyebrow">Mini-jeu</p><h2>${esc(title||b.title)}</h2>${sub?`<p class="muted">${esc(sub)}</p>`:""}
+      ${typeof miniDemo==="function"?miniDemo(kind):""}
       <ol class="brief-steps">${b.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
-      <button class="btn primary brief-go" type="button">Je suis prêt</button><button class="btn ghost brief-sim" type="button">Laisser le jeu simuler</button>
+      <button class="btn primary brief-go" type="button">Je suis prêt</button><button class="btn ghost brief-sim" type="button">${esc(opts?.simLabel||"Laisser le jeu simuler")}</button>
       <div class="brief-count" aria-live="assertive"></div></div>`;
     document.body.appendChild(el);
+    if(typeof miniDemoStart==="function") miniDemoStart(el);
     const done = v=>{ removeEventListener("keydown",key,true); el.remove(); res(v); };
     const go = ()=>{
       el.querySelector(".brief-go").setAttribute("disabled",""); el.querySelector(".brief-sim").setAttribute("disabled","");

@@ -503,3 +503,7 @@ details.names[open] summary{margin-bottom:8px}
 @keyframes winner{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.urne .tire,.tirage .verdict,.cer-r,.cer-env,.cer-win,.cer-me{opacity:1}}
 
+/* stade 3D des coups de pied arrêtés : la scène WebGL sous le canvas 2D, qui garde le viseur, les jauges et les textes */
+.pen-stage.has-3d{position:relative}
+.pen-stage .pen-3d{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;pointer-events:none}
+.pen-stage.has-3d canvas:not(.pen-3d){position:relative;z-index:1;background:transparent}
