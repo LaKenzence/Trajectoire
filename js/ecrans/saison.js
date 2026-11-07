@@ -2,7 +2,7 @@
 /* ============ Simulation de saison ============ */
 function poisson(l){ let L=Math.exp(-l),k=0,q=1; do{k++;q*=Math.random();}while(q>L); return k-1; }
 function ageGrowth(age){ return age<=19?R(3,7):age<=22?R(2,5):age<=26?R(0,3):age<=29?R(-1,1.5):age<=32?R(-3.5,-.5):R(-6,-2); }
-function simRival(playerStar){
+function simRival(){
   const r = p.rival; if(!r||r.retired) return null;
   let g = ageGrowth(p.age); if(g>0) g = Math.min(g,Math.max(0,r.pot-r.lvl));
   r.lvl = clamp(Math.round(r.lvl+g),30,99);
@@ -11,7 +11,6 @@ function simRival(playerStar){
   const goals = poisson(apps*POS[p.pos].g*q), assists = poisson(apps*POS[p.pos].a*q), clean = p.pos==="GB"?poisson(apps*.3):0;
   let tr = chance(clamp((r.club.str-70)*.03,0,.45))?1:0, note = null;
   if(r.lvl>=COUNTRIES[r.country].nat-6&&p.age>=18) r.caps += RI(5,10);
-  if(!playerStar&&r.lvl>=87&&chance(.35)){ r.stars++; tr++; note = "a remporté le Ballon d'Étoile"; p.moments.push(`${p.year+1} · Son rival ${r.name} remporte le Ballon d'Étoile`); }
   r.apps+=apps; r.goals+=goals; r.assists+=assists; r.clean+=clean; r.trophies+=tr; r.best = Math.max(r.best,r.lvl);
   if(r.lvl>r.club.str+3&&chance(.6)){ const nc = shuffle(CLUBS.filter(c=>c.str>r.club.str&&c.str<=r.lvl+6))[0]; if(nc){ r.club={...nc}; note = note||`a signé à ${nc.name}`; } }
   if(p.age>=34&&(chance(.35)||p.age>=37)){ r.retired = true; note = "a annoncé sa retraite"; p.moments.push(`${p.year+1} · Son rival ${r.name} prend sa retraite`); }
@@ -23,20 +22,23 @@ function simSeason(){
   let play = 50+diff*3.5+(p.moral-50)*.25+(p.form-50)*.3+p.tmp.play+youth+(p.flags.cap?5:0)+((p.rel?.trust??50)-50)*.3;
   play = clamp(play,3,97);
   let avail = 1, injury = null;
-  const injP = clamp((.1+(60-p.form)*.005+(p.age>30?.05:0)-(p.trait==="athl"?.05:0)-(has("acier")?.05:0))*(defiOn("verre")?2:1),.03,defiOn("verre")?.7:.45);
+  ensureQuals(); const cs = coachStyle();
+  if(cs.young&&p.age<=21) play = clamp(play+cs.young,3,97);
+  const injP = clamp((.1+(60-p.form)*.005+(p.age>30?.05:0)-(p.trait==="athl"?.05:0)-(has("acier")?.05:0)-qd("phy")*.004+(p.intens==="intense"?.05:p.intens==="doux"?-.04:0))*(defiOn("verre")?2:1),.03,defiOn("verre")?.7:.45);
   if(chance(injP+(p.flags.fragile?.08:0))){ avail = R(.45,.85); injury = pick(["Entorse de la cheville","Lésion aux ischios","Fracture du pied","Pubalgie","Élongation au mollet"]); }
   const apps = Math.max(1,Math.round(R(34,38)*play/100*avail));
   const starts = Math.round(apps*clamp(play/100+.1,0,1));
-  let rating = 6.4+diff*.035+(p.moral-50)*.006+(p.form-50)*.004+(p.tmp.rating||0)+R(-.35,.35)*(p.trait==="inst"?1.8:1);
+  let rating = 6.4+diff*.035+(p.moral-50)*.006+(p.form-50)*.004+(p.tmp.rating||0)+R(-.35,.35)*(p.trait==="inst"?1.8:1)*clamp(1-qd("men")*.02,.6,1.3)+(p.pos==="DEF"||p.pos==="GB"?qd("sig")*.012:0);
   rating = clamp(rating,5.2,9.2);
   const q = clamp(1+diff*.03+(rating-6.5)*.25,.3,2.2);
   const share = starts/Math.max(apps,1)*.6+.4;
-  const goals = poisson(apps*POS[p.pos].g*q*(p.trait==="inst"?1.2:1)*(has("finition")?1.15:1)*share)+(M?M.myG:0)+(p.tmp.ordG||0);
-  const assists = poisson(apps*POS[p.pos].a*q*(p.trait==="tech"?1.35:1)*(has("vision")?1.2:1)*share)+(M?M.myA:0)+(p.tmp.ordA||0);
-  const clean = p.pos==="GB"?poisson(apps*clamp(.15+(c.str-60)*.008+diff*.004,.08,.55)*(has("reflexes")?1.15:1)):0;
+  const qm = clamp(1+qd("sig")*.02,.7,1.35)*((p.pos==="ATT"||p.pos==="MIL")&&cs.goals?cs.goals:1);
+  const goals = poisson(qm*apps*POS[p.pos].g*q*(p.trait==="inst"?1.2:1)*(has("finition")?1.15:1)*share)+(M?M.myG:0)+(p.tmp.ordG||0);
+  const assists = poisson(qm*apps*POS[p.pos].a*q*(p.trait==="tech"?1.35:1)*(has("vision")?1.2:1)*share)+(M?M.myA:0)+(p.tmp.ordA||0);
+  const clean = p.pos==="GB"?poisson(qm*apps*clamp(.15+(c.str-60)*.008+diff*.004,.08,.55)*(has("reflexes")?1.15:1)):0;
   // classement
   const impact = (rating-6.5)*3*(apps/38);
-  const league = CLUBS.filter(x=>x.country===c.country).map(x=>({n:x.name,s:x.str+R(-9,9)+(x.name===c.name?impact:0)}));
+  const league = raceLeague(impact);
   league.sort((a,b)=>b.s-a.s);
   const rank = league.findIndex(x=>x.n===c.name)+1;
   const tr = [], lg = COUNTRIES[c.country].league;
@@ -63,10 +65,9 @@ function simSeason(){
     if(p.caps===0) p.moments.push(`${p.year} · Première sélection avec ${COUNTRIES[p.country].name}`);
   }
   // distinctions
-  const awardScore = rating*10+(p.pos==="ATT"?goals*.4:p.pos==="MIL"?(goals+assists)*.35:p.pos==="GB"?clean*.45:5.5)+tr.length*4+(p.lvl-80);
+  // le Ballon d'Étoile se décide plus bas, par le vote (ballonVote)
   let star = false;
-  if(p.lvl>=86&&apps>=25&&awardScore>R(95,112)){ star = true; tr.push(`Ballon d'Étoile ${yEnd}`); p.moments.push(`${yEnd} · Ballon d'Étoile !`); }
-  else if(p.age<=21&&rating>=7.1&&apps>=20&&chance(.5)) tr.push(`Révélation de l'année ${yEnd}`);
+  if(p.age<=21&&rating>=7.1&&apps>=20&&chance(.5)) tr.push(`Révélation de l'année ${yEnd}`);
   if(p.pos==="ATT"&&goals>=25&&rank<=5&&chance(.5)) tr.push(`Meilleur buteur – ${lg}`);
   // chaque poste a sa distinction individuelle, comme le titre de meilleur buteur pour les attaquants
   if(p.pos==="GB"&&clean>=12&&rank<=5&&chance(.5)) tr.push(`Gant d'or – ${lg}`);
@@ -79,13 +80,18 @@ function simSeason(){
   if(p.pos==="GB"&&g<0&&p.age<=36) g*=.8; // les gardiens déclinent plus tard
   if(has("acier")&&g<0) g*=.75;
   if(has("travail")&&p.age<=28&&p.lvl<p.pot) g+=1;
-  if(g>0){ g*=.45+apps/38*.75; if(p.life==="pro") g+=.6; if(p.ent==="coach"&&p.age<=27) g+=.6; g=Math.min(g,Math.max(0,p.pot-p.lvl)); }
+  if(g>0){ g*=.7+apps/38*.5; g+=(cs.growth||0)+(p.intens==="intense"?.5:0); if(p.life==="pro") g+=.6; if(p.ent==="coach"&&p.age<=27) g+=.6; g=Math.min(g,Math.max(0,p.pot-p.lvl)); }
   p.lvl = clamp(Math.round(p.lvl+g),20,99);
+  // une saison de très haut niveau fait mentir les pronostics : le potentiel grimpe
+  qualsSeason(p.lvl-old.lvl,apps);
+  if(rating>=7.45&&apps>=20&&p.age<=29&&p.pot<99) p.pot = Math.min(99,p.pot+(rating>=7.8?2:1));
   p.form = clamp(p.form+(78-p.form)*.5-(p.age>30?(p.age-30)*2:0)-(injury?8:0)-(p.life==="fete"?5:0)-(p.life==="star"?2:0)+(p.life==="pro"?3:0),10,100);
   p.moral = clamp(p.moral+(play-50)*.15+tr.length*5+(obj.ok?4:-4)+(p.trait==="lead"?3:0)+(55-p.moral)*.2+(p.life==="fete"?3:0)+(p.ent==="ami"?2:0)+familyMoral(),5,100);
   if(p.ent==="parent") p.moral = Math.max(p.moral,30);
   if(has("mental")) p.moral = Math.max(p.moral,35);
-  if(p.rel) p.rel.trust = clamp(p.rel.trust+(rating-6.5)*12+(50-p.rel.trust)*.15,5,100);
+  if(p.rel) p.rel.trust = clamp(p.rel.trust+(rating-6.5)*12*(cs.trust||1)+(50-p.rel.trust)*.15+qd("lea")*.15,5,100);
+  p.moral = clamp(p.moral+(cs.moral||0),5,100); if(p.intens==="doux") p.form = clamp(p.form+6,10,100);
+  personaSeason();
   const repMul = (p.life==="star"?1.25:p.life==="discret"?.8:1)*(defiOn("solo")?.85:1);
   p.rep = clamp(p.rep+((rating-6.3)*4*(apps/30)+tr.length*3+(caps?3:0)+(c.str-65)*.05)*repMul,0,100);
   let earn = p.salary*(1-agentOf().com)*(p.ent==="coach"?.92:1)+(p.life==="star"?p.rep*3:0);
@@ -96,20 +102,30 @@ function simSeason(){
   if(injury){ p.moments.push(`${p.year} · ${injury}`); p.rehab = newRehab(injury); } else p.rehab = null;
   delete p.flags.fragile;
   if(goals>=30) p.moments.push(`${p.year} · Saison à ${goals} buts`);
-  const rival = simRival(star);
+  const rival = simRival();
   if(p.protege){ const q = p.protege; q.age++; q.lvl = clamp(Math.round(q.lvl+Math.min(ageGrowth(q.age),Math.max(0,q.pot-q.lvl))),40,99); if(p.flags.protOff&&q.club===p.club.name&&q.lvl>=76){ const big = CLUBS.filter(c=>c.name!==p.club.name&&c.str>=Math.min(84,q.lvl+2)); const same = big.filter(c=>c.country===p.club.country); const nc = pick(same.length?same:big); if(nc){ q.club = nc.name; p.moments.push(`${p.year+1} · Son protégé ${q.name} signe à ${nc.name}`); } } }
-  const ballon = ballonPodium(star,rival,rating,tr.length);
+  const vote = ballonVote({rating,goals,assists,clean,apps,tr,rival});
+  if(vote.myRank===1){
+    star = true; tr.push(`Ballon d'Étoile ${yEnd}`); p.trophies.push({t:`Ballon d'Étoile ${yEnd}`,y:yEnd}); p.moments.push(`${yEnd} · Ballon d'Étoile !`);
+    p.rep = clamp(p.rep+6,0,100); p.moral = clamp(p.moral+8,5,100);
+  } else if(vote.rivalWon&&p.rival&&rival){
+    const r = p.rival; r.stars++; r.trophies++; rival.note = "a remporté le Ballon d'Étoile"; p.moments.push(`${yEnd} · Son rival ${r.name} remporte le Ballon d'Étoile`);
+  }
+  const ballon = vote.show?vote:null;
   // objectif personnel et points de talent
   const goalOk = checkGoal(p.goal,{goals,clean,assists,apps,rating:rating.toFixed(2),caps,tr,match:M});
   if(goalOk){ p.rep = clamp(p.rep+4,0,100); p.moral = clamp(p.moral+6,0,100); p.tp = (p.tp||0)+1; p.goalsDone = (p.goalsDone||0)+1; }
   else if(goalOk===false) p.moral = clamp(p.moral-4,0,100);
+  // le pari sur soi-même (dilemme « pariSaison ») : la prime tombe si l'objectif est atteint
+  if(p.flags.pariObjectif){ delete p.flags.pariObjectif; if(goalOk){ const prime = Math.round(p.salary*2.2); p.money += prime; p.moments.push(`${p.year} · Pari gagné : prime de ${money(prime)} pour l'objectif atteint`); } }
   if(p.age<=19) p.tp = (p.tp||0)+1;
   if(tr.length) p.tp = (p.tp||0)+1;
 
   const table = league.map((x,i)=>({n:x.n,pos:i+1})).filter(x=>x.pos<=4||x.n===c.name);
   const full = fullTable(league), leaders = leagueLeaders(goals,assists,rival);
   const cal = seasonCalendar(rank,apps,goals+clean,injury);
-  p.last = {full,leaders,cdc,cal,apps,starts,goals,assists,clean,rating:rating.toFixed(2),rank,tr,obj,caps,ig,intl,injury,match:M,rival,table,lg,star,ballon,news:worldShift().concat(worldNews()).slice(0,4),goal:p.goal?{t:p.goal.t,ok:goalOk}:null,
+  const coachNews = coachSeasonEnd(obj.ok);
+  p.last = {coachNews,full,leaders,cdc,cal,apps,starts,goals,assists,clean,rating:rating.toFixed(2),rank,tr,obj,caps,ig,intl,injury,match:M,rival,table,lg,star,ballon,news:worldShift().concat(worldNews()).slice(0,4),goal:p.goal?{t:p.goal.t,ok:goalOk}:null,
     d:{lvl:p.lvl-old.lvl,form:Math.round(p.form-old.form),moral:Math.round(p.moral-old.moral),rep:Math.round(p.rep-old.rep)},earn:Math.round(earn),inv};
   p.seasons.push({y:`${p.year}-${String(yEnd).slice(2)}`,age:p.age,club:c.name,cc:c.country,apps,goals,assists,clean,rating:rating.toFixed(2),rank,lvl:p.lvl,tr:tr.length});
   clubSeason(c,tr.length,rating);
@@ -122,6 +138,7 @@ function seasonScreen(){
   const ds = Object.entries(L.d).filter(([,v])=>v).map(([k,v])=>`<span class="${v>0?"up":"down"}">${LABELS[k]} ${v>0?"+":""}${v}</span>`).join("");
   const h = headline(L);
   render(`${tip("season")}<div class="muted">Bilan de la saison ${p.seasons.at(-1).y}</div>
+  <button class="btn story-btn" onclick="seasonStoryOpen()">📖 Ta saison en 5 cartes</button>
   <div class="paper"><div class="mast"><span>Le Quotidien du Ballon</span><span>${p.year+1}</span></div><h3>${h[0]}</h3><p>${h[1]}</p></div>
   ${storyCard()}
   ${L.cal?calendarHtml(L.cal):""}
@@ -142,7 +159,7 @@ function seasonScreen(){
     ${L.match?.mr?`<p>⚽ Match clé : ${esc(L.match.title)} — <b>${L.match.score}</b>${L.match.tab} · ta note ${L.match.mr}</p>`:""}
     ${L.goal?`<p>🎯 Ton objectif : <b>${esc(L.goal.t)}</b> — ${L.goal.ok?'<span style="color:var(--good)">réussi ✓ (+1 point de talent)</span>':'<span style="color:var(--bad)">manqué ✗</span>'}</p>`:""}
     <p>Objectif du club : <b>${L.obj.t}</b> — ${L.obj.ok?'<span style="color:var(--good)">atteint ✓</span>':'<span style="color:var(--bad)">manqué ✗</span>'}</p>
-    ${L.injury?`<p>🩹 Blessure : ${L.injury}</p>`:""}
+    ${L.injury?`<p>🩹 Blessure : ${L.injury}</p>`:""}${L.coachNews?`<p>📋 ${esc(L.coachNews)}</p>`:""}
     ${L.caps?`<p>${flag(p.country)} Sélection : ${L.caps} matchs, ${L.ig} but(s)${L.intl?` · ${L.intl}`:""}</p>`:""}
     <p class="muted" style="margin-bottom:0">Revenus de la saison : ${money(L.earn)}${agentOf().com?` (après ${Math.round(agentOf().com*100)} % pour ton agent)`:""}${L.inv?` · placements : <b style="color:${L.inv>0?"var(--good)":"var(--bad)"}">${L.inv>0?"+":"−"}${money(Math.abs(L.inv))}</b>`:""}</p>
     <div class="delta">${ds}</div>
@@ -155,7 +172,8 @@ function seasonScreen(){
   ${p.tourney&&!p.tourney.done?`<button class="btn primary" onclick="startTourney()">✈️ Partir au ${esc(p.tourney.name)} →</button>`:`<button class="btn primary" onclick="toOffseason()">Passer à l'intersaison →</button>`}`);
   if(L.tr.length){ playLottie("trophee",document.querySelector(".tr-anim"),false); if(!ui.confettiShown){ ui.confettiShown = true; confetti(); } }
   // nommé au Ballon d'Étoile : la cérémonie s'ouvre d'elle-même, une seule fois
-  if(L.ballon&&L.ballon.myRank<=5&&!L.ballonSeen&&!ui.quick){ L.ballonSeen = true; save(); ceremonyOpen(); }
+  if(L.ballon&&L.ballon.myRank<=5&&!L.ballonSeen&&!ui.quick){ L.ballonSeen = true; L.storySeen = true; save(); ceremonyOpen(); }
+  else if(!L.storySeen&&!ui.quick){ L.storySeen = true; save(); seasonStoryOpen(); }
 }
 
 /* ============ Journal de la saison ============ */
@@ -177,26 +195,53 @@ function headline(L){
 }
 
 /* ============ Cérémonie du Ballon d'Étoile ============ */
-function ballonPodium(star,rival,rating,tr){
-  const rivalWon = !!rival?.note?.includes("Ballon");
-  if(!(p.lvl>=80||star||rivalWon)) return null;
+// Toi, ton rival et quatre stars du moment, notés sur la même échelle : le niveau, la saison (note, buts ou passes,
+// arrêts), les trophées, et une part de hasard. Le premier gagne, que ce soit toi ou un autre.
+// Les défenseurs et les gardiens, moins mis en avant par les votants, sont un peu aidés par leurs notes et leurs arrêts.
+function ballonVote(s){
   const yEnd = p.year+1, codes = Object.keys(COUNTRIES), POSN = ["ATT","MIL","DEF","GB"];
+  const T = s.tr.join(" | ");
+  const titles = (/Coupe des Champions/.test(T)?4:0)+(/Championnat du Monde/.test(T)?4:/Coupe Continentale/.test(T)?2.5:0)+(/Champion –/.test(T)?1.5:0)+(/Coupe nationale/.test(T)?.5:0);
+  const prod = p.pos==="ATT"?(s.goals-20)*.2:p.pos==="MIL"?(s.goals+s.assists-20)*.12:p.pos==="DEF"?(s.rating-7)*4+1:(s.clean-12)*.25+(s.rating-7)*3+1;
+  // les votants se lassent un peu de couronner toujours le même
+  const already = p.trophies.filter(x=>x.t.startsWith("Ballon")).length;
+  const parts = {niveau:p.lvl,saison:(s.rating-7)*7,prod,titres:titles,banc:s.apps<25?-10:0,lassitude:-already*2};
+  const mine = parts.niveau+parts.saison+parts.prod+parts.titres+parts.banc+parts.lassitude+R(-2.5,2.5);
   /** @type {any[]} */
-  const cands = [{n:p.name,c:p.country,club:p.club.name,me:true,s:p.lvl+(+rating)*3+tr*2+(star?100:0)}];
-  if(p.rival&&!p.rival.retired) cands.push({n:p.rival.name,c:p.rival.country,club:p.rival.club.name,rival:true,s:p.rival.lvl+R(0,8)+(rivalWon?100:0)});
+  const cands = [{n:p.name,c:p.country,club:p.club.name,me:true,s:mine}];
+  const r = p.rival;
+  if(r&&!r.retired&&s.rival) cands.push({n:r.name,c:r.country,club:r.club.name,rival:true,s:r.lvl+(r.club.str-80)*.25+R(-3,6)});
   for(let i=0;i<4;i++){
     const h = hashStr("etoile"+yEnd+i), big = CLUBS.filter(c=>c.str>=82);
-    cands.push({n:FIRST[h%FIRST.length]+" "+LAST[(h>>>7)%LAST.length],c:codes[(h>>>3)%codes.length],club:big[(h>>>11)%big.length].name,pos:POSN[(h>>>5)%4],s:84+(h%100)/10});
+    cands.push({n:FIRST[h%FIRST.length]+" "+LAST[(h>>>7)%LAST.length],c:codes[(h>>>3)%codes.length],club:big[(h>>>11)%big.length].name,pos:POSN[(h>>>5)%4],s:90+(h%100)/10+R(-3,3)});
   }
-  if(!star&&!rivalWon) cands.slice(-4).sort((a,b)=>b.s-a.s)[0].s += 100;
   cands.sort((a,b)=>b.s-a.s);
-  return {top:cands.slice(0,5),myRank:cands.findIndex(x=>x.me)+1,year:yEnd};
+  const myRank = cands.findIndex(x=>x.me)+1;
+  // tu ne gagnes qu'avec une vraie saison de classe mondiale
+  if(myRank===1&&(p.lvl<86||s.apps<25)){ const me = cands.shift(); cands.splice(1,0,me); }
+  const rank = cands.findIndex(x=>x.me)+1;
+  // pourquoi : ce qui t'a porté, ce qui t'a manqué, et l'écart avec le vainqueur
+  const meC = cands.find(x=>x.me), win = cands[0];
+  const why = {parts:{saison:Math.round(parts.saison*10)/10,prod:Math.round(prod*10)/10,titres:titles,banc:parts.banc,lassitude:parts.lassitude},gap:rank===1?Math.round((meC.s-cands[1].s)*10)/10:Math.round((win.s-meC.s)*10)/10,lowLvl:rank===1&&myRank!==1?false:p.lvl<86};
+  return {top:cands.slice(0,5),myRank:rank,year:yEnd,rivalWon:!!cands[0].rival,show:p.lvl>=80||!!cands[0].rival,why};
+}
+// l'explication du vote, en une ligne : ce qui t'a fait gagner ou ce qui t'a manqué
+function ballonWhy(B){
+  const w = B.why; if(!w) return "";
+  const fr = v=>String(v).replace(".",","), sgn = v=>(v>0?"+":"")+fr(v), P = w.parts, items = [];
+  items.push(`saison ${sgn(P.saison)}`);
+  items.push(`${p.pos==="ATT"?"buts":p.pos==="MIL"?"buts et passes":p.pos==="GB"?"arrêts":"défense"} ${sgn(P.prod)}`);
+  if(P.titres) items.push(`trophées +${fr(P.titres)}`);
+  if(P.banc) items.push(`trop peu de matchs ${P.banc}`);
+  if(P.lassitude) items.push(`lassitude des votants ${P.lassitude}`);
+  const lead = B.myRank===1?`🗳️ Tu l'emportes avec ${fr(w.gap)} point${w.gap>=2?"s":""} d'avance.`:w.lowLvl?`🗳️ Il faut au moins 86 de niveau pour être sacré.`:`🗳️ Il t'a manqué ${fr(w.gap)} point${w.gap>=2?"s":""}${P.titres<4?" : une Coupe des Champions ou un titre mondial aurait pu tout changer":""}.`;
+  return `<p class="ballon-why">${lead}<br><small class="muted">Ton vote : niveau ${p.lvl} · ${items.join(" · ")}</small></p>`;
 }
 function ballonHtml(B){
   const medal = ["🥇","🥈","🥉"];
   return `<div class="card podium"><h3>🌟 Ballon d'Étoile ${B.year}</h3>
     ${[2,1,0].map((i,j)=>{ const x = B.top[i]; return `<div class="pl ${x.me?"me":""}" style="animation-delay:${.4+j*.8}s"><span class="md">${medal[i]}</span>${flag(x.c)} <b>${esc(x.n)}</b>${x.me?" (toi)":x.rival?" ⚔️ ton rival":""}<small>${esc(x.club)}</small></div>`; }).join("")}
-    ${B.myRank>3?`<p class="muted" style="margin:8px 0 0">Tu termines ${B.myRank}e du vote.</p>`:""}</div>`;
+    ${B.myRank>3?`<p class="muted" style="margin:8px 0 0">Tu termines ${B.myRank}e du vote.</p>`:""}${ballonWhy(B)}</div>`;
 }
 
 /* ============ Saison rapide ============ */

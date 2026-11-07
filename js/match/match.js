@@ -11,7 +11,9 @@ function setupMatch(){
   else { type="derby"; opp=lg.sort((a,b)=>Math.abs(a.str-c.str)-Math.abs(b.str-c.str))[RI(0,2)]; }
   const title = {cdc:"Finale de la Coupe des Champions",monde:`Finale du Championnat du Monde face à ${opp.name}`,final:"Finale de la Coupe nationale",derby:`Derby face au ${opp.name}`,rival:`Le choc face à ${p.rival?.name}`}[type];
   const mins = [RI(8,25),RI(30,44),RI(55,70),RI(78,90)];
-  const m = p.match = {type,title,usStr:type==="monde"?nat:c.str,weather:pick(WEATHER),crowd:Math.round((type==="monde"?82000:type==="cdc"?70000:c.str*720)*R(.72,1)),opp:{...opp},us:0,them:0,step:0,mins,tpl:[],log:[],myG:0,myA:0,perf:0,pending:null,calm:false};
+  const m = p.match = {type,title,usStr:type==="monde"?nat:c.str,weather:pick(WEATHER),crowd:Math.round((type==="monde"?82000:type==="cdc"?70000:c.str*720)*R(.72,1)),opp:{...opp},us:0,them:0,step:0,mins,tpl:[],log:[],myG:0,myA:0,perf:0,pending:null,calm:false,stake:null};
+  const st = type==="derby"?raceStake():null;
+  if(st){ const o = CLUBS.find(x=>x.name===st.opp.n); if(o) m.opp = {...o}; m.title = `${st.t} face au ${m.opp.name}`; m.stake = st.k; m.log.push(stakeLine(st)); }
   m.tpl = freshOrder(matchActions().length); // les situations les moins récemment vues d'abord
   if(p.lvl<c.str-9&&p.age>=18){ m.step=2; m.log.push("🪑 Tu commences sur le banc. Le coach te lance à l'heure de jeu."); }
   simGap(0,m.mins[m.step]);
@@ -205,6 +207,7 @@ function finishMatch(){
     tab = win?" Victoire aux tirs au but !":" Défaite aux tirs au but…"; res = win?"w":"l";
   }
   const score = `${m.us}-${m.them}`;
+  if(m.type!=="ordinaire") raceAfterMatch(res,m.stake);
   const fx = {w:{rep:3+(m.type==="final"?3:["cdc","monde"].includes(m.type)?7:0),moral:7},d:{moral:1},l:{moral:-5,rep:-1}}[res];
   p.rep = clamp(p.rep+(fx.rep||0)+(m.myG>=2?3:0),0,100);
   p.moral = clamp(p.moral+fx.moral,0,100);

@@ -47,10 +47,12 @@ Les carrières d'une série s'enchaînent comme chez un même joueur (Panthéon 
 | `foot-reel.js` | Histoires inspirées du football réel (clause libératoire, salaires impayés, ultras, remontada, gardien buteur…), avec leur catégorie, les rares et leurs pistes |
 | `departs.js` | Points de départ (club de ta région, exil précoce, formé dans un géant, joueur tardif, fils de légende, vieux lion) et défis Exilé et Prodige, débloqués par le Panthéon (`lock`) |
 | `histoires-ciblees.js` | Histoires selon le pays, le niveau du club, la sélection et la fin de carrière ; retours dans les anciens clubs ; légendes des carrières passées ; suites qui reviennent des années plus tard |
+| `dilemmes.js` | Dilemmes de la carrière vivante : souvenirs qui citent un choix fait des saisons plus tôt, course au titre (jouer blessé, crise, maintien), style du coach, vrais choix où tout coûte |
 | `defis.js` | Défis de départ (Parti de rien, Un club une vie, Corps de verre, Sans filet) |
 | **`js/ecrans/`** | |
 | `interface.js` | Création du joueur, rendu, fenêtres accessibles, sons, écussons, conseils, taille du texte |
 | `saison.js` | Simulation de la saison, calendrier match par match, journal, distinctions, Ballon d'Étoile, saison rapide |
+| `vivant.js` | La carrière vivante : classement qui avance à chaque moment de la saison et match clé à enjeu, qualités et axe de travail, entraîneurs à style, réputation construite par les choix (`p.persona`, `p.memo`), rêve de carrière et note finale, récap de saison en cartes |
 | `competitions.js` | Classement complet, buteurs et passeurs du championnat, Coupe des Champions (qualification, tirage au sort animé, parcours) et cérémonie du Ballon d'Étoile |
 | `mercato.js` | Intersaison : offres, négociation en direct (patience du directeur sportif), enchères, talents |
 | `fin-de-carriere.js` | Après-carrière jouable (télé, dirigeant, académie, agent), bilan final, entraîneur, Héritage |
@@ -73,6 +75,7 @@ Les carrières d'une série s'enchaînent comme chez un même joueur (Panthéon 
 | `match.js` | Match clé en direct : actions par poste, mi-temps, mini-terrain, célébrations, contres (une action défensive réussie peut relancer ton équipe) |
 | `ordinaires.js` | Matchs de saison : une action jouée en cours de saison (championnat ou coupe), et la prolongation jouable des finales |
 | `dialogues.js` | Actions supplémentaires par poste (tirées en priorité parmi les moins récemment vues, avec variantes de texte dans `ACT_ALT`), phrase de contexte selon le score, réactions du banc et des tribunes, dialogues entre deux actions (`MATCH_TALKS`) |
+| `stade3d.js` | Le stade 3D des mini-jeux (Three.js chargé à la demande) et le footballeur animé de `img/3d/joueur.glb` ; repli en 2D sans connexion |
 | `penalty.js` | Coups de pied arrêtés jouables : penalty (placé, en force, Panenka), plongeon, tirs au but, coup franc avec mur et effet |
 | `conference.js` | Conférence de presse d'après-match, avec chrono |
 | `duel.js` | Les gestes de chaque poste joués au bon moment : dribble, tacle, sortie aérienne, passe ; réglage des mini-jeux |

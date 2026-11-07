@@ -63,7 +63,7 @@ function __step(){
   ui.quick = true;
   try{
     if(p.phase==="tirage"){ tirageScreen(); tirageDone(); return "tirage"; }
-    if(p.phase==="goal"){ if(!p.goalOpts) p.goalOpts = goalOptions(); setGoal(RI(0,p.goalOpts.length-1)); return "objectif"; }
+    if(p.phase==="goal"){ if(!p.goalOpts) p.goalOpts = goalOptions(); if(chance(.5)){ goalScreen(); setFocus(pick(Object.keys(QUALS))); if(chance(.4)) setIntensity(pick(Object.keys(INTENS))); } setGoal(RI(0,p.goalOpts.length-1)); return "objectif"; }
     if(p.phase==="event"){ if(!p.curEv) eventScreen(); choose(__pickChoice(EVENTS.find(x=>x.id===p.curEv))); return "événement"; }
     if(p.phase==="match"||p.phase==="ordinaire"){
       const m = p.match;

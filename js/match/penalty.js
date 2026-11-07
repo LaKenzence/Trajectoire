@@ -915,7 +915,7 @@ const Penalty = (() => {
 
 /* ============ Branchements dans la carrière ============ */
 // Niveau de difficulté des penalties : niveau du joueur, forme, moral et talent « Sang-froid »
-function penSkill(){ return clamp((p.lvl-40)/55+(has("sangfroid")?.12:0)+(p.moral-50)/400+(p.form-60)/500,0,1); }
+function penSkill(){ return clamp((p.lvl-40)/55+(has("sangfroid")?.12:0)+(p.moral-50)/400+(p.form-60)/500+(typeof qd==="function"?qd("tec")/150+qd("men")/200:0),0,1); }
 function penTeams(opp){
   const usName = p.match?.type==="monde"?COUNTRIES[p.country].name:p.club.name;
   const us = clubColors(usName), them = clubColors(opp?opp.name:"Adversaire");

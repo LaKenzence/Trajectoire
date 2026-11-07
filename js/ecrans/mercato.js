@@ -144,15 +144,17 @@ function startSeason(){
   p.phase="goal"; p.evIdx=0; p.evCount=3; p.curEv=null; p.goal=null; p.nego=null;
   p.tmp={play:p.starterPromise?12:0}; p.starterPromise=false; ui.seenThisSeason=[];
   p.cdc = cdcQualified()?newCdc():null;
+  p.race = newRace(); ensureCoach(); ensureQuals();
   if(p.cdc) p.phase = "tirage";
   route();
 }
 function goalScreen(){
   if(!p.goalOpts) p.goalOpts = goalOptions();
   render(`<div class="muted">Saison ${p.year}-${String(p.year+1).slice(2)} · avant la reprise</div>
-    ${tip("goal")}<div class="card"><h2>🎯 Ton objectif personnel</h2>
-    <p class="story">Choisis l'objectif que tu te fixes pour cette saison. S'il est atteint : réputation, moral et un point de talent en plus.</p>
-    ${p.goalOpts.map((g,i)=>`<button class="btn" onclick="setGoal(${i})"><kbd>${i+1}</kbd>${esc(g.t)}</button>`).join("")}</div>${quickBtn()}`);
+    ${tip("goal")}${focusHtml()}<div class="card"><h2>🎯 Ton objectif personnel</h2>
+    <p class="story">Choisis l'objectif que tu te fixes pour cette saison (ça lance la saison). S'il est atteint : réputation, moral et un point de talent en plus.</p>
+    ${p.goalOpts.map((g,i)=>`<button class="btn" onclick="setGoal(${i})"><kbd>${i+1}</kbd>${esc(g.t)}</button>`).join("")}</div>
+    ${dreamProgress()?`<div class="card">${dreamProgress()}</div>`:""}${quickBtn()}`);
 }
 function setGoal(i){ p.goal = p.goalOpts[i]; p.goalOpts = null; p.phase = "event"; route(); }
 function stay(){ startSeason(); }

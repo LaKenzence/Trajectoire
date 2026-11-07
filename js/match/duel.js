@@ -268,14 +268,16 @@ const Duel = (() => {
     let ballP = null, camX = 400;
     if (k === "dribble") {
       const lastDir = D.me.y - (D.prevY ?? D.me.y); D.prevY = D.me.y;
-      const fell = ended && !D.result;
-      A.me = { x: D.me.x, y: D.me.y, face: [1, lastDir * 3], anim: fell ? "chute" : "course", time: fell ? e : t * 1.25, loop: !fell };
+      // raté : s'il t'a taclé (tu n'as rien fait), il glisse et tu tombes ; si tu as joué trop tôt ou du mauvais côté,
+      // il te prend simplement le ballon. Un défenseur effacé ne tombe pas : il se retourne et te regarde filer.
+      const lost = ended && !D.result, tackled = lost && /TACLÉ/.test(why());
+      A.me = { x: D.me.x, y: D.me.y, face: [1, lastDir * 3], anim: tackled && e > .25 ? "chute" : lost ? "attente" : "course", time: tackled ? e - .25 : lost ? e : t * 1.25, loop: !tackled };
       D.defs.forEach((d, i) => {
-        const tackling = fell && i === D.stage;
-        A["d" + i] = { x: d.x, y: d.y, face: d.beaten ? [1, 0] : [-1, 0], anim: d.beaten ? "chute" : tackling ? "tacle" : "gb_attente", time: d.beaten ? (D.now - (d.beatAt || D.now)) / 1000 : tackling ? e + .1 : t + i, loop: !d.beaten && !tackling };
-        if (d.beaten && !d.beatAt) d.beatAt = D.now;
+        const cur = lost && i === D.stage, back = d.beaten && D.me.x > d.x;
+        A["d" + i] = { x: d.x, y: d.y, face: back ? [1, (D.me.y - d.y) / 300] : [-1, (D.me.y - d.y) / 300], anim: cur ? (tackled ? "tacle" : "controle") : d.beaten ? "attente" : "gb_attente", time: cur ? (tackled ? e + .1 : 1.2 + e) : t + i * 1.3, loop: !cur };
       });
-      ballP = fell ? { x: D.me.x + 40, y: D.me.y + 20, h: 0 } : { x: D.me.x + 16, y: D.me.y + 4, h: 0 };
+      const stealer = lost ? D.defs[D.stage] : null;
+      ballP = stealer ? { x: lerp(D.me.x + 16, stealer.x - 14, cl(e * 3, 0, 1)), y: lerp(D.me.y + 4, stealer.y + 4, cl(e * 3, 0, 1)), h: 0 } : { x: D.me.x + 16, y: D.me.y + 4, h: 0 };
       camX = D.me.x + 140;
     }
     if (k === "tacle") {

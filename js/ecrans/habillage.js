@@ -247,6 +247,7 @@ const EMOJI_IC = {
   "💰":"coins","💸":"coins","💼":"coins","🏦":"coins","🔊":"vol","🔇":"volx","⚙":"gear","🟥":"card","🟨":"card","🔓":"lock","🔒":"lock","📖":"edit","🔎":"target",
   
   "🪨":"run","🦁":"fire","🎒":"plane","👁":"eye","👀":"eye","🗿":"shield","🧊":"snow","❄":"snow","🌙":"moon","⚪":"ball","😱":"warning","🌪":"bolt","🙌":"users","🌳":"tree","🎈":"star","🧓":"clock","💔":"heart","🐈":"shield","⬇":"down","📂":"save","🤦":"meh","😘":"smile","😭":"meh","😂":"smile","😅":"smile","😏":"smile","😉":"smile","😴":"clock","😈":"fire","🙏":"handshake","😢":"meh","👏":"handshake","🥺":"meh","🤡":"meh","🌧":"cloud","🪑":"clock","🛷":"run","🤫":"chat","🤸":"run","🕺":"run","☝":"target","🏴":"flag",
+  "🗳":"check","🪖":"shield","⚡":"bolt","❔":"target","😰":"warning",
   "🙂":"smile","😄":"smile","😎":"smile","😐":"meh","😬":"meh","😠":"angry","😤":"angry","🤬":"angry","😒":"angry"
 };
 const EMO_RE = /(?:[\u{1F1E6}-\u{1F1FF}]{2}|\p{Extended_Pictographic}(?:️|[\u{1F3FB}-\u{1F3FF}]|‍\p{Extended_Pictographic}️?)*|[#*0-9]️?⃣)/u;
