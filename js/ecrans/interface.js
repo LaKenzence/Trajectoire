@@ -62,11 +62,22 @@ function seasonSteps(){
 let shownHud = null, shownNav = null, lastPhase = null;
 // les écussons et l'avatar portent un identifiant SVG unique à chaque dessin : on l'ignore pour savoir si le bandeau a changé
 const sameUi = (a,b)=>a!=null&&b!=null&&a.replace(/(cr|av)\d+/g,"$1")===b.replace(/(cr|av)\d+/g,"$1");
+// dernier bouton touché dans l'écran : sa position sert à garder la vue en place quand le même écran se redessine
+let lastTap = null;
+if(typeof document!=="undefined"&&document.addEventListener) document.addEventListener("click",e=>{
+  const t = /** @type {HTMLElement} */ (e.target), b = t&&t.closest?t.closest("#app [onclick]"):null;
+  if(!b) return;
+  const card = b.closest(".card"), cards = [...document.querySelectorAll("#app .fade .card")];
+  lastTap = {on:b.getAttribute("onclick"),top:b.getBoundingClientRect().top,ci:cards.indexOf(card),ct:card?card.getBoundingClientRect().top:0};
+},true);
+// titre principal de l'écran affiché : s'il ne change pas, c'est le même écran mis à jour (l'été après un talent, des vacances…)
+const screenHead = ()=>document.querySelector("#app .fade h1, #app .fade h2")?.textContent||null;
 function render(html){
   const app = $("#app"), content = takeToast()+`<div class="fade" tabindex="-1">${html}</div>`;
   const hudEl = document.getElementById("hudBox"), scr = document.getElementById("screen"), navEl = document.getElementById("navBox");
   const phase = p?p.phase:null, still = !!phase&&phase===lastPhase;
-  lastPhase = phase;
+  const head = hudEl?screenHead():null, y = window.scrollY||0, tap = lastTap;
+  lastPhase = phase; lastTap = null;
   if(!hudEl||!scr||!navEl||hudEl.parentElement!==app){
     app.innerHTML = `<div id="hudBox">${shownHud = hud()}</div><div id="screen">${content}</div><div id="navBox">${shownNav = navBar()}</div>`;
   } else {
@@ -76,7 +87,17 @@ function render(html){
     scr.innerHTML = content;
   }
   if(still) app.querySelector(".fade")?.classList.add("still");
-  placeView(); focusScreen();
+  if(still&&head&&head===screenHead()&&!document.querySelector("#app .decide")) keepView(y,tap); else placeView();
+  focusScreen();
+}
+// même écran redessiné : le bouton touché (ou, s'il a disparu, son cadre) revient à la même hauteur ; sinon la vue ne bouge pas
+function keepView(y,tap){
+  window.scrollTo(0,y);
+  if(!tap) return;
+  const same = tap.on&&[...document.querySelectorAll("#app [onclick]")].find(el=>el.getAttribute("onclick")===tap.on);
+  const card = !same&&tap.ci>=0?document.querySelectorAll("#app .fade .card")[tap.ci]:null;
+  const el = same||card, was = same?tap.top:tap.ct;
+  if(el&&typeof el.getBoundingClientRect==="function") window.scrollBy(0,el.getBoundingClientRect().top-was);
 }
 // place l'écran pour que la décision (les premiers choix) soit visible sans faire défiler,
 // en gardant si possible le résultat du choix précédent et le texte de la situation
