@@ -1,6 +1,6 @@
 # Trajectoire
 
-Jeu de carrière de footballeur, de 16 ans à la retraite : choix, matchs clés joués en direct, penalties et coups francs jouables, dribbles, tacles et passes au bon moment, conférences de presse, téléphone et réseaux sociaux, vestiaire, calendrier, tournois internationaux, vie perso (agent, famille, placements), rival, talents, défis de départ, dynasties et vies d'après-carrière jouables.
+Jeu de carrière de footballeur, de 16 ans à la retraite : un centre de formation où tout commence (un seul contrat pro pour deux), choix, matchs clés joués en direct, penalties et coups francs jouables, dribbles, tacles et passes au bon moment, conférences de presse, téléphone et réseaux sociaux, vestiaire, calendrier, tournois internationaux, vie perso (agent, famille, placements), rival, talents, défis de départ, dynasties et vies d'après-carrière jouables.
 
 Version publiée : https://claude.ai/artifact/7Hpbg6m2A94JtGXD5aPxne (avec les classements partagés)
 
@@ -59,6 +59,13 @@ Les carrières d'une série s'enchaînent comme chez un même joueur (Panthéon 
 | `pantheon.js` | Panthéon, succès, défi du jour, records partagés, carte en image, stats |
 | `carnet.js` | Carnet des histoires : mémoire des événements vécus d'une carrière à l'autre (`trajectoire_vus`), tirage qui favorise l'inédit, écran du carnet et carte « nouvelles histoires » du bilan |
 | `monde.js` | Réputation dans chaque club (`clubRep`) et offre de retour aux sources, clubs qui montent et chutent (`p.world`), légendes du Panthéon qui reviennent, titre de carrière, unes de journal |
+| `centre.js` | Le centre de formation, début de chaque nouvelle carrière : match d'essai, trois saisons de 16 à 18 ans pour un seul contrat pro, trois personnages qui se souviennent de tes choix (Vasseur, Sacha, le proche), six fins et le film de ces trois ans. `cfToCareer()` enchaîne sur la carrière (Sacha devient le rival, état gardé dans `p.cf`) et `CF_EVENTS` fait revenir ces personnages ensuite. « Créer mon joueur en détail » ouvre la création classique |
+| `chapitres.js` | Les trois chapitres de la carrière après le centre : la percée (titulaire avant 23 ans), le sommet (un grand titre avant 30 ans), la dernière danse (choisir comment tu pars). Rappel à chaque avant-saison, verdict à l'intersaison (`p.acts`), scènes d'ouverture, offre qui suit le choix de la dernière danse, carte « Tes chapitres » au bilan |
+| `rythme.js` | Le rythme de la carrière (voir `docs/boucle-de-jeu.md`) : grandes saisons jouées en détail, saisons de transition qui passent vite (deux moments, match clé simulé sauf s'il y a un enjeu), intrigues de la saison annoncées avant la reprise et prioritaires dans le tirage |
+| `coequipiers.js` | Les coéquipiers qui comptent : capitaine, meilleur pote, vétéran ou gamin, qui vieillissent, se souviennent de tes choix (`p.crew`), partent, reviennent en face au match clé, t'écrivent et apparaissent dans le film de carrière |
+| `direction.js` | Le dirigeant de chaque club (président ou directeur sportif, nommé, avec son caractère) : sa voix à l'été et en négociation, et sa mémoire des refus, départs et offres retirées (`p.bosses`) |
+| `panoplie.js` | Les récompenses du Panthéon : crampons, célébration, numéro, chant du public, choisis au Panthéon et visibles en 3D et dans le stade |
+| `partage.js` | La carte de fin de carrière au format story et le film de carrière exporté en vidéo (canvas et MediaRecorder) |
 | `histoire.js` | Défi de la semaine (même classement que le défi du jour, `p.daily` porte la clé de la semaine) et mode Histoire en 5 chapitres |
 | `installation.js` | Version web seulement (page avec manifeste) : enregistre le service worker et affiche « Installer l'appli » sur l'accueil |
 | `sauvegardes.js` | Export et import de toutes les sauvegardes (code à copier ou fichier) |
@@ -80,7 +87,9 @@ Les carrières d'une série s'enchaînent comme chez un même joueur (Panthéon 
 | `conference.js` | Conférence de presse d'après-match, avec chrono |
 | `duel.js` | Les gestes de chaque poste joués au bon moment : dribble, tacle, sortie aérienne, passe ; réglage des mini-jeux |
 | `tournoi.js` | Championnat du Monde et Coupe Continentale joués l'été : groupes, quarts, demie, finale, tirs au but jouables |
-| `ambiance.js` | Foule, chants, sifflets, battements de cœur, météo, voix du commentateur |
+| `ambiance.js` | Sifflets, battements de cœur, météo, voix du commentateur |
+| `stade-son.js` | Le son du stade, synthétisé : fond de foule en stéréo avec réverbération, chants à plusieurs voix, montée sur occasion, explosion sur but, silence avant un penalty |
+| `direct.js` | Le match clé en direct : entre deux actions, le chrono défile, les buts tombent à leur minute avec le score et la foule, et la dernière action d'un match serré devient un « moment décisif » |
 | **`tools/`** | |
 | `serve.js` | Serveur de développement local |
 | `build.js` | Version web installable (`dist/web`) et archive itch.io (`npm run build`) |

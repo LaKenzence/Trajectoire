@@ -46,15 +46,15 @@ function bar(label,v,col){return `<div class="bar">${label} <b style="color:var(
 function hud(){
   if(!p) return "";
   return `<div class="hud"><div class="hud-row">
-    <button class="hud-id" onclick="showCard()" aria-label="Voir ma carte de joueur">${avatarSvg(p.look,42,clubColors(p.club).a)}<span class="hud-who"><b>${esc(p.name)} ${flag(p.country)}</b><small>Saison ${p.seasons.length+1} · ${p.age} ans · ${crest(p.club,14)} ${esc(p.club.name)}</small></span></button>
+    <button class="hud-id" onclick="showCard()" aria-label="Voir ma carte de joueur">${avatarSvg(p.look,42,clubColors(p.club).a)}<span class="hud-who"><b>${esc(p.name)} ${flag(p.country)}</b><small>Saison ${p.seasons.length+(p.retired||p.phase==="season"||p.phase==="tournoi"?0:1)||1} · ${p.age} ans · ${crest(p.club,14)} ${esc(p.club.name)}</small></span></button>
     <div class="hud-kpi"><span class="kpi money" title="Fortune">${ic("coins")}${money(p.money)}</span><span class="kpi lvl" title="Niveau">${ic("star")}${p.lvl}</span></div></div>
   <div class="bars">${bar("Niveau",p.lvl,"var(--accent)")}${bar("Forme",p.form,"var(--good)")}${bar("Moral",p.moral,"var(--blue)")}${bar("Réputation",p.rep,"#c08bff")}${bar("Coach",p.rel?.trust??50,"#ff9f5a")}</div>${seasonSteps()}</div>`;
 }
 // frise des étapes de la saison, sous les jauges
 function seasonSteps(){
   if(!p||p.retired) return "";
-  const steps = ["Objectif","Moment 1","Moment 2","Moment 3","Match clé","Bilan","Été"];
-  const cur = p.phase==="goal"?0:p.phase==="hiver"?3:p.phase==="event"||p.phase==="ordinaire"?1+Math.min(p.evIdx,2):p.phase==="match"?4:p.phase==="season"?5:6;
+  const n = p.evCount||3, steps = ["Objectif",...Array.from({length:n},(_,i)=>"Moment "+(i+1)),"Match clé","Bilan","Été"];
+  const cur = p.phase==="goal"?0:p.phase==="hiver"?Math.min(3,n):p.phase==="event"||p.phase==="ordinaire"?1+Math.min(p.evIdx,n-1):p.phase==="match"?n+1:p.phase==="season"?n+2:n+3;
   return `<div class="steps" aria-label="Étape de la saison : ${steps[cur]}">${steps.map((x,i)=>`<span class="${i<cur?"done":i===cur?"cur":""}" title="${x}"></span>`).join("")}<em>${steps[cur]}</em></div>`;
 }
 // le bandeau et la barre du bas restent en place : seul ce qui change est redessiné, et l'animation d'entrée
@@ -203,11 +203,12 @@ function heroPitch(){
 }
 function home(){
   p = null; unseed();
-  const slots = ["1","2","3"].map(k=>({k,s:loadSlot(k)}));
+  // l'emplacement « centre » vient du premier prototype du centre de formation : il reste affiché tant qu'il est occupé
+  const slots = ["1","2","3"].concat(loadSlot("centre")?["centre"]:[]).map(k=>({k,s:loadSlot(k)}));
   const card = ({k,s:sv})=>{
     if(!sv) return `<button class="slot empty" onclick="newCareer('${k}')">${ic("plus")}<span class="muted">Emplacement ${k}</span><b>Nouvelle carrière</b></button>`;
     const done = sv.retired&&sv.after;
-    return `<div class="slot"><button class="slotmain" onclick="${done?`viewEnd('${k}')`:`resume('${k}')`}">${crest(sv.club,30)}<span><b>${esc(sv.name)}</b> ${flag(sv.country)}${sv.hard?" 👑":""}<small>${done?`Carrière terminée · ${sv.seasons.length} saisons · voir le bilan`:`${sv.age} ans · ${esc(sv.club.name)} · niveau ${sv.lvl}`}</small></span></button><button class="slotdel" onclick="askDelete('${k}',this)" aria-label="Supprimer la carrière de l'emplacement ${k}">✕</button></div>`;
+    return `<div class="slot"><button class="slotmain" onclick="${done?`viewEnd('${k}')`:`resume('${k}')`}">${crest(sv.club,30)}<span><b>${sv.centre&&sv.name==="Inconnu"?"Le jour de l'essai":esc(sv.name)}</b> ${flag(sv.country)}${sv.hard?" 👑":""}<small>${done?`Carrière terminée · ${sv.seasons.length} saisons · voir le bilan`:sv.centre?`${sv.age} ans · centre de formation du Racing`:`${sv.age} ans · ${esc(sv.club.name)} · niveau ${sv.lvl}`}</small></span></button><button class="slotdel" onclick="askDelete('${k}',this)" aria-label="Supprimer la carrière de l'emplacement ${k}">✕</button></div>`;
   };
   const cur = slot!=="daily"&&slot!=="semaine"&&loadSlot(slot), live = cur&&!(cur.retired&&cur.after);
   const ach = Object.keys(loadHof().ach).length, free = slots.find(x=>!x.s);
@@ -215,7 +216,7 @@ function home(){
   $("#app").innerHTML = `<div class="fade home">
     <section class="hero" aria-label="Trajectoire">
       <div class="hero-top"><span class="crown" aria-hidden="true">${ic("crown")}</span><h1 class="logo">Trajectoire</h1><span class="swoosh" aria-hidden="true"></span><p class="tagline">Écris ta légende sur les terrains…</p></div>
-      <div class="hero-cta">${live?`<button class="btn primary big" onclick="resume('${slot}')">${ic("play")}<span>Continuer<small>${esc(cur.name)} · ${cur.age} ans · ${esc(cur.club.name)}</small></span></button>`:`<button class="btn primary big" onclick="newCareer('${free?free.k:"1"}')">${ic("play")}<span>Nouvelle carrière</span></button>`}</div>
+      <div class="hero-cta">${live?`<button class="btn primary big" onclick="resume('${slot}')">${ic("play")}<span>Continuer<small>${cur.centre?(cur.name==="Inconnu"?"Le jour de l'essai":`${esc(cur.name)} · ${cur.age} ans · centre de formation`):`${esc(cur.name)} · ${cur.age} ans · ${esc(cur.club.name)}`}</small></span></button>`:`<button class="btn primary big" onclick="newCareer('${free?free.k:"1"}')">${ic("play")}<span>Nouvelle carrière</span></button>`}</div>
     </section>
     <section class="home-sec"><h3>Mes carrières</h3><div class="slots">${slots.map(card).join("")}</div></section>
     <section class="home-sec"><h3>Jouer</h3><div class="menu-list">
@@ -231,7 +232,7 @@ function home(){
     </div></section>
     <details class="card howto"><summary>Comment ça marche</summary>
       <ol>
-        <li>Crée ton joueur : pays, poste, profil, origine, entourage, mode de vie, et un défi de départ si tu veux corser l'aventure.</li>
+        <li>Tout commence à 16 ans, par un match d'essai au centre de formation : trois ans pour décrocher ton contrat pro, et des gens qui se souviendront de tes choix toute ta carrière. Tu préfères tout régler toi-même ? « Créer mon joueur en détail » reste possible dès le premier écran.</li>
         <li>Chaque saison, fixe-toi un objectif, puis réponds aux événements. Certains choix ont des suites des années plus tard.</li>
         <li>Joue le match clé et les matchs de saison action par action : penalties et coups francs se tirent, ou s'arrêtent, toi-même.</li>
         <li>L'été, choisis tes vacances, négocie tes contrats et débloque des talents. Ton téléphone peut sonner à tout moment.</li>
@@ -325,8 +326,9 @@ function route(){
 }
 function routeScreen(){
   save();
+  if(p.centre) return centreRoute();
   if(p.phase!=="match") ambient(false);
-  if(p.retired) return p.after?endScreen():p.coach?coachRoute():afterScreen();
+  if(p.retired) return p.after?(!p.filmSeen&&!p.daily&&!p.friend&&!ui.quick?careerFilm():endScreen()):p.coach?coachRoute():afterScreen();
   if(p.phase==="tirage") return tirageScreen();
   if(p.phase==="goal") return goalScreen();
   if(p.phase==="event") return eventScreen();
@@ -343,12 +345,14 @@ function drawEvent(){
   // une conséquence arrivée à échéance passe en priorité
   const i = (p.seeds||[]).findIndex(s=>s.age<=p.age&&EVENTS.find(e=>e.id===s.ev).cond());
   if(i>=0){ const ev = p.seeds.splice(i,1)[0].ev; return EVENTS.find(e=>e.id===ev); }
+  // juste après le centre de formation, les scènes écrites des premières saisons pro passent avant le hasard
+  const arc = typeof cfArcNext==="function"?cfArcNext():null; if(arc) return arc;
   const ok = e=>!e.seedOnly&&e.cond()&&!ui.seenThisSeason?.includes(e.id);
   let pool = EVENTS.filter(e=>ok(e)&&(p.used[e.id]||0)<3);
   if(!pool.length) pool = EVENTS.filter(ok);
   if(!pool.length) pool = EVENTS.filter(e=>!e.seedOnly&&e.cond());
   // les événements jamais vus (dans cette carrière comme dans les autres) sortent plus souvent ; les rares, peu ; le fêtard attire les soirées
-  const w = pool.map(e=>(e.weight||(e.rare?RARE_W:1))*novelty(e)*(e.id==="soiree"&&p.life==="fete"?2.5:1)/(1+(p.used[e.id]||0)*2));
+  const w = pool.map(e=>(e.weight||(e.rare?RARE_W:1))*novelty(e)*(typeof threadBoost==="function"?threadBoost(e):1)*(e.id==="soiree"&&p.life==="fete"?2.5:1)/(1+(p.used[e.id]||0)*2));
   let r = Math.random()*w.reduce((a,b)=>a+b,0);
   for(let j=0;j<pool.length;j++){ r-=w[j]; if(r<=0) return pool[j]; }
   return pool[0];
@@ -393,6 +397,8 @@ function applyFx(fx){
     if(k==="unflag"){ delete p.flags[v]; continue; }
     if(k==="moment"){ p.moments.push(`${p.year} · ${v}`); continue; }
     if(k==="retire"){ p.retired = v; continue; }
+    if(k==="crew"){ if(typeof crewFx==="function") crewFx(v); continue; }
+    if(k==="crewBack"){ if(typeof crewBackFx==="function") crewBackFx(v); continue; }
     if(k==="seed"){ p.seeds.push({ev:v.ev,age:p.age+RI(v.d[0],v.d[1])}); ui.seeded=true; continue; }
     if(k==="rival"){ if(p.rival) p.rival.lvl = clamp(p.rival.lvl+v,30,99); continue; }
     if(k==="protege"){ if(!p.protege) p.protege = {name:pick(FIRST)+" "+pick(LAST),age:18,lvl:RI(58,64),pot:RI(80,92),club:p.club.name}; continue; }
@@ -436,8 +442,8 @@ function choose(i){
   if(e.id==="sifflets"||deltas.some(d=>d.k==="Réputation"&&d.v<=-5)) setTimeout(()=>sfx("boo"),200);
   if(e.seedOnly) p.echoes = (p.echoes||0)+1;
   p.curEv = null; p.evIdx++;
-  if(!p.retired&&p.evIdx===2){ const w = winterWindow(); if(w){ p.winter = w; p.phase = "hiver"; } }
-  if(!p.retired && p.evIdx>=p.evCount){ p.phase="match"; setupMatch(); }
+  if(!p.retired&&p.evIdx===(p.evCount<=2?1:2)){ const w = winterWindow(); if(w){ p.winter = w; p.phase = "hiver"; } }
+  if(!p.retired && p.evIdx>=p.evCount){ p.phase="match"; setupMatch(); if(p.calm&&typeof calmMatch==="function"&&!bigMatch(p.match)) calmMatch(); }
   else if(ordinaryWanted()) startOrdinary();
   if(!p.retired&&!p.urgent&&(chance(.1)||(urgentDue("saison")&&chance(.5)))) maybeUrgent("saison");
   save();
@@ -488,6 +494,8 @@ function toggleSound(btn){
 // suit le score du match en cours pour jouer les bons sons
 function matchSounds(m){
   if(ui.msKey!==m.title+m.mins.join()){ ui.msKey = m.title+m.mins.join(); ui.ms = {us:0,them:0}; sfx("whistle"); speak(`Coup d'envoi. ${m.title}.`); }
+  // en direct (direct.js), les buts sonnent quand ils apparaissent à leur minute
+  if(typeof liveOn==="function"&&liveOn()){ ui.ms = {us:m.us,them:m.them}; return; }
   if(m.us>ui.ms.us){ sfx("goal"); crowdSwell(); setTimeout(()=>sfx("chant"),900); speak(lastGoalLine(m)); }
   else if(m.them>ui.ms.them){ sfx("concede"); if(m.them-m.us>=2) setTimeout(()=>sfx("boo"),500); speak(lastGoalLine(m)); }
   ui.ms = {us:m.us,them:m.them};
@@ -554,7 +562,12 @@ const TIPS = {
   summer:"☀️ L'été, tu restes ou tu pars : négocie les offres, lance une bataille d'enchères quand deux clubs te veulent, et dépense tes points de talent plus bas."
 };
 let tipsSeen = (()=>{ try{ return JSON.parse(localStorage.getItem("trajectoire_tips"))||{}; }catch(e){ return {}; } })();
-function tip(id){ return tipsSeen[id]?"":`<div class="tip" id="tip-${id}"><div>${TIPS[id]}</div><button class="linkbtn" onclick="hideTip('${id}')">Compris</button></div>`; }
+// un conseil ne s'affiche qu'une fois : vu, il ne revient plus (sauf « Revoir les conseils »), et jamais deux en même temps
+function tip(id){
+  if(tipsSeen[id]||ui.quick) return "";
+  tipsSeen[id] = 1; try{ localStorage.setItem("trajectoire_tips",JSON.stringify(tipsSeen)); }catch(e){}
+  return `<div class="tip" id="tip-${id}"><div>${TIPS[id]}</div><button class="linkbtn" onclick="hideTip('${id}')">Compris</button></div>`;
+}
 function hideTip(id){ tipsSeen[id] = 1; try{ localStorage.setItem("trajectoire_tips",JSON.stringify(tipsSeen)); }catch(e){} document.getElementById("tip-"+id)?.remove(); }
 function resetTips(){ tipsSeen = {}; try{ localStorage.removeItem("trajectoire_tips"); }catch(e){} home(); }
 

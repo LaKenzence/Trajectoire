@@ -4,7 +4,7 @@
 
 // après un événement : un match de saison se glisse parfois avant le suivant
 function ordinaryWanted(){
-  if(p.retired||p.phase!=="event"||p.evIdx>=p.evCount) return false;
+  if(p.retired||p.calm||p.phase!=="event"||p.evIdx>=p.evCount) return false;
   if(p.lvl<p.club.str-9&&p.age>=18) return false; // remplaçant : pas de temps de jeu à jouer
   return p.evIdx===1?chance(.65):p.evIdx===2?chance(.4):false;
 }
@@ -15,7 +15,7 @@ function startOrdinary(){
   const pc = protegeClub(), meet = !!pc&&chance(.45);
   const opp = meet?pc:cup&&small.length?pick(small):pick(lg);
   const home = chance(.5), day = p.evIdx===1?RI(6,15):RI(18,32);
-  const title = `${cup?"Coupe nationale":`${day}e journée`} · ${home?"à domicile":"à l'extérieur"} face au ${opp.name}`;
+  const title = `${cup?"Coupe nationale":`${day}e journée`} · ${home?"à domicile":"à l'extérieur"} face ${auC(opp.name)}`;
   const min = RI(20,86);
   const m = p.match = {type:"ordinaire",short:true,cup,title,usStr:c.str+(home?2:-2),weather:pick(WEATHER),crowd:Math.round(c.str*(home?560:420)*R(.6,1)),
     opp:{...opp},us:0,them:0,step:0,mins:[min],tpl:[],log:[],myG:0,myA:0,perf:0,pending:null,calm:false,talk:null,protege:false};

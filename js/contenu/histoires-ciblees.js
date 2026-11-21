@@ -8,7 +8,7 @@ EVENTS.push(
   ch:[{t:"Promettre un but à ton quartier",risk:{p:()=>clamp(.4+(p.lvl-65)*.012,.2,.75),good:{rep:5,moral:7,moment:"Décisif dans le derby de sa ville",txt:"Tu marques et tu cours vers la tribune où se trouve ton quartier."},bad:{rep:-3,moral:-4,txt:"Défaite, et des messages moqueurs de ta propre famille."}}},
       {t:"Rester sobre dans les médias",fx:{trust:2,form:2},why:"Le coach apprécie ton calme."}]},
  {id:"coupeAfrique",scene:"selection",hint:"Une Coupe Continentale en plein milieu de saison…",cond:()=>AFRIQUE.includes(p.country)&&expat()&&p.caps>=1,
-  txt:()=>`La Coupe Continentale se joue en janvier, en pleine saison. Le ${p.club.name} fait pression pour que tu déclines la convocation.`,
+  txt:()=>`La Coupe Continentale se joue en janvier, en pleine saison. ${LeC(p.club.name)} fait pression pour que tu déclines la convocation.`,
   ch:[{t:"Partir défendre ton pays",fx:{nat:10,rep:4,play:-8,trust:-4,moral:5},why:"Tout le pays te remercie. Ton club compte les jours."},
       {t:"Rester au club",fx:{nat:-12,trust:5,play:6,rep:-4},why:"La presse de ton pays te traite de mercenaire."}]},
  {id:"pionnier",scene:"medias",hint:"Être le premier de ton pays à réussir là-bas…",cond:()=>LOIN.includes(p.country)&&expat()&&p.age<=26,
@@ -29,8 +29,8 @@ EVENTS.push(
 
  /* --- Selon le niveau du club --- */
  {id:"maintien",scene:"terrain",hint:"Une dernière journée pour sauver ton club…",cond:()=>p.club.str<=62&&p.age>=19,
-  txt:()=>`Dernière journée. Le ${p.club.name} doit gagner pour se maintenir. Le stade est plein, la ville retient son souffle.`,
-  ch:[{t:"Tout donner, même blessé",risk:{p:.5,good:{rep:6,moral:8,moment:()=>`Sauve le ${p.club.name} de la relégation lors de la dernière journée`,txt:"Victoire 1-0. Les supporters envahissent le terrain en larmes."},bad:{moral:-8,form:-6,txt:"Défaite. Relégation. Le silence du stade te hante."}}},
+  txt:()=>`Dernière journée. ${LeC(p.club.name)} doit gagner pour se maintenir. Le stade est plein, la ville retient son souffle.`,
+  ch:[{t:"Tout donner, même blessé",risk:{p:.5,good:{rep:6,moral:8,moment:()=>`Sauve ${leC(p.club.name)} de la relégation lors de la dernière journée`,txt:"Victoire 1-0. Les supporters envahissent le terrain en larmes."},bad:{moral:-8,form:-6,txt:"Défaite. Relégation. Le silence du stade te hante."}}},
       {t:"Jouer prudemment",fx:{form:2},why:"Match nul. Le maintien se joue sur un autre terrain… et passe."}]},
  {id:"venteDirigeant",scene:"argent",cond:()=>p.club.str<=66&&p.age>=20,txt:()=>"Le président vend tes trois meilleurs coéquipiers le dernier jour du mercato. Le vestiaire est sonné.",
   ch:[{t:"Prendre la parole pour remobiliser le groupe",fx:{trust:4,rep:2,moral:-1},why:"Tu deviens le patron d'une équipe en reconstruction."},
@@ -71,10 +71,10 @@ EVENTS.push(
       {t:"Rester concentré sur le match",fx:{form:2},why:"Un derby reste un derby."}]},
 
  /* --- Anciens clubs --- */
- {id:"retourOvation",scene:"echo",hint:"Revenir dans un stade qui t'aime…",cond:()=>!!lovedClub(),txt:()=>`Premier retour au ${lovedClub().name}, ton ancien club. Le speaker annonce ton nom… et le stade entier se lève.`,
-  ch:[{t:"Saluer chaque tribune",fx:{rep:4,moral:8,moment:()=>`Standing ovation pour son retour au ${lovedClub().name}`},why:"Un moment qui vaut tous les trophées."},
+ {id:"retourOvation",scene:"echo",hint:"Revenir dans un stade qui t'aime…",cond:()=>!!lovedClub(),txt:()=>`Premier retour ${auC(lovedClub().name)}, ton ancien club. Le speaker annonce ton nom… et le stade entier se lève.`,
+  ch:[{t:"Saluer chaque tribune",fx:{rep:4,moral:8,moment:()=>`Standing ovation pour son retour ${auC(lovedClub().name)}`},why:"Un moment qui vaut tous les trophées."},
       {t:"Ne pas célébrer si tu marques",fx:{rep:3,moral:4},why:"Tu marques, mains levées en signe d'excuse. Les deux publics applaudissent."}]},
- {id:"retourSifflets",scene:"echo",hint:"Revenir dans un stade qui ne t'a pas pardonné…",cond:()=>!!hatedClub(),txt:()=>`Retour au ${hatedClub().name}. Les supporters n'ont pas digéré ton départ : faux billets à ton effigie, sifflets à chaque ballon.`,
+ {id:"retourSifflets",scene:"echo",hint:"Revenir dans un stade qui ne t'a pas pardonné…",cond:()=>!!hatedClub(),txt:()=>`Retour ${auC(hatedClub().name)}. Les supporters n'ont pas digéré ton départ : faux billets à ton effigie, sifflets à chaque ballon.`,
   ch:[{t:"Leur répondre par un but",risk:{p:()=>clamp(.35+(p.lvl-70)*.015,.15,.7),good:{rep:4,moral:6,txt:"Tu marques et mets un doigt sur la bouche. Une image qui fera le tour du monde."},bad:{moral:-6,rep:-2,txt:"Tu passes à côté. Ils chantent ton nom… pour se moquer."}}},
       {t:"Les applaudir en partant",fx:{rep:3,moral:-1},why:"Un geste élégant. Certains finissent par applaudir aussi."}]},
 

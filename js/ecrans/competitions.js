@@ -4,14 +4,24 @@
 /* ============ Classement complet ============ */
 const LEAGUE_GAMES = 36;
 // league : clubs triés du premier au dernier, avec leur force du moment (s)
+// points par match d'un club selon sa force du moment : la même échelle sert au classement provisoire
+// (raceTable) et au classement final, pour que la saison se lise d'un bout à l'autre sans saut
+const leaguePpg = (s,mean)=>clamp(1.39+(s-mean)*.062,.5,2.42);
 function fullTable(league){
   const mean = league.reduce((a,x)=>a+x.s,0)/league.length;
-  let prev = 999;
+  let prev = 999, prevGd = 999;
   return league.map((x,i)=>{
-    let pts = clamp(Math.round(50+(x.s-mean)*2.4+R(-3,3)),RI(19,24),90);
-    pts = Math.min(pts,prev); prev = pts;
-    const d0 = RI(4,11), w = Math.max(0,Math.floor((pts-d0)/3)), d = Math.min(pts-3*w,LEAGUE_GAMES-w), l = Math.max(0,LEAGUE_GAMES-w-d);
-    return {n:x.n,pos:i+1,w,d,l,gf:Math.round(w*1.9+d*1.1+R(0,8)),ga:Math.round(l*1.8+d*1.1+R(0,8)),pts:3*w+d};
+    // le champion garde au moins un point d'avance ; derrière, une égalité se départage à la différence de buts
+    let pts = Math.min(Math.round(LEAGUE_GAMES*leaguePpg(x.s,mean)+R(-2.5,2.5)),i===1?prev-1:prev);
+    pts = clamp(pts,12,90);
+    // des nuls en nombre crédible, tels que victoires × 3 + nuls redonne exactement les points, et au moins une défaite
+    const ds = [5,6,7,8,9,10,11,12].filter(d=>(pts-d)%3===0&&pts-d>=0&&pts+2*d<=LEAGUE_GAMES*3-3);
+    const d = pick(ds), w = (pts-d)/3, l = LEAGUE_GAMES-w-d;
+    const gf = Math.round(w*1.9+d*1.1+R(0,8));
+    let ga = Math.round(l*1.8+d*1.1+R(0,8));
+    if(pts===prev&&gf-ga>=prevGd) ga = gf-prevGd+RI(1,4);
+    prev = pts; prevGd = gf-ga;
+    return {n:x.n,pos:i+1,w,d,l,gf,ga,pts};
   });
 }
 // buteurs et passeurs : des joueurs fictifs, toi, et ton rival s'il joue dans le même championnat
@@ -85,13 +95,13 @@ function cdcPath(c,impact,finalRes){
   const T = p.cdc, str = c.str+impact*2;
   const avg = T.group.reduce((a,g)=>a+g.str,0)/T.group.length;
   const forced = finalRes!==undefined;
-  const qual = forced||chance(clamp(.55+(str-avg)*.04,.15,.95));
+  const qual = forced||chance(clamp(.5+(str-avg)*.035,.12,.9));
   const out = {group:T.group,pos:qual?(chance(.55)?1:2):(chance(.6)?3:4),steps:[],won:false};
   if(!qual) return out;
   const pool = CLUBS.filter(x=>x.country!==c.country&&!T.group.some(g=>g.name===x.name));
   for(const [r,min] of [["Quart de finale",78],["Demi-finale",82],["Finale",85]]){
     const opp = pick(pool.filter(x=>x.str>=min))||pick(pool);
-    const w = forced?(r==="Finale"?!!finalRes:true):chance(clamp(.5+(str-opp.str)*.035,.15,.88));
+    const w = forced?(r==="Finale"?!!finalRes:true):chance(clamp(.44+(str-opp.str)*.025,.12,.7));
     out.steps.push({r,opp:opp.name,cc:opp.country,w});
     if(!w) return out;
   }

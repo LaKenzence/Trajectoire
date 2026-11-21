@@ -22,12 +22,12 @@ const raceBonus = v=>()=>{ if(p.race) p.race.bonus += v; return 0; };
 EVENTS.push(
  /* ---------- Les souvenirs qui reviennent ---------- */
  {id:"echoMercenaire",scene:"echo",cond:()=>!!memoPick("mercenaire")&&p.clubsHist.length>=2,
-  txt:()=>{ const m = memoFor("mercenaire"); return `À la sortie du stade, un supporter du ${esc(m.club)} t'attend, ton ancien maillot sur le dos : « Tu te souviens ? ${ago(m)}, tu as choisi : « ${esc(m.t)} ». Nous, on n'a pas oublié. »`; },
+  txt:()=>{ const m = memoFor("mercenaire"); return `À la sortie du stade, un supporter ${duC(esc(m.club))} t'attend, ton ancien maillot sur le dos : « Tu te souviens ? ${ago(m)}, tu as choisi : « ${esc(m.t)} ». Nous, on n'a pas oublié. »`; },
   ch:[{t:"Assumer : c'est ton métier",fx:{moral:2,rep:-2},why:"Il crache par terre. Tu dors très bien quand même."},
       {t:"Lui signer son maillot et t'excuser",fx:{rep:3,moral:-2},why:"La vidéo tourne : « Le geste classe de l'année. »"},
       {t:"Financer le centre de formation de ton ancien club",cond:()=>p.money>=150,fx:{money:()=>-Math.round(Math.max(100,p.money*.08)),rep:6,moral:4},why:"Les supporters déploient une banderole à ton nom. La page est tournée."}]},
  {id:"echoLoyal",scene:"echo",cond:()=>!!memoPick("loyal"),
-  txt:()=>{ const m = memoFor("loyal"); return `${ago(m)[0].toUpperCase()+ago(m).slice(1)}, au ${esc(m.club)}, tu as choisi : « ${esc(m.t)} ». Le président s'en souvient : il veut faire de toi l'ambassadeur du club, avec un rôle à vie après ta carrière.`; },
+  txt:()=>{ const m = memoFor("loyal"); return `${ago(m)[0].toUpperCase()+ago(m).slice(1)}, ${auC(esc(m.club))}, tu as choisi : « ${esc(m.t)} ». Le président s'en souvient : il veut faire de toi l'ambassadeur du club, avec un rôle à vie après ta carrière.`; },
   ch:[{t:"Accepter, la main sur le cœur",fx:{moral:7,rep:3,flag:"ambassadeur"},why:"Ton nom est gravé sur le mur du centre d'entraînement."},
       {t:"Négocier une vraie part au club",fx:{money:()=>Math.round(p.rep*8),rep:-2},why:"Signé, mais certains trouvent que tu as fait payer ta fidélité."},
       {t:"Refuser : tu veux garder ta liberté",fx:{moral:-2},why:"Il comprend. La porte reste ouverte."}]},
@@ -67,7 +67,7 @@ EVENTS.push(
       {t:"Pousser pour partir au plus offrant",fx:{money:()=>Math.round(p.salary*.3),rep:-5,trust:-10},why:"Le club te met au placard en attendant. Ton agent sourit."},
       {t:"Attendre la fin de saison pour décider",fx:{moral:-3},why:"Tu joues avec une boule au ventre."}]},
  {id:"titreRival",scene:"rival",cond:()=>{ const r = raceNow(); return !!r&&r.top2&&rivalActive()&&r.leader&&p.rival.club.name===r.leader.n; },
-  txt:()=>`Coïncidence cruelle : le ${esc(p.rival.club.name)}, ton concurrent direct pour le titre, est le club de ${esc(p.rival.name)}. Il te provoque en interview : « Le titre, il est pour nous. Lui, il regardera. »`,
+  txt:()=>`Coïncidence cruelle : ${leC(esc(p.rival.club.name))}, ton concurrent direct pour le titre, est le club de ${esc(p.rival.name)}. Il te provoque en interview : « Le titre, il est pour nous. Lui, il regardera. »`,
   ch:[{t:"Lui répondre sèchement",fx:{rep:3,moral:4,trust:-2,rival:-1},why:"Le choc est lancé. Toute la presse en parle."},
       {t:"Le féliciter pour sa saison",fx:{rep:2,moral:-1},why:"Classe. Mais il en rit avec ses coéquipiers."},
       {t:"Ne rien dire, travailler en silence",fx:{form:4,lvl:raceBonus(1)},why:"Tes coéquipiers prennent exemple."}]},

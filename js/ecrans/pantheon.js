@@ -80,6 +80,7 @@ function hofScreen(){
     <header class="cosmos"><div class="muted">Toutes tes carrières</div><h1><span class="emo" aria-hidden="true">🏛️</span> Panthéon</h1></header>
     <div class="card"><h3>Succès · ${n}/${ACH.length}</h3>
       ${ACH.map(a=>`<div class="ach ${h.ach[a.id]?"":"off"}"><span class="i">${a.i}</span><div><b>${a.n}</b><small>${a.d}</small></div></div>`).join("")}</div>
+    ${typeof gearCard==="function"?gearCard():""}
     ${titlesHof(h)}
     <div class="card"><h3>Les plus grandes carrières</h3>${h.careers.length?`<div class="tablewrap"><table><tr><th>#</th><th>Joueur</th><th>Saisons</th><th>Buts</th><th>🏆</th><th>🌟</th><th>Max</th></tr>
       ${h.careers.slice(0,10).map((c,i)=>`<tr><td>${i+1}</td><td>${flag(c.country)} ${esc(c.name)}${c.hard?" 👑":""}<br><small class="muted">${POS[c.pos].n}${c.after?" · "+esc(c.after):""}</small></td><td>${c.seasons}</td><td>${c.goals}</td><td>${c.trophies}</td><td>${c.stars}</td><td>${c.peak}</td></tr>`).join("")}</table></div>`:'<p class="muted">Termine une carrière pour entrer au Panthéon.</p>'}</div>
@@ -232,7 +233,7 @@ async function loadRecords(){
 }
 
 /* ============ Emplacements de sauvegarde ============ */
-function newCareer(k){ slot = k; draft = {}; createStep(0); }
+function newCareer(k){ startCentre(k); }
 function viewEnd(k){ slot = k; p = loadSlot(k); migrate(); endScreen(); }
 function askDelete(k,btn){
   if(btn.dataset.sure){ wipe(k); home(); return; }

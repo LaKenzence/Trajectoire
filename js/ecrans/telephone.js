@@ -8,6 +8,7 @@ const CONTACTS = {
   pote:{n:()=>p.rel?.mate||"Ton pote",i:()=>"🤜"},
   rival:{n:()=>p.rival?.name||"Ton rival",i:()=>"⚔️"},
   club:{n:()=>p.club.name,i:()=>"🏟️"},
+  crew:{n:()=>"Un coéquipier",i:()=>"👥"},
   dm:{n:()=>"Message privé",i:()=>"✉️"}
 };
 const newPhone = ()=>({msgs:[],feed:[],unread:0,posted:null,seq:0});
@@ -54,10 +55,10 @@ function phoneAfterMatch(M,type){
   post("journal",journo(),`${w?"✅":l?"❌":"➖"} ${M.title} : ${M.score}${M.tab}. ${M.myG?`${n} buteur${M.myG>1?` (×${M.myG})`:""}. `:""}Note : ${M.mr}.`);
   post("fan",fan(),w?pick([`QUELLE SOIRÉE 🔥 ${n} MONSTRUEUX`,`On est là !!! ${M.score} 💪`,`Je pleure de joie, merci les gars 😭`]):l?pick([`Honte ce soir…`,`On mérite pas ça. Remboursez`,`${n} invisible, comme d'hab`]):`Un point… on aurait pu faire mieux`);
   if(p.celeb&&M.myG) post("fan",fan(),`Cette célébration de ${n} ${CELEBS[p.celeb].i} on la refait tous au city stade`);
-  msg("famille",w?pick(["On a tout vu à la télé ! Ta grand-mère a crié 😂","Fiers de toi mon grand. Toujours.","Le quartier entier est dans la rue !"]):l?pick(["Tête haute. On t'aime quoi qu'il arrive.","Une défaite ça arrive. Mange bien ce soir.","Ton père dit que l'arbitre était nul 😅"]):"Beau match quand même ! Bisous");
+  msg("famille",w?pick(["On a tout vu à la télé ! Ta grand-mère a crié 😂","Fiers de toi. Toujours.","Le quartier entier est dans la rue !"]):l?pick(["Tête haute. On t'aime quoi qu'il arrive.","Une défaite ça arrive. Mange bien ce soir.","Ton père dit que l'arbitre était nul 😅"]):"Beau match quand même ! Bisous");
   if(+M.mr>=7.5) msg("coach","Grand match. Continue comme ça.");
   else if(+M.mr<6) msg("coach","On en parle demain au centre. Viens à 9 h.");
-  if(type==="rival"&&p.rival) msg("rival",w?"Bien joué. Profite, la prochaine est pour moi.":"Pas mal… pour un second rôle 😏",[
+  if(type==="rival"&&p.rival&&!(p.rival.cf&&cfPhoneRival(w))) msg("rival",w?"Bien joué. Profite, la prochaine est pour moi.":"Pas mal… pour un second rôle 😏",[
     {t:"« Rendez-vous au prochain match. »",fx:{moral:2},r:"Il répond par un pouce levé."},
     {t:"« Regarde le tableau d'affichage. »",fx:{rep:1,rival:1},r:"Il te bloque. Puis te débloque."}]);
   socialAfterMatch(M,type);
@@ -76,6 +77,7 @@ function phoneAfterSeason(L){
   }
   if(chance(.5)&&p.rel) msg("pote",L.rank<=3?"Saison de malade frérot 🔥 vacances ensemble ?":"On a galéré cette année… on remet ça mieux l'an prochain 💪");
   if(p.celeb&&(p.celebN||0)>=5&&!p.flags.celebCulte){ p.flags.celebCulte = true; p.rep = clamp(p.rep+2,0,100); post("journal",journo(),`📹 Les enfants de tout le pays imitent la célébration de ${n} ${CELEBS[p.celeb].i}. Phénomène !`); p.moments.push(`${p.year+1} · Sa célébration devient culte`); }
+  if(typeof cfPhoneSeason==="function") cfPhoneSeason(L);
   socialAfterSeason(L);
 }
 
@@ -132,7 +134,7 @@ function phoneScreen(tab){
   const P = phone(); tab = tab||"msgs";
   if(tab==="msgs") P.unread = 0;
   const note = P.note; P.note = null;
-  const msgs = P.msgs.length?P.msgs.map(m=>{ const c = CONTACTS[m.from];
+  const msgs = P.msgs.length?P.msgs.map(m=>{ const c = m.who?{n:()=>m.who,i:()=>"👥"}:CONTACTS[m.from]||CONTACTS.dm;
     return `<div class="sms"><span class="sms-i" aria-hidden="true">${c.i()}</span><div><b>${esc(c.n())}</b> <small class="muted">${m.y}</small><p>${esc(m.txt)}</p>
       ${m.replies?m.answered!=null?`<p class="sms-me">Toi : ${esc(m.replies[m.answered].t)}</p>`:m.replies.map((r,j)=>`<button class="hudbtn" onclick="reply(${m.id},${j})">${esc(r.t)}</button>`).join(" "):""}</div></div>`; }).join(""):'<p class="muted">Aucun message pour l\'instant.</p>';
   const canPost = postsLeft()>0&&p.defi!=="solo";
@@ -166,7 +168,7 @@ function setTrend(t){
 function comments(kind,txt){
   const n = lastName(), club = p.club.name.split(" ").pop();
   const pools = {
-    moi:["🔥🔥🔥","Légende.",`On t'aime ${n} ❤️`,"Moins de posts, plus de buts 😒","Signe chez nous 🙏","Le meilleur du championnat, point.",`Allez ${club} !`,...((p.clubsHist||[]).length>1?[`Reviens au ${p.clubsHist.at(-2)} 😢`]:[]),"Mon fils a ton maillot sur le dos tous les jours"],
+    moi:["🔥🔥🔥","Légende.",`On t'aime ${n} ❤️`,"Moins de posts, plus de buts 😒","Signe chez nous 🙏","Le meilleur du championnat, point.",`Allez ${club} !`,...((p.clubsHist||[]).length>1?[`Reviens ${auC(p.clubsHist.at(-2))} 😢`]:[]),"Mon fils a ton maillot sur le dos tous les jours"],
     journal:["Il mérite mieux que ça","Surcoté depuis toujours","Enfin on parle de lui","Source ?","Le titre est putaclic","Respect 👏",`${n} > tout le monde`],
     fan:["Tellement vrai","N'importe quoi","+1","😂😂😂","Ratio","Je valide"]
   };
@@ -243,7 +245,7 @@ function farewell(){
   const n = lastName(), crowd = Math.round(clamp(p.club.str*700*(.6+p.rep/120),8000,90000)/100)*100, q = p.protege;
   if(p.flags.adieu){
     p.jubileCrowd = crowd;
-    p.jubile = `${crowd.toLocaleString("fr-FR")} spectateurs au ${p.club.name} pour ton dernier match. Tes anciens coéquipiers sont là${p.rival&&!p.rival.retired?", et même "+p.rival.name:""}.${q?` ${q.name}, le gamin que tu as pris sous ton aile, porte le brassard ce soir-là.`:""} À la 90e, le stade entier se lève.`;
+    p.jubile = `${crowd.toLocaleString("fr-FR")} spectateurs ${auC(p.club.name)} pour ton dernier match. Tes anciens coéquipiers sont là${p.rival&&!p.rival.retired?", et même "+p.rival.name:""}.${q?` ${q.name}, le gamin que tu as pris sous ton aile, porte le brassard ce soir-là.`:""} À la 90e, le stade entier se lève.`;
     p.moments.push(`${p.year} · Jubilé devant ${crowd.toLocaleString("fr-FR")} spectateurs`);
     p.rep = clamp(p.rep+3,0,100);
   }

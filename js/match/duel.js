@@ -79,7 +79,7 @@ const Duel = (() => {
     // geste réussi : paillettes autour de toi et légère secousse ; le téléphone vibre dans les deux cas
     D.shake = success ? 0.8 : 0.4;
     if (success && !reduceMotion && D.me) for (let i = 0; i < 50; i++) { const a = rnd(0, Math.PI * 2), v = rnd(0.06, 0.3); (D.parts = D.parts || []).push({ x: D.me.x, y: D.me.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(600, 1100), age: 0, c: Math.random() < 0.6 ? "#f5c542" : "#ffffff" }); }
-    if (!D.skipped && navigator.vibrate) { try { navigator.vibrate(success ? [30, 40, 80] : 160); } catch (e) {} }
+    if (!D.skipped && navigator.vibrate && navigator.userActivation?.hasBeenActive) { try { navigator.vibrate(success ? [30, 40, 80] : 160); } catch (e) {} }
     hint(success ? "Réussi !" : "Raté…");
     snd(success ? "goal" : "concede");
     const session = D;
@@ -311,7 +311,15 @@ const Duel = (() => {
       else ballP = { x: D.me.x + 16, y: D.me.y + 4, h: 0 };
       camX = 400;
     }
-    D.v3.drawDuel({ now: D.now, actors: A, ball: ballP, camX, dist: k === "passe" ? 19 : k === "aerien" ? 13.5 : 12.5, shake: D.shake || 0, intro: D.state === "intro" });
+    // la fin du geste, mise en scène : le héros du moment exulte (ou se prend la tête), la caméra se rapproche de lui
+    let star = null;
+    if (ended) {
+      const who = k === "passe" && D.result ? A.mate : A.me, wait = { dribble: .3, tacle: .85, aerien: 9, passe: .55 }[k];
+      if (D.result && who && e > wait) Object.assign(who, { anim: "attente", time: t, loop: true, ip: true, fade: 280, cheer: true });
+      if (!D.result && A.me && k !== "aerien" && !/TACLÉ/.test(why()) && e > .45) Object.assign(A.me, { anim: "attente", time: t, loop: true, ip: true, fade: 280, despair: cl((e - .45) / .3, 0, 1) });
+      star = who || A.me;
+    }
+    D.v3.drawDuel({ now: D.now, actors: A, ball: ballP, focus: star ? { x: star.x, k: cl(e / .8, 0, 1) } : null, camX, dist: k === "passe" ? 19 : k === "aerien" ? 13.5 : 12.5, shake: D.shake || 0, intro: D.state === "intro" });
     D.shake = Math.max(0, (D.shake || 0) - 0.03);
     overlay3d();
   }
@@ -380,6 +388,7 @@ function cycleMinis(btn) {
 const miniChip = o => (o.duel && minisOn("duel")) || (o.pen && minisOn("pen")) ? '<span class="chip">🎮 À jouer</span>' : "";
 function playDuel(kind) {
   if (ui.quick || !minisOn("duel")) return Promise.resolve(null);
+  if (typeof miniInterrupted === "function" && miniInterrupted(kind)) return Promise.resolve(false);
   const opp = p.match?.opp, t = penTeams(opp);
-  return miniBrief(kind,DUEL_TITLES[kind],opp?`Face à ${opp.name}`:"").then(go=>!go?Math.random()<0.45+penSkill()*0.3:Duel.play({ kind, skill: penSkill(), pressure: penPressure(), title: DUEL_TITLES[kind], sub: opp ? `Face à ${opp.name}` : "", us: t.us, them: t.them }).then(r => { if (!r.skipped) recordMini(kind, r.success); return r.success; }));
+  return miniBrief(kind,DUEL_TITLES[kind],opp?`Face à ${opp.name}`:"").then(go=>!go?Math.random()<0.45+penSkill()*0.3:(miniLockStart(kind),Duel.play({ kind, skill: penSkill(), pressure: penPressure(), title: DUEL_TITLES[kind], sub: opp ? `Face à ${opp.name}` : "", us: t.us, them: t.them, ...(typeof miniVenue === "function" ? miniVenue() : {}) })).then(r => { miniLockEnd(); if (!r.skipped) recordMini(kind, r.success); return r.success; }));
 }

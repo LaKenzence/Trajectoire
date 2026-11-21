@@ -144,14 +144,14 @@ const EVENTS = [
       {t:"Pas maintenant",fx:{},why:"Le terrain d'abord."}]},
 
  /* --- Poste --- */
- {id:"gbBoulette",cond:()=>p.pos==="GB",txt:()=>"89e minute : le ballon te glisse des mains et finit au fond. Défaite.",
+ {id:"gbBoulette",cond:()=>p.pos==="GB"&&p.lvl>=p.club.str-9,txt:()=>"89e minute : le ballon te glisse des mains et finit au fond. Défaite.",
   ch:[{t:"Assumer face aux caméras",fx:{rep:2,moral:-4},why:"Ton honnêteté est saluée."},
       {t:"Revoir la vidéo toute la nuit",fx:{lvl:1,form:-4,moral:-2},why:"Tu ne referas plus cette erreur."},
       {t:"Accuser la pelouse",fx:{rep:-3,moral:1},why:"Personne n'y croit."}]},
  {id:"defStar",cond:()=>p.pos==="DEF",txt:()=>"Ce soir, tu dois marquer l'attaquant le plus redouté du championnat.",
   ch:[{t:"Le coller à la culotte",risk:{p:()=>clamp(.45+(p.lvl-70)*.015,.2,.85),good:{rep:6,moral:5,moment:"Muselle la star adverse",txt:"Il ne touche pas un ballon. Tu es élu homme du match."},bad:{rep:-3,moral:-4,txt:"Il te dribble deux fois et marque."}}},
       {t:"L'intimider dès le début",risk:{p:.4,good:{rep:2,moral:3,txt:"Il disparaît du match."},bad:{play:-6,rep:-2,txt:"Carton rouge à la 30e."}}}]},
- {id:"attDisette",cond:()=>p.pos==="ATT",txt:()=>"Huit matchs sans marquer. Les journalistes parlent de « panne sèche ».",
+ {id:"attDisette",cond:()=>p.pos==="ATT"&&p.lvl>=p.club.str-9,txt:()=>"Huit matchs sans marquer. Les journalistes parlent de « panne sèche ».",
   ch:[{t:"Rester après l'entraînement pour frapper",fx:{lvl:1,form:-4,moral:2},why:"Les automatismes reviennent."},
       {t:"Demander à jouer plus bas, pour toucher le ballon",fx:{play:3,moral:3},why:"Tu te remets en confiance."},
       {t:"Changer de crampons",risk:{p:.5,good:{moral:8,txt:"Doublé dès le match suivant. Superstition validée."},bad:{moral:-3,txt:"Toujours rien."}}}]},
@@ -390,7 +390,7 @@ addSeed("famille",0,null,"familleRetour",[4,7]);
 
 /* ============ Relations dans le vestiaire ============ */
 function newRel(){
-  const n = ()=>{ let s; do s = pick(FIRST)+" "+pick(LAST); while(p&&(s===p.name||s===p.rival?.name)); return s; };
+  const n = ()=>{ let s; do s = pick(FIRST)+" "+pick(LAST); while(p&&(s===p.name||s===p.rival?.name||s.split(" ")[0]===String(p.name).split(" ")[0])); return s; };
   return {trust:50, mate:n(), jealous:n()};
 }
 const MATE = ()=>esc(p.rel?.mate||"ton meilleur pote"), JEAL = ()=>esc(p.rel?.jealous||"un coéquipier");
@@ -424,7 +424,7 @@ EVENTS.push(
  {id:"dj",cond:()=>true,txt:()=>"Tes coéquipiers te nomment DJ officiel du vestiaire.",
   ch:[{t:"Envoyer du son qui fait vibrer",fx:{moral:4,rep:1},why:"Le vestiaire danse avant chaque match."},
       {t:"Refuser : trop de pression",fx:{moral:-1},why:"Quelqu'un d'autre s'en charge… mal."}]},
- {id:"tatouage",cond:()=>p.age>=18,txt:()=>`Tu envisages de te faire tatouer l'écusson du ${p.club.name}.`,
+ {id:"tatouage",cond:()=>p.age>=18,txt:()=>`Tu envisages de te faire tatouer l'écusson ${duC(p.club.name)}.`,
   ch:[{t:"Le faire",fx:{rep:3,moral:3,flag:"tatoo"},why:"Les supporters t'adoptent pour de bon."},
       {t:"Un tatouage plus personnel",fx:{moral:2},why:"Un symbole qui te ressemble."},
       {t:"Aucun tatouage",fx:{},why:"Peau intacte."}]},
@@ -476,7 +476,7 @@ EVENTS.push(
  {id:"pubYaourt",cond:()=>p.rep>=30,txt:()=>"Une marque de yaourts te veut pour une publicité… où tu danses.",
   ch:[{t:"Danser sans retenue",risk:{p:.5,good:{money:120,rep:4,txt:"La pub devient culte."},bad:{money:120,rep:-3,txt:"Les mèmes ne s'arrêtent plus."}}},
       {t:"Refuser",fx:{},why:"Ta dignité est intacte."}]},
- {id:"centenaire",cond:()=>true,txt:()=>`Le ${p.club.name} fête son centenaire. Vous jouerez avec le maillot de 1926.`,
+ {id:"centenaire",cond:()=>true,txt:()=>`${LeC(p.club.name)} fête son centenaire. Vous jouerez avec le maillot de ${p.year-100}.`,
   ch:[{t:"Faire honneur au maillot",risk:{p:.5,good:{rep:4,moral:5,moment:"Héros du match du centenaire",txt:"Tu es décisif. Ton nom rejoint l'histoire du club."},bad:{moral:-2,txt:"Défaite le soir de la fête."}}},
       {t:"Profiter du moment",fx:{moral:4},why:"Une soirée à part."}]},
  {id:"chant",cond:()=>p.rep>=20,txt:()=>"Les supporters ont inventé un chant à ton nom.",
@@ -498,3 +498,23 @@ EVENTS.push(
   ch:[{t:"Réviser sérieusement",fx:{moral:2},why:"Reçu du premier coup !"},
       {t:"Y aller au talent",risk:{p:.35,good:{moral:3,txt:"Reçu ! Coup de chance."},bad:{moral:-2,rep:-1,txt:"Recalé. Tes coéquipiers ne te lâchent plus."}}}]}
 );
+
+/* ============ Des voix dans les événements de tous les jours ============ */
+// Les événements génériques les plus fréquents parlent de tes gens quand ils existent : ton coach, ton capitaine, ton
+// vétéran, ton meilleur pote, et les gens du centre de formation (ton proche, Vasseur, Nino). Sinon, le texte d'origine.
+const coachN = ()=>esc(p.rel?.coach?.name||"Le coach");
+const hasCrew = role=>typeof crewOn==="function"&&crewOn()&&!!crewGet(role);
+const fromCentre = ()=>!!p.cf&&typeof T==="function";
+/** @type {Record<string,()=>string|null>} */
+const EV_PERSO = {
+  coach:()=>p.rel?.coach?`${coachN()} arrête la séance d'un coup de sifflet. Devant tout le groupe : « Toi. Tu marches. Si tu veux te promener, il y a un parc derrière le stade. »${hasCrew("veteran")?` ${crewN("veteran")} baisse les yeux : il est passé par là, lui aussi.`:""}`:null,
+  soiree:()=>p.rel?.mate?`${MATE()} t'envoie une adresse et trois emojis : grosse soirée chez un ami, la veille d'un match important. « Une heure, promis. Tout le monde y sera. »`:null,
+  famille:()=>fromCentre()?T("Au téléphone, {par} répète que tout va bien. Trop souvent. C'est un voisin qui finit par te le dire : les factures, la santé, l'hiver qui n'en finit pas. {Pr} ne voulait pas t'inquiéter."):null,
+  nutri:()=>hasCrew("veteran")?`Le nutritionniste du club pose ton plateau sur la balance et soupire. ${crewN("veteran")} ricane dans ton dos : « Bienvenue chez les grands. Dis adieu aux frites. » Son programme est strict : fini les fast-foods.`:null,
+  bagarre:()=>p.rel?.mate?`Le ton monte dans le vestiaire, puis les poings partent : ${MATE()} et ${JEAL()} roulent par terre entre les bancs. Tout le monde se tourne vers toi.`:null,
+  dj:()=>hasCrew("capitaine")?`${crewN("capitaine")} te tend l'enceinte du vestiaire, très solennel : « À partir d'aujourd'hui, c'est toi le DJ. Si on perd, c'est ta faute. »`:null,
+  maillotFan:()=>fromCentre()&&p.cf.mem?.nino?"Après une défaite, un gamin en larmes t'attend près du car et te réclame ton maillot. Il a l'âge de Nino, le jour de l'essai, sous la pluie.":null,
+  livre:()=>fromCentre()?"Dans ton casier, un livre sur la préparation mentale des athlètes. Un post-it dépasse, à l'écriture penchée que tu connais par cœur : « Page 112. R. V. »":null,
+  drone:()=>`Un drone survole l'entraînement à la veille du derby. ${coachN()} hurle vers le ciel en agitant sa casquette.${hasCrew("veteran")?` ${crewN("veteran")}, blasé : « Ils font ça tous les ans. »`:" Espionnage ?"}`,
+  insomnie:()=>fromCentre()?T("3 h du matin, la veille d'un grand match. Impossible de dormir. L'écran de ton téléphone s'allume : « Tu dors pas, hein ? Moi non plus. » C'est {par}."):null
+};

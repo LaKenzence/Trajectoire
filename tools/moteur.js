@@ -13,6 +13,9 @@ function scriptList() {
 function seeded(seed) {
   let a = 0;
   for (const ch of String(seed)) a = Math.imul(a ^ ch.charCodeAt(0), 2654435761);
+  // brassage final (fmix32) : sans lui, des graines voisines donnent des premiers tirages corrélés à graine % 4,
+  // donc au poste choisi par le simulateur, et le rapport d'équilibrage voit de faux écarts entre postes
+  a ^= a >>> 16; a = Math.imul(a, 0x85ebca6b); a ^= a >>> 13; a = Math.imul(a, 0xc2b2ae35); a ^= a >>> 16;
   return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 }
 

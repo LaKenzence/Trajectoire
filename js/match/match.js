@@ -4,20 +4,29 @@ function setupMatch(){
   const c = p.club, lg = CLUBS.filter(x=>x.country===c.country&&x.name!==c.name);
   let type, opp;
   const nat = COUNTRIES[p.country].nat;
-  if((p.year+1)%4===2&&p.age>=19&&p.caps>0&&p.lvl>=nat-6&&chance(clamp((nat-74)*.03+.12,.08,.45))){ type="monde"; const oc = pick(Object.keys(COUNTRIES).filter(k=>k!==p.country&&COUNTRIES[k].nat>=80)); opp = {name:COUNTRIES[oc].name,country:oc,str:COUNTRIES[oc].nat}; }
-  else if(p.cdc&&chance(clamp((c.str-74)*.025,.05,.3))){ type="cdc"; opp = pick(CLUBS.filter(x=>x.country!==c.country&&x.str>=80)); }
+  if((p.year+1)%4===2&&p.age>=19&&p.caps>0&&p.lvl>=nat-6&&chance(clamp((nat-74)*.02+.04,.04,.2))){ type="monde"; const oc = pick(Object.keys(COUNTRIES).filter(k=>k!==p.country&&COUNTRIES[k].nat>=80)); opp = {name:COUNTRIES[oc].name,country:oc,str:COUNTRIES[oc].nat}; }
+  else if(p.cdc&&chance(clamp((c.str-78)*.014,.03,.14))){ type="cdc"; opp = pick(CLUBS.filter(x=>x.country!==c.country&&x.str>=80)); }
   else if(rivalActive()&&p.rival.club.name!==c.name&&p.age>=17&&chance(.35)){ type="rival"; opp=p.rival.club; }
-  else if(chance(clamp(.15+(c.str-55)*.012,.15,.5))){ type="final"; opp=pick(lg.filter(x=>x.str>=c.str-8))||pick(lg); }
+  else if(chance(cupFinalChance(c))){ type="final"; opp=pick(lg.filter(x=>x.str>=c.str-8))||pick(lg); }
   else { type="derby"; opp=lg.sort((a,b)=>Math.abs(a.str-c.str)-Math.abs(b.str-c.str))[RI(0,2)]; }
-  const title = {cdc:"Finale de la Coupe des Champions",monde:`Finale du Championnat du Monde face à ${opp.name}`,final:"Finale de la Coupe nationale",derby:`Derby face au ${opp.name}`,rival:`Le choc face à ${p.rival?.name}`}[type];
+  const title = {cdc:"Finale de la Coupe des Champions",monde:`Finale du Championnat du Monde face à ${opp.name}`,final:"Finale de la Coupe nationale",derby:`Derby face ${auC(opp.name)}`,rival:`Le choc face à ${p.rival?.name}`}[type];
   const mins = [RI(8,25),RI(30,44),RI(55,70),RI(78,90)];
-  const m = p.match = {type,title,usStr:type==="monde"?nat:c.str,weather:pick(WEATHER),crowd:Math.round((type==="monde"?82000:type==="cdc"?70000:c.str*720)*R(.72,1)),opp:{...opp},us:0,them:0,step:0,mins,tpl:[],log:[],myG:0,myA:0,perf:0,pending:null,calm:false,stake:null};
+  const m = p.match = {type,title,usStr:type==="monde"?nat:c.str,weather:pick(WEATHER),crowd:Math.round((type==="monde"?82000:type==="cdc"?70000:c.str*720)*R(.72,1)),opp:{...opp},us:0,them:0,step:0,mins,tpl:[],log:[],myG:0,myA:0,perf:0,pending:null,calm:false,stake:null,underdog:false,chap:null,exMate:null,live:null};
   const st = type==="derby"?raceStake():null;
-  if(st){ const o = CLUBS.find(x=>x.name===st.opp.n); if(o) m.opp = {...o}; m.title = `${st.t} face au ${m.opp.name}`; m.stake = st.k; m.log.push(stakeLine(st)); }
+  if(st){ const o = CLUBS.find(x=>x.name===st.opp.n); if(o) m.opp = {...o}; m.title = `${st.t} face ${auC(m.opp.name)}`; m.stake = st.k; m.log.push(stakeLine(st)); }
+  else if(type==="derby"&&typeof chapterMatch==="function"){ const ch = chapterMatch(lg); if(ch){ m.opp = {...ch.opp}; m.title = ch.t; m.chap = ch.id; m.log.push(ch.log); } }
+  // un petit club en finale : l'épopée que personne n'attendait
+  if(type==="final"&&cupRank(c)>=6){ m.underdog = true; m.log.push(`✨ Personne ne vous attendait là : ${leC(esc(c.name))} a sorti ${cupRank(c)>=8?"trois":"deux"} favoris pour s'offrir cette finale. Tout le pays s'est pris d'affection pour le petit poucet.`); }
   m.tpl = freshOrder(matchActions().length); // les situations les moins récemment vues d'abord
   if(p.lvl<c.str-9&&p.age>=18){ m.step=2; m.log.push("🪑 Tu commences sur le banc. Le coach te lance à l'heure de jeu."); }
+  if(typeof crewMatchSetup==="function") crewMatchSetup(m);
   simGap(0,m.mins[m.step]);
 }
+// un titre de match dans une phrase, sans perdre ses majuscules (« Coupe des Champions »)
+const lc1 = s=>s.charAt(0).toLowerCase()+s.slice(1);
+// la finale de la coupe nationale se mérite : fréquente pour un grand du championnat, une épopée rare pour un petit
+const cupRank = c=>CLUBS.filter(x=>x.country===c.country&&x.str>c.str).length+1;
+const cupFinalChance = c=>[.3,.25,.2,.15,.11,.08,.06,.04,.03,.02][Math.min(cupRank(c),10)-1];
 function simGap(from,to){
   const m = p.match, d = (m.usStr||p.club.str)-m.opp.str, span = (to-from)/90;
   const tm = from>=45&&m.tactic==="att"?[1.35,1.3]:from>=45&&m.tactic==="def"?[.7,.6]:[1,1];
@@ -25,14 +34,14 @@ function simGap(from,to){
   m.calm = false;
   const evs = [];
   const rf = [(m.redThem?1.3:1)*(m.redUs?.7:1),(m.redUs?1.3:1)*(m.redThem?.7:1)];
-  if(!m.redUs&&!m.redThem&&span>.15&&chance(.06)){ const mine = chance(.5); if(mine) m.redUs = true; else m.redThem = true; m.log.push(`🟥 ${RI(from+1,Math.max(from+1,to-1))}' Carton rouge ${mine?"pour un de tes coéquipiers":`pour un joueur du ${m.opp.name}`} !`); }
+  if(!m.redUs&&!m.redThem&&span>.15&&chance(.06)){ const mine = chance(.5); if(mine) m.redUs = true; else m.redThem = true; m.log.push(`🟥 ${RI(from+1,Math.max(from+1,to-1))}' Carton rouge ${mine?"pour un de tes coéquipiers":`pour un joueur ${duC(m.opp.name)}`} !`); }
   for(let i=poisson(lu*rf[0]);i>0;i--) evs.push({min:RI(from+1,Math.max(from+1,to-1)),us:true});
   for(let i=poisson(lt*rf[1]);i>0;i--) evs.push({min:RI(from+1,Math.max(from+1,to-1)),us:false});
   const half = ()=>{ if(!m.half){ m.half=true; m.log.push(`⏸️ Mi-temps : ${m.us}-${m.them}`); } };
   evs.sort((a,b)=>a.min-b.min).forEach(e=>{
     if(e.min>45) half();
     if(e.us){ m.us++; m.log.push(`⚽ ${e.min}' But de ton équipe ! (${pick(GOAL_US)})`); }
-    else { m.them++; m.log.push(`🔴 ${e.min}' But du ${m.opp.name} (${pick(GOAL_THEM)}).`); }
+    else { m.them++; m.log.push(`🔴 ${e.min}' But ${duC(m.opp.name)} (${pick(GOAL_THEM)}).`); }
   });
   if(to>45) half();
 }
@@ -127,7 +136,7 @@ function matchScreen(){
       ${a.o.map((o,i)=>{ const q = o.p+talentBonus(o.t), tb = (p.talents||[]).filter(t=>TALENTS[t].re&&TALENTS[t].re.test(o.t)).map(t=>TALENTS[t].i).join("");
         return `<button class="btn" onclick="matchPick(${i})">${choiceLead(o.t,i)}<span class="ctext">${o.t}</span>${miniChip(o)}<small>${riskHtml(q)}${tb?` · ${tb} talent`:""}</small></button>`; }).join("")}`;
   }
-  render(`${tip("match")}${tip("minis")}<div class="muted">Match clé · saison ${p.year}-${String(p.year+1).slice(2)}</div>
+  render(`${tip("match")||tip("minis")}<div class="muted">Match clé · saison ${p.year}-${String(p.year+1).slice(2)}</div>
   <div class="card"><h2 style="text-align:center">${esc(m.title)}</h2>${m.weather?`<p class="muted" style="text-align:center;margin:-4px 0 6px;font-size:.85rem">🏟️ ${m.crowd.toLocaleString("fr-FR")} spectateurs · ${m.weather}</p>`:""}
     ${(()=>{ const usName = m.type==="monde"?COUNTRIES[p.country].name:p.club.name;
       const clock = m.simDone?"FIN":m.awaitTactic?"MT":`${m.mins[Math.min(m.step,m.mins.length-1)]}'`;
@@ -135,6 +144,7 @@ function matchScreen(){
     ${pitchSvg(m)}
     ${m.log.length?`<ul class="mlog">${m.log.map(l=>`<li>${l}</li>`).join("")}</ul>`:""}
     <div class="decide">${body||`<button class="btn primary" onclick="finishMatch()">Terminer le match →</button>`}</div></div>`);
+  if(typeof liveTicker==="function") liveTicker(m);
   animateBall();
 }
 function matchPick(i){
@@ -171,9 +181,9 @@ function matchPick(i){
   } else {
     const r = o.ko; txt = r.txt; m.perf--;
     if(r.moral) p.moral = clamp(p.moral+r.moral,0,100);
-    if(r.them && chance(r.them)){ m.them++; m.log.push(`🔴 ${min}' But du ${m.opp.name}.`); txt += " But adverse."; }
+    if(r.them && chance(r.them)){ m.them++; m.log.push(`🔴 ${min}' But ${duC(m.opp.name)}.`); txt += " But adverse."; }
     else if(r.them) txt += " Ouf, ça passe à côté.";
-    else { const c = counterRoll(r,false); if(c){ m.them++; m.log.push(`🔴 ${Math.min(min+1,90)}' But du ${m.opp.name} en contre.`); txt += " "+c; } }
+    else { const c = counterRoll(r,false); if(c){ m.them++; m.log.push(`🔴 ${Math.min(min+1,90)}' But ${duC(m.opp.name)} en contre.`); txt += " "+c; } }
   }
   txt += reaction(okRoll,m);
   m.boost = 0;
@@ -186,7 +196,7 @@ function matchNext(){
   if(m.short) return finishOrdinary();
   m.pending = null; m.pendingGoal = null; m.step++;
   if(m.step===2&&!m.tactic){ simGap(m.mins[1],45); m.awaitTactic = true; save(); return matchScreen(); }
-  if(m.step<4){ simGap(m.mins[m.step-1],m.mins[m.step]); if(chance(.5)) m.talk = pickTalk(m); }
+  if(m.step<4){ simGap(m.mins[m.step-1],m.mins[m.step]); if(chance(.5)||(m.chap&&!(m.talks||[]).includes("c_"+m.chap))) m.talk = pickTalk(m); }
   else if(m.step===4&&!m.extraUsed&&!m.et&&m.us-m.them>=-1&&m.us<=m.them&&chance(.7)){ simGap(m.mins[3],90); m.extraUsed = true; m.mins[4] = 90+RI(2,6); m.log.push(`⏱️ ${m.mins[4]-90} minutes de temps additionnel. Dernière chance !`); }
   else return finishMatch();
   save(); matchScreen();
@@ -208,6 +218,8 @@ function finishMatch(){
   }
   const score = `${m.us}-${m.them}`;
   if(m.type!=="ordinaire") raceAfterMatch(res,m.stake);
+  if(typeof chapterMatchAfter==="function") chapterMatchAfter(m,res);
+  if(typeof crewAfterMatch==="function") crewAfterMatch(m,res);
   const fx = {w:{rep:3+(m.type==="final"?3:["cdc","monde"].includes(m.type)?7:0),moral:7},d:{moral:1},l:{moral:-5,rep:-1}}[res];
   p.rep = clamp(p.rep+(fx.rep||0)+(m.myG>=2?3:0),0,100);
   p.moral = clamp(p.moral+fx.moral,0,100);
@@ -215,19 +227,19 @@ function finishMatch(){
   if(m.type==="final") p.tmp.cup = res==="w";
   if(m.type==="cdc") p.tmp.cdc = res==="w";
   if(m.type==="monde") p.tmp.world = res==="w";
-  if(res==="w"&&(m.type==="cdc"||m.type==="monde")) p.moments.push(`${p.year+1} · Vainqueur de la ${m.title.split(" face")[0].toLowerCase()} (${score})`);
+  if(res==="w"&&(m.type==="cdc"||m.type==="monde")) p.moments.push(`${p.year+1} · Vainqueur de la ${lc1(m.title.split(" face")[0])} (${score})`);
   if(m.type==="final"&&res==="w") p.finals = (p.finals||0)+1;
   const mr = clamp(6.2+m.perf*.5+m.myG*.6+m.myA*.4+(res==="w"?.3:0),3,10).toFixed(1);
-  if(m.type==="final"&&res==="w") p.moments.push(`${p.year+1} · Vainqueur de la finale de coupe (${score})`);
+  if(m.type==="final"&&res==="w") p.moments.push(`${p.year+1} · Vainqueur de la finale de coupe (${score})${m.underdog?`, l'exploit historique ${duC(p.club.name)}`:""}`);
   if(m.type==="rival"&&p.rival){ p.rival.h2h[res]++; if(res==="w"&&m.myG+m.myA>=1) p.moments.push(`${p.year+1} · Décisif dans le choc face à ${p.rival.name} (${score})`); }
-  if(m.myG>=3) p.moments.push(`${p.year+1} · Triplé lors du ${m.title.toLowerCase()}`);
+  if(m.myG>=3) p.moments.push(`${p.year+1} · Triplé : ${lc1(m.title)}`);
   p.tmp.match = {title:m.title,score,res,myG:m.myG,myA:m.myA,tab,mr};
   phoneAfterMatch(p.tmp.match,m.type);
   p.match = null;
   p.phase = "season"; simSeason(); save();
   const label = {w:"Victoire",d:"Match nul",l:"Défaite"}[res];
   render(`<div class="card ${res==="w"?"celebrate":""}"><h2>${label} ${score}${tab}</h2>
-    <p class="story">${res==="w"?(m.type==="monde"?"CHAMPION DU MONDE ! Tout un pays descend dans la rue.":m.type==="cdc"?"La Coupe des Champions est à vous ! Le sommet du football de club.":m.type==="final"?"La coupe est à vous ! Les tribunes chantent ton nom.":"Les trois points, et une soirée que tu n'oublieras pas."):res==="d"?"Un match accroché, rien de décidé.":"Une soirée à oublier… ou à retenir pour la prochaine fois."}</p>
+    <p class="story">${res==="w"?(m.type==="monde"?"CHAMPION DU MONDE ! Tout un pays descend dans la rue.":m.type==="cdc"?"La Coupe des Champions est à vous ! Le sommet du football de club.":m.type==="final"?(m.underdog?"L'exploit est total : le petit poucet soulève la coupe ! On en parlera encore dans vingt ans.":"La coupe est à vous ! Les tribunes chantent ton nom."):"Les trois points, et une soirée que tu n'oublieras pas."):res==="d"?"Un match accroché, rien de décidé.":"Une soirée à oublier… ou à retenir pour la prochaine fois."}</p>
     <ul class="mlog">${m.log.map(l=>`<li>${l}</li>`).join("")}</ul>
     <div class="stats"><div class="stat"><b style="color:${+mr>=7.5?"var(--good)":+mr<6?"var(--bad)":"var(--text)"}">${mr}</b><span>ta note</span></div>
       <div class="stat"><b>${m.myG}</b><span>but(s)</span></div><div class="stat"><b>${m.myA}</b><span>passe(s) déc.</span></div></div>
@@ -242,13 +254,14 @@ function finishMatch(){
 function setTactic(t){
   const m = p.match;
   m.tactic = t; m.awaitTactic = false;
+  if(!m.half){ m.half = true; m.log.push(`⏸️ Mi-temps : ${m.us}-${m.them}`); }
   if(chance(.5)) m.talk = pickTalk(m);
   m.log.push({att:"⚔️ Consigne de mi-temps : tout pour l'attaque.",def:"🛡️ Consigne de mi-temps : on verrouille.",eq:"⚖️ Consigne de mi-temps : on garde le plan."}[t]);
   simGap(45,m.mins[2]);
   save(); matchScreen();
 }
 function tacticHtml(){
-  return `<p><span class="minute">MT</span></p><p class="story">Mi-temps dans le vestiaire. Le coach se tourne vers les cadres : « Qu'est-ce qu'on fait ? »</p>
+  return `<p><span class="minute">MT</span></p><p class="story">${p.flags.cap?"Mi-temps dans le vestiaire. Le coach se tourne vers toi, son capitaine : « Qu'est-ce qu'on fait ? »":p.age<=20&&p.rep<40?"Mi-temps dans le vestiaire. Le coach hésite, les cadres se taisent. Tu oses lever la main : « Coach, et si on… »":"Mi-temps dans le vestiaire. Le coach se tourne vers les cadres : « Qu'est-ce qu'on fait ? »"}</p>
     <button class="btn" onclick="setTactic('att')"><kbd>1</kbd>⚔️ Tout pour l'attaque<small>Plus de buts… des deux côtés</small></button>
     <button class="btn" onclick="setTactic('eq')"><kbd>2</kbd>⚖️ Garder le plan<small>Rien ne change</small></button>
     <button class="btn" onclick="setTactic('def')"><kbd>3</kbd>🛡️ Verrouiller<small>Moins d'occasions, moins de risques</small></button>`;
@@ -261,7 +274,7 @@ function tacticHtml(){
 const PITCH_SCENES = [
   // attaquant
   [/dos au but/,               {att:1, me:[84,31], ball:[84,31], opp:[[88,31]], mates:[[72,22],[74,40]]}],
-  [/seul face au gardien/,     {alone:1, att:1, me:[80,30], ball:[82,30], opp:[[62,26],[64,36]], mates:[]}],
+  [/seul face au gardien|entre toi et le gardien/,     {alone:1, att:1, me:[80,30], ball:[82,30], opp:[[62,26],[64,36]], mates:[]}],
   [/Centre tendu/,             {att:1, me:[87,26], ball:[90,55], opp:[[89,31],[86,36]], mates:[[90,55],[80,40]]}],
   [/relance mal/,              {att:1, me:[71,33], ball:[73,33], opp:[[82,28],[80,40]], mates:[[76,18]]}],
   [/Corner rentrant/,          {att:1, me:[91,25], ball:[99,59], opp:[[91,29],[89,34],[93,22]], mates:[[99,59],[88,38]]}],

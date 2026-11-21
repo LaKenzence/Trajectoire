@@ -336,3 +336,300 @@ test("monde vivant : clubs qui bougent, réputation par club, titre de carrière
   assert.match(html, /Titre de carrière/);
   assert.match(html, /Remontada historique/);
 });
+
+test("championnat cohérent : classement final, calendrier et classement provisoire racontent la même saison", () => {
+  for (const [seed, country, lvl] of [[71, "ES", 45], [72, "EN", 92], [73, "SN", 70], [74, "FR", 60], [75, "DE", 99]]) {
+    const g = createGame({ seed });
+    g.run(`newPlayer({name:"Table Test",country:${JSON.stringify(country)},pos:"GB",trait:"tech",origin:"quartier",ent:"ami",life:"pro"}); p.lvl = ${lvl};
+      p.goalOpts = p.goalOpts||goalOptions(); setGoal(0); var __mid = raceTable(28); p.evIdx = 3; p.phase = 'match'; p.tmp.match = null; simSeason();`);
+    const full = g.run("p.last.full"), cal = g.run("p.last.cal"), me = g.run("p.last.full.find(x=>x.n===p.club.name)"), mid = g.run("__mid");
+    assert.strictEqual(full.length, 10);
+    full.forEach((x, i) => {
+      assert.strictEqual(x.w * 3 + x.d, x.pts, `${x.n} : victoires et nuls ne redonnent pas les points`);
+      assert.strictEqual(x.w + x.d + x.l, 36, `${x.n} : pas 36 matchs`);
+      assert.ok(x.w >= 0 && x.d >= 0 && x.l >= 1, `${x.n} : bilan impossible ${x.w}-${x.d}-${x.l}`);
+      if (i) {
+        const a = full[i - 1];
+        assert.ok(a.pts > x.pts || (a.pts === x.pts && a.gf - a.ga > x.gf - x.ga), `le ${i}e (${a.pts} pts) doit devancer le ${i + 1}e (${x.pts} pts)`);
+      }
+    });
+    assert.ok(full[0].pts > full[1].pts, "le champion est seul en tête");
+    assert.strictEqual(g.run("p.last.rank"), me.pos);
+    // le calendrier du bilan reprend la ligne du club
+    assert.strictEqual(cal.days.length, 36);
+    assert.strictEqual(cal.pts, me.pts);
+    assert.strictEqual(cal.days.filter(d => d.r === "w").length, me.w);
+    assert.strictEqual(cal.days.filter(d => d.on).length, Math.min(36, g.run("p.last.apps")));
+    assert.ok(cal.days.every(d => !(d.g && d.r === "l")), "un clean sheet un soir de défaite");
+    // à la 28e journée, personne n'est déjà au-delà de ce que le classement final permet, ni à la traîne de façon absurde
+    for (const r of mid) assert.ok(r.pts >= 10 && r.pts <= 72, `${r.n} : ${r.pts} points après 28 journées`);
+  }
+});
+
+test("match clé : la finale de coupe se mérite, la mi-temps précède la consigne, le bandeau garde la bonne saison", () => {
+  const g = createGame({ seed: 81 });
+  g.run(`newPlayer({name:"Coupe Test",country:"ES",pos:"ATT",trait:"tech",origin:"quartier",ent:"ami",life:"pro"});`);
+  const ch = g.run("CLUBS.filter(c=>c.country==='ES').sort((a,b)=>b.str-a.str).map(c=>cupFinalChance(c))");
+  assert.ok(ch[0] >= .25 && ch[9] <= .05, "un grand y va souvent, un petit presque jamais");
+  assert.ok(ch.every((x, i) => i === 0 || x <= ch[i - 1]), "les chances baissent avec le rang");
+  // le journal du match : la mi-temps s'inscrit avant la consigne
+  g.run("p.goalOpts = p.goalOpts||goalOptions(); setGoal(0); p.evIdx = 3; p.phase = 'match'; setupMatch(); const m = p.match; m.step = 1; m.pending = 'x'; matchNext();");
+  assert.strictEqual(g.run("p.match.awaitTactic"), true);
+  g.run("setTactic('att')");
+  const log = g.run("p.match.log.map(String)");
+  const iHalf = log.findIndex(l => /Mi-temps/.test(l)), iTac = log.findIndex(l => /Consigne/.test(l));
+  assert.ok(iHalf >= 0 && iHalf < iTac, "mi-temps avant la consigne : " + log.join(" | "));
+  assert.strictEqual(log.filter(l => /Mi-temps :/.test(l)).length, 1);
+  // pendant le bilan de la première saison, le bandeau dit encore « Saison 1 »
+  g.run("p.match = null; p.tmp.match = null; simSeason(); p.phase = 'season'; seasonScreen();");
+  assert.match(g.run("hud()"), /Saison 1 ·/);
+  g.run("toOffseason()");
+  if (g.run("!p.retired")) assert.match(g.run("hud()"), /Saison 2 ·/);
+});
+
+// joue le centre de formation jusqu'au bout en choisissant au hasard ; renvoie la fin et les écrans vus
+function playCentre(seed) {
+  const g = createGame({ seed });
+  g.run("startCentre(); ui.quick = true;");
+  for (let n = 0; n < 200; n++) {
+    const k = g.run("(()=>{ const c = p.centre, b = CF_BEATS[c.i]; return b?b.k:'fin'; })()");
+    if (k === "fin") break;
+    g.run(`(()=>{ const c = p.centre, b = CF_BEATS[c.i];
+      if(b.k==="essai") return cfEssai(RI(0,1));
+      if(b.k==="nom") return cfName(chance(.5));
+      if(b.k==="proche") return cfPickPar(pick(Object.keys(CF_PARENTS)));
+      if(b.k==="poste") return cfPickPoste(pick(Object.keys(CF_POSTE)));
+      if(b.k==="match"){ const m = c.m; if(m.done) return cfMatchEnd(); if(b.acts[m.a]==="dil") return cfDil(RI(0,1)); return cfPlay(RI(0,1)); }
+      return cfChoose(RI(0,b.ch(c).length-1));
+    })()`);
+  }
+  g.run("ui.quick = false; route(); cfFilmSkip();");
+  return { g, out: g.run("p.centre.out"), i: g.run("p.centre.i"), n: g.run("CF_BEATS.length") };
+}
+
+test("le centre de formation se joue jusqu'au film, sans texte cassé, et ses fins varient", () => {
+  const outs = {};
+  for (let s = 1; s <= 60; s++) {
+    const { g, out, i, n } = playCentre(900 + s);
+    assert.ok(out && g.run(`!!CF_ENDS[${JSON.stringify(out)}]`), `graine ${900 + s} : pas de fin (${out})`);
+    assert.strictEqual(i, n - 1, `graine ${900 + s} : la partie s'arrête avant la fin`);
+    outs[out] = (outs[out] || 0) + 1;
+    for (const h of g.renders) {
+      const t = h.replace(/<[^>]+>/g, " ");
+      assert.doesNotMatch(t, /\b(undefined|NaN|null)\b|\[object|\{(par|Par|pr|Pr|e|appel|moi)\}/, `graine ${900 + s} : ${t.match(/.{0,60}(undefined|NaN|null|\[object|\{\w+\}).{0,40}/)?.[0]}`);
+    }
+    assert.match(g.lastRender(), /Aujourd'hui/);
+    assert.match(g.lastRender(), /Fins découvertes/);
+  }
+  assert.ok(Object.keys(outs).length >= 5, "au moins cinq fins différentes sur 60 parties : " + JSON.stringify(outs));
+  // la reprise d'une partie en cours retombe au même endroit
+  const g = createGame({ seed: 3 });
+  g.run("startCentre(); ui.quick = true; cfEssai(0); cfChoose(0); cfName(true); cfPickPar('gm');");
+  g.run("const k = p.centre.i; p = null; resume(slot); globalThis.__k = k;");
+  assert.strictEqual(g.run("p.centre.i"), g.run("__k"));
+  assert.match(g.lastRender(), /tu joues où/);
+  // la carrière classique n'est pas touchée : l'accueil propose le centre, et une carrière normale démarre comme avant
+  g.run("home(); newCareer('2')");
+  assert.match(g.lastRender(), /Le jour de l'essai/);
+  assert.strictEqual(g.run("slot"), "2");
+});
+
+// le centre joué au hasard jusqu'au bout, puis la carrière qui continue (lancement pour le simulateur)
+const CENTRE_PUIS_CARRIERE = `startCentre('1'); ui.quick = true;
+  for(let n=0;n<200&&CF_BEATS[p.centre.i]&&CF_BEATS[p.centre.i].k!=="fin";n++){ const c = p.centre, b = CF_BEATS[c.i];
+    if(b.k==="essai") cfEssai(RI(0,1)); else if(b.k==="nom") cfName(true); else if(b.k==="proche") cfPickPar(pick(Object.keys(CF_PARENTS)));
+    else if(b.k==="poste") cfPickPoste(pick(Object.keys(CF_POSTE)));
+    else if(b.k==="match"){ if(!c.m) cfMatchStart(b); const m = c.m; if(m.done) cfMatchEnd(); else if(b.acts[m.a]==="dil") cfDil(RI(0,1)); else cfPlay(RI(0,1)); }
+    else cfChoose(RI(0,b.ch(c).length-1)); }
+  cfToCareer()`;
+
+test("après le centre, la carrière continue avec Sacha en rival, et les gens du centre reviennent", () => {
+  const seen = new Set();
+  for (let s = 0; s < 16; s++) {
+    const r = playCareer(1500 + s, { launch: CENTRE_PUIS_CARRIERE });
+    assert.strictEqual(r.issues.length, 0, report(r.issues));
+    assert.ok(r.stats && r.stats.seasons >= 1, `graine ${1500 + s} : carrière vide`);
+    r.stats.ids.filter(id => /^cf/.test(id)).forEach(id => seen.add(id));
+  }
+  assert.ok(seen.size >= 4, "au moins quatre retours de personnages différents sur 16 carrières : " + [...seen].join(", "));
+  // juste après le centre : même joueur, même âge, Sacha en rival, et la carrière démarre normalement
+  const g = createGame({ seed: 77 });
+  g.run(CENTRE_PUIS_CARRIERE);
+  assert.strictEqual(g.run("p.centre"), undefined);
+  assert.strictEqual(g.run("p.rival.name"), "Sacha Lenoir");
+  assert.strictEqual(g.run("p.phase"), "goal");
+  assert.ok(g.run("p.age>=17&&p.age<=18"));
+  assert.ok(g.run("p.name!=='Inconnu'"));
+  assert.doesNotMatch(g.lastRender(), /undefined|NaN/);
+});
+
+test("centre rejouable : une scène tirée par saison, inédite d'abord, et les anciennes parties se reprennent", () => {
+  const g = createGame({ seed: 5 });
+  const pools = [];
+  for (let k = 0; k < 3; k++) {
+    g.run("startCentre('1'); ui.quick = true;");
+    const pool = g.run("p.centre.pool");
+    assert.strictEqual(pool.length, 3, "une scène par saison");
+    pools.push(pool);
+    g.run("p.centre.pool.forEach(cfVu)");
+  }
+  // trois parties de suite : jamais deux fois la même scène tant qu'il en reste d'inédites
+  const s1 = pools.map(x => x[0]);
+  assert.strictEqual(new Set(s1).size, 3, "saison 1 : " + s1.join(", "));
+  // une partie du premier prototype (sans tirage) reprend à la même étape
+  g.run(`startCentre('2'); const c = p.centre; delete c.v; delete c.pool; c.i = 12; save(); p = null; resume('2');`);
+  assert.strictEqual(g.run("CF_BEATS[p.centre.i].id"), "agent");
+  assert.ok(g.run("p.centre.pool.includes('depanne')"));
+  assert.doesNotMatch(g.lastRender(), /undefined|NaN/);
+});
+
+test("à la retraite, le film de la carrière passe avant le bilan, avec les gens du centre", () => {
+  const g = createGame({ seed: 88 });
+  g.run(CENTRE_PUIS_CARRIERE);
+  g.run(`p.seasons = [{y:"2028-29",age:18,club:p.club.name,cc:"FR",apps:30,goals:9,assists:3,clean:0,rating:"7.00",rank:3,lvl:70,tr:1}];
+    p.moments.push("2031 · Ballon d'Étoile !"); p.retired = "test"; p.after = {k:"calme",n:"Profiter",t:"…"}; ui.quick = false; route();`);
+  const film = g.lastRender();
+  assert.match(film, /Le film de ta carrière/);
+  assert.match(film, /Sacha/);
+  assert.doesNotMatch(film.replace(/<[^>]+>/g, " "), /undefined|NaN|\{(par|Par|e|pr)\}/);
+  // la fin du film ouvre le bilan, et le bilan propose de le revoir
+  g.run("filmEnd()");
+  assert.match(g.lastRender(), /Bilan de carrière/);
+  assert.match(g.lastRender(), /Revoir le film de ta carrière/);
+  assert.strictEqual(g.run("p.filmSeen"), true);
+});
+
+test("chapitres : la percée et le sommet ont un verdict, la dernière danse amène son offre, le bilan les raconte", () => {
+  const g = createGame({ seed: 91 });
+  g.run(`newPlayer({name:"Chap Test",country:"FR",pos:"ATT",trait:"tech",origin:"quartier",ent:"ami",life:"pro"});
+    p.goalOpts = goalOptions(); goalScreen();`);
+  assert.match(g.lastRender(), /Chapitre 1 · La percée/);
+  // 23 ans : sans saison pleine, la percée est manquée ; avec, elle est réussie
+  g.run(`p.age = 23; p.seasons = [{y:"2030-31",age:21,club:p.club.name,cc:"FR",apps:12,goals:2,assists:1,clean:0,rating:"6.40",rank:5,lvl:70,tr:0}]; globalThis.__t = chapterCheck();`);
+  assert.strictEqual(g.run("p.acts.percee"), "ko");
+  assert.match(g.run("__t"), /manqué/);
+  g.run(`p.acts = {}; p.club = {...CLUBS.find(c=>c.name==="Olympique Valmont")}; p.seasons[0] = {...p.seasons[0],club:"Olympique Valmont",apps:33,rating:"7.10"}; chapterCheck();`);
+  assert.strictEqual(g.run("p.acts.percee"), "ok");
+  // 30 ans : une Coupe des Champions à 27 ans valide le sommet
+  g.run(`p.age = 30; p.trophies = [{t:"Coupe des Champions",y:p.year-3}]; chapterCheck();`);
+  assert.strictEqual(g.run("p.acts.sommet"), "ok");
+  assert.ok(g.run("p.moments.some(m=>/Au sommet : Coupe des Champions/.test(m))"));
+  // la dernière danse « revenir aux racines » fait venir une offre du premier club
+  g.run(`p.clubsHist = ["Stade Saint-Aubrac","Olympique Valmont"]; p.flags.danseRacines = true; globalThis.__o = []; chapterOffers(__o);`);
+  assert.strictEqual(g.run("p.flags.danse"), "racines");
+  assert.strictEqual(g.run("__o[0]&&__o[0].club.name"), "Stade Saint-Aubrac");
+  const card = g.run("chaptersCard()");
+  assert.match(card, /Tes chapitres/);
+  assert.doesNotMatch(card, /undefined|NaN/);
+});
+
+test("rythme : la saison décisive d'un chapitre a un moment de plus, et chaque conseil ne s'affiche qu'une fois", () => {
+  const g = createGame({ seed: 93 });
+  g.run(`newPlayer({name:"Rythme Test",country:"FR",pos:"MIL",trait:"tech",origin:"quartier",ent:"ami",life:"pro"});
+    p.age = 22; p.seasons = [{y:"2031-32",age:21,club:p.club.name,cc:"FR",apps:10,goals:1,assists:1,clean:0,rating:"6.20",rank:6,lvl:60,tr:0}]; startSeason();`);
+  assert.strictEqual(g.run("p.evCount"), 4);
+  assert.match(g.run("seasonSteps()"), /Moment 4/);
+  assert.match(g.run("chapterLine()"), /Dernière chance/);
+  g.run("p.age = 25; startSeason();");
+  assert.strictEqual(g.run("p.evCount"), g.run("p.calm") ? 2 : 3);
+  // un conseil vu ne revient pas, même sans avoir cliqué sur « Compris »
+  g.run("tipsSeen = {}");
+  assert.match(g.run("tip('goal')"), /objectif personnel/);
+  assert.strictEqual(g.run("tip('goal')"), "");
+});
+
+test("vestiaire vivant : les coéquipiers durent, se souviennent, partent et reviennent en face ; le dirigeant se souvient", () => {
+  const g = createGame({ seed: 97 });
+  g.run(`newPlayer({name:"Vestiaire Test",country:"FR",pos:"ATT",trait:"tech",origin:"quartier",ent:"ami",life:"pro"}); p.centre = null; p.age = 21;`);
+  const roles = JSON.parse(g.run("JSON.stringify(crew().map(x=>x.role))"));
+  assert.deepStrictEqual(roles, ["capitaine", "pote", "mentor"]);
+  // un choix laisse une trace chez le coéquipier, et le texte qui suit s'en souvient
+  g.run(`applyFx({crew:{role:"capitaine",aff:10,mem:{repas:"oui"}}})`);
+  assert.strictEqual(g.run("crewGet('capitaine').mem.repas"), "oui");
+  g.run("crewGet('capitaine').age = 33; p.age = 23;");
+  assert.strictEqual(g.run("EVENTS.find(e=>e.id==='eqBrassard').cond()"), true);
+  assert.match(g.run("EVENTS.find(e=>e.id==='eqBrassard').txt()"), /dîner/);
+  // le texte se relit sans planter une fois le brassard pris (le capitaine devient le vétéran)
+  g.run("applyFx({flag:'cap',crew:{role:'capitaine',aff:8,mem:{adieu:'brassard'}}})");
+  assert.ok(g.run("EVENTS.find(e=>e.id==='eqBrassard').txt()").length > 20);
+  // en changeant de club, le groupe reste là-bas ; un ancien coéquipier en face est annoncé et a son dialogue
+  const old = g.run("p.club.name");
+  g.run(`p.club = {...CLUBS.find(c=>c.country===p.club.country&&c.name!==p.club.name)}; p.rel = newRel(); crew();`);
+  assert.ok(JSON.parse(g.run("JSON.stringify(p.crew.gone.map(x=>x.club))")).every(c => c === old));
+  g.run(`p.phase = "match"; setupMatch(); p.match.opp = {...CLUBS.find(c=>c.name===${JSON.stringify(old)})}; p.match.log = []; crewMatchSetup(p.match);`);
+  assert.ok(g.run("!!p.match.exMate"));
+  assert.strictEqual(g.run("pickTalk(p.match)"), "c_exmate");
+  // retour dans l'ancien club (fin de prêt) : ceux qui y sont restés sont là, et la scène des retrouvailles les nomme
+  const capName = g.run("p.crew.gone.find(x=>x.role==='mentor'||x.role==='capitaine').n");
+  g.run(`p.match = null; p.club = {...CLUBS.find(c=>c.name===${JSON.stringify(old)})}; crew();`);
+  assert.ok(JSON.parse(g.run("JSON.stringify(crew().map(x=>x.n))")).includes(capName));
+  assert.strictEqual(g.run("EVENTS.find(e=>e.id==='eqRetrouvailles').cond()"), true);
+  assert.match(g.run("EVENTS.find(e=>e.id==='eqRetrouvailles').txt()"), new RegExp(capName));
+  g.run("applyFx({moral:5,crewBack:6})");
+  assert.strictEqual(g.run("EVENTS.find(e=>e.id==='eqRetrouvailles').cond()"), false);
+  // le film de carrière garde l'homme du vestiaire
+  assert.match(g.run("crewFilmFrame()||''"), /Le vestiaire/);
+  // le dirigeant : un refus est retenu, et il le rappelle à la négociation suivante
+  g.run(`bossRemember("refused","Olympique Valmont","Stade X"); p.year += 2;`);
+  assert.match(g.run(`bossLine("Olympique Valmont","open")`), /préféré Stade X/);
+  assert.match(g.run(`bossSay("Olympique Valmont","sign")`), /cf-say/);
+  // la panoplie : sans succès, seul l'équipement de base est porté
+  assert.strictEqual(g.run("gear().boots.id"), "noir");
+});
+
+test("rythme de carrière : grandes saisons et saisons de transition, qui passent vite et se jouent en détail sur demande", () => {
+  const g = createGame({ seed: 101 });
+  g.run(`newPlayer({name:"Rythme Bis",country:"FR",pos:"MIL",trait:"tech",origin:"quartier",ent:"ami",life:"pro"}); p.centre = null; p.age = 25;
+    p.seasons = [{y:"2030-31",age:24,club:p.club.name,cc:"FR",apps:30,goals:4,assists:6,clean:0,rating:"6.90",rank:8,lvl:70,tr:0}];
+    p.rival = null; p.caps = 0; p.bigRun = 1; p.calmRun = 0; startSeason();`);
+  // rien de décisif : saison de transition, deux moments, pas de match de championnat
+  assert.strictEqual(g.run("p.calm"), true);
+  assert.strictEqual(g.run("p.evCount"), 2);
+  g.run("goalScreen()"); assert.match(g.lastRender(), /Saison de transition/);
+  // elle va jusqu'au bilan sans jouer le match clé à l'écran
+  g.run("setGoal(0); choose(0); if(p.phase==='hiver'){ p.winter=null; p.phase='event'; } if(p.phase==='event') choose(0);");
+  // un match à enjeu (course au titre, finale) reste joué en détail même dans une saison calme : on le simule ici
+  if (g.run("p.phase") === "match") { assert.strictEqual(g.run("bigMatch(p.match)"), true); g.run("calmMatch()"); }
+  assert.strictEqual(g.run("p.phase"), "season");
+  assert.strictEqual(g.run("!!p.last.calm"), true);
+  // après un match joué, le récit « ta saison en 5 cartes » peut s'ouvrir par-dessus le bilan : on lit les deux derniers rendus
+  g.run("seasonScreen()"); assert.match(g.renders.slice(-2).join(""), /Saison de transition/);
+  // trois saisons de transition d'affilée n'existent pas
+  g.run("p.calmRun = 2; p.seasons.push({...p.seasons[0],club:p.club.name}); startSeason();");
+  assert.strictEqual(g.run("p.calm"), false);
+  // on peut toujours vivre une saison de transition en détail
+  g.run("p.calmRun = 0; p.bigRun = 1; startSeason();");
+  if (g.run("p.calm")) { g.run("playFullSeason()"); assert.strictEqual(g.run("p.evCount"), 3); assert.strictEqual(g.run("p.calm"), false); }
+  // un nouveau club fait toujours une grande saison, avec ses intrigues
+  g.run(`p.club = {...CLUBS.find(c=>c.country===p.club.country&&c.name!==p.club.name)}; p.bigRun = 5; startSeason();`);
+  assert.strictEqual(g.run("p.calm"), false);
+  assert.match(g.run("paceCard()"), /Grande saison/);
+});
+
+test("après le centre : les deux premières saisons pro ont leurs scènes écrites, quelle que soit la fin", () => {
+  for (const out of ["signe", "valmont", "bas", "double", "exil", "renvoye", "prix"]) {
+    const g = createGame({ seed: 31 });
+    g.run(`startCentre("1"); ui.quick = true; p.name = "Léo Fil"; const c = p.centre; c.out = "${out}"; c.mem = {nino:"mot",appel:"promesse"}; c.sacha = 1; c.par = "gm"; c.i = CF_BEATS.length; cfToCareer();`);
+    const seen = [];
+    for (let s = 0; s < 3; s++) {
+      g.run(`if(p.phase==="goal"){ p.goalOpts = goalOptions(); setGoal(0); }`);
+      for (let k = 0; k < 8 && g.run("p.phase") === "event"; k++) {
+        seen.push(g.run(`(()=>{ if(!p.curEv){ const e = drawEvent(); p.curEv = e.id; ui.seenThisSeason = (ui.seenThisSeason||[]).concat(e.id); } const e = EVENTS.find(x=>x.id===p.curEv), t = evText(e)+e.ch.map(c=>c.t+(c.why||"")).join(); if(/undefined|NaN|\{par\}|\{mpar\}/.test(t)) throw new Error("texte cassé "+e.id+" : "+t.slice(0,200)); choose(0); return e.id; })()`));
+        g.run(`if(p.phase==="hiver"){ p.winter=null; p.phase="event"; } if(p.phase==="ordinaire") p.phase="event";`);
+      }
+      g.run(`(()=>{ let n=0; while(p.phase!=="goal"&&!p.retired&&n++<50){ if(p.phase==="match") calmMatch(); else if(p.phase==="season") toOffseason(); else if(p.phase==="offseason"||p.phase==="summer") stay(); else if(p.phase==="ordinaire") p.phase="event"; else if(p.phase==="tirage") tirageDone(); else if(p.phase==="event"){ if(!p.curEv){ p.curEv = drawEvent().id; } choose(0); } else break; } })()`);
+    }
+    for (const id of ["cfCasier", "cfNinoLettre", "cfVasseurAppel"]) assert.ok(seen.includes(id), `${out} : ${id} absent (${seen.join(" ")})`);
+    assert.ok(seen.indexOf("cfCasier") < seen.indexOf("cfNinoLettre"), `${out} : ordre du fil`);
+  }
+});
+
+test("un mini-jeu interrompu par un rechargement compte comme manqué, au même endroit seulement", () => {
+  const g = createGame({ seed: 5 });
+  g.run(`newPlayer({name:"Verrou Test",country:"FR",pos:"ATT",trait:"tech",origin:"quartier",ent:"ami",life:"pro"}); p.phase = "event"; p.evIdx = 1; p.curEv = "coach"; miniLockStart("shoot");`);
+  assert.strictEqual(g.run("miniInterrupted('shoot')"), true);
+  assert.strictEqual(g.run("!!p.miniLock"), false);
+  // ailleurs dans la saison, la note ne pénalise pas un autre mini-jeu
+  g.run(`miniLockStart("shoot"); p.evIdx = 2;`);
+  assert.strictEqual(g.run("miniInterrupted('shoot')"), false);
+});

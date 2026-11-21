@@ -3,7 +3,7 @@
 EVENTS.push(
  /* --- Contrats et argent --- */
  {id:"libre",scene:"argent",cond:()=>p.contract<=1&&p.age>=24&&!p.loanFrom&&!p.flags.libre&&!p.flags.forceDepart,hint:"Un contrat qui arrive à son terme…",
-  txt:()=>`Ton contrat avec le ${p.club.name} se termine en juin. Le président te presse de prolonger : « Sinon, tu partiras libre et le club ne touchera rien. »`,
+  txt:()=>`Ton contrat avec ${leC(p.club.name)} se termine en juin. Le président te presse de prolonger : « Sinon, tu partiras libre et le club ne touchera rien. »`,
   ch:[{t:"Prolonger par fidélité",fx:{flag:"libre",salary:1.12,trust:4,moral:2},why:"Les supporters saluent ton engagement."},
       {t:"Laisser filer et partir libre",fx:{flag:"forceDepart",money:()=>Math.round(p.salary*8),trust:-6,rep:-1},why:"Ton agent négocie une grosse prime à la signature ailleurs. Le président ne te parle plus."},
       {t:"Faire monter les enchères dans la presse",risk:{p:.5,good:{flag:"libre",salary:1.35,rep:1,txt:"Le club cède : tu deviens l'un des mieux payés du vestiaire."},bad:{flag:"forceDepart",rep:-4,trust:-8,txt:"Le bras de fer tourne mal : tu es écarté jusqu'à l'été."}}}]},
@@ -12,7 +12,7 @@ EVENTS.push(
   ch:[{t:"Accepter le défi",fx:{flag:"forceDepart",rep:6,moral:4,moment:"Clause libératoire payée par un géant"},why:"Tes valises sont presque faites. Ton club pleure, les journaux s'enflamment."},
       {t:"Rester, par amour du club",fx:{rep:5,moral:3,trust:6,salary:1.2,moment:"Refuse un géant pour rester fidèle"},why:"Tu deviens un symbole. Le président t'augmente dans la foulée."}]},
  {id:"impayes",scene:"argent",cond:()=>p.club.str<=66&&p.age>=19&&!p.loanFrom,hint:"Un club qui ne paie plus ses joueurs…",
-  txt:()=>`Trois mois que les salaires du ${p.club.name} ne sont plus versés. Certains coéquipiers ne peuvent plus payer leur loyer.`,
+  txt:()=>`Trois mois que les salaires ${duC(p.club.name)} ne sont plus versés. Certains coéquipiers ne peuvent plus payer leur loyer.`,
   ch:[{t:"Prêter de l'argent aux plus jeunes",cond:()=>p.money>=80,fx:{money:-60,moral:4,trust:3,rep:2},why:"Le vestiaire n'oubliera pas."},
       {t:"Saisir la commission des litiges",fx:{flag:"forceDepart",money:()=>p.salary*3,trust:-5},why:"Tu récupères ton dû et pourras partir libre cet été."},
       {t:"Serrer les dents avec le groupe",fx:{moral:-4,form:2,trust:4},why:"Vous gagnez trois matchs d'affilée, par fierté."}]},
@@ -155,8 +155,8 @@ EVENTS.push(
       {t:"Organiser une minute d'applaudissements avec les supporters",fx:{rep:3,moral:2},why:"Les deux publics applaudissent ensemble pendant une minute."},
       {t:"Demander à ne pas jouer",fx:{moral:3,play:-3},why:"Le coach respecte ta décision."}]},
  {id:"formateur",scene:"perso",hint:"Ton tout premier club a besoin de toi…",cond:()=>p.age>=28&&p.clubsHist.length>=2&&p.clubsHist[0]!==p.club.name,
-  txt:()=>`Le ${p.clubsHist[0]}, le club qui t'a formé, est au bord de la faillite. Les anciens organisent une collecte pour le sauver.`,
-  ch:[{t:"Faire un très gros chèque",cond:()=>p.money>=800,fx:{money:-500,rep:4,moral:8,moment:()=>`A sauvé le ${p.clubsHist[0]} de la faillite`},why:"Le club est sauvé. Une tribune portera peut-être ton nom."},
+  txt:()=>`${LeC(p.clubsHist[0])}, le club qui t'a formé, est au bord de la faillite. Les anciens organisent une collecte pour le sauver.`,
+  ch:[{t:"Faire un très gros chèque",cond:()=>p.money>=800,fx:{money:-500,rep:4,moral:8,moment:()=>`A sauvé ${leC(p.clubsHist[0])} de la faillite`},why:"Le club est sauvé. Une tribune portera peut-être ton nom."},
       {t:"Organiser un match de gala avec tes amis du foot",fx:{form:-3,rep:3,moral:5},why:"Stade plein, et une soirée de légendes."},
       {t:"Partager la cagnotte sur tes réseaux",fx:{rep:1,moral:1},why:"Ça aide, un peu."}]}
 );

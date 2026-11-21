@@ -25,11 +25,11 @@ function raceLeague(impact){
   const r = ensureRace();
   return r.teams.map(t=>({n:t.n,s:t.str+t.luck+(t.me?impact+r.bonus:0)}));
 }
-// classement à la journée J : environ 50 points sur 38 matchs pour un club moyen (comme fullTable)
+// classement à la journée J : la même échelle de points par match que le classement final (leaguePpg, fullTable)
 function raceTable(J){
   const sc = raceLeague(myImpact()), mean = sc.reduce((a,t)=>a+t.s,0)/sc.length, me = p.club.name;
   const rows = sc.map(t=>{ const h = hashStr(t.n+p.year+":"+J), noise = ((h%100)/100-.5)*Math.max(0,5-J*.13);
-    return {n:t.n,me:t.n===me,pts:Math.max(0,Math.round(J*clamp(1.316+(t.s-mean)*.063,.3,2.6)+noise))}; });
+    return {n:t.n,me:t.n===me,pts:Math.max(0,Math.round(J*leaguePpg(t.s,mean)+noise))}; });
   rows.sort((a,b)=>b.pts-a.pts||(a.me?-1:b.me?1:0));
   rows.forEach((r,i)=>r.pos=i+1);
   return rows;
@@ -51,7 +51,7 @@ function raceBanner(){
   const obj = clubObjective(p.club.str), lineRow = rows[obj.line-1], okNow = obj.ok(me.pos);
   const gap = okNow?(rows[obj.line]?me.pts-rows[obj.line].pts:0):lineRow.pts-me.pts;
   const show = rows.filter(x=>x.pos<=3||x.me);
-  const status = okNow?(gap<=2?`<span class="warn">en ballottage (+${gap} pt${gap>1?"s":""})</span>`:`<span class="good">en bonne voie</span>`):`<span class="bad">à ${gap} pt${gap>1?"s":""}</span>`;
+  const status = okNow?(gap<=2?`<span class="warn">en ballottage (${gap>0?`+${gap}&nbsp;pt${gap>1?"s":""}`:"à égalité de points"})</span>`:`<span class="good">en bonne voie</span>`):`<span class="bad">${gap>0?`à&nbsp;${gap}&nbsp;pt${gap>1?"s":""}`:"à égalité de points, mais derrière"}</span>`;
   return `<div class="card race"><div class="race-head"><span>📊 ${esc(COUNTRIES[p.club.country].league)} · journée ${J}</span>${move}</div>
     <table class="mini race-t">${show.map(x=>`<tr class="${x.me?"me":""}"><td>${x.pos}</td><td>${esc(x.n)}</td><td>${x.pts} pts</td></tr>`).join("")}</table>
     <p class="race-obj">🎯 Objectif du club : <b>${obj.t}</b> · ${status}</p>${rivalLine(rows)}${coachLine()}</div>`;
@@ -61,7 +61,7 @@ function rivalLine(rows){
   if(typeof rivalActive!=="function"||!rivalActive()) return "";
   const r = p.rival, his = rows.find(x=>x.n===r.club.name&&!x.me);
   const lead = p.lvl>r.lvl?"tu as l'avantage":p.lvl<r.lvl?"il a une longueur d'avance":"vous êtes à égalité";
-  return `<p class="race-coach">⚔️ Ton rival <b>${esc(r.name)}</b> · ${his?`son club est ${his.pos}${his.pos===1?"er":"e"} (${his.pts} pts)`:`au ${esc(r.club.name)}`} · niveau ${r.lvl}, ${lead}</p>`;
+  return `<p class="race-coach">⚔️ Ton rival <b>${esc(r.name)}</b> · ${his?`son club est ${his.pos}${his.pos===1?"er":"e"} (${his.pts} pts)`:`${auC(esc(r.club.name))}`} · niveau ${r.lvl}, ${lead}</p>`;
 }
 // l'enjeu du match clé, lu dans le classement juste avant : titre, maintien, place visée
 function raceStake(){
@@ -115,8 +115,8 @@ function focusHtml(){
     <div class="quals">${Object.keys(QUALS).map(k=>`<button class="btn qual ${p.focus===k?"sel":""}" aria-pressed="${p.focus===k}" onclick="setFocus('${k}')"><span class="q-i">${QUALS[k].i}</span><span class="q-n">${qualName(k)}<small>${QUAL_D[k]()}</small></span><b>${q[k]}</b></button>`).join("")}</div>
     <h3 style="margin-top:12px">Intensité de la préparation</h3><div class="row3">${Object.entries(INTENS).map(([k,v])=>`<button class="btn ${p.intens===k?"sel":""}" aria-pressed="${p.intens===k}" onclick="setIntensity('${k}')">${v.n}<small>${v.d}</small></button>`).join("")}</div></div>`;
 }
-function setFocus(k){ ensureQuals(); p.focus = k; save(); route(); }
-function setIntensity(k){ ensureQuals(); p.intens = k; save(); route(); }
+function setFocus(k){ ensureQuals(); p.focus = k; ui.focusOpen = true; save(); route(); }
+function setIntensity(k){ ensureQuals(); p.intens = k; ui.focusOpen = true; save(); route(); }
 // le radar des qualités, pour la carte du joueur
 function qualsRadar(size=180){
   const q = ensureQuals(), ks = Object.keys(QUALS), c = size/2, r = size/2-26;
@@ -280,7 +280,7 @@ function storyStep(btn,d){
 // la phrase d'enjeu affichée au coup d'envoi du match clé
 function stakeLine(st){
   const g = st.gap, pts = n=>`${Math.abs(n)} point${Math.abs(n)>1?"s":""}`;
-  if(st.k==="titre") return g>0?`🔥 Enjeu : vous avez ${pts(g)} d'avance sur le ${st.opp.n}. Gagnez, et le titre vous tend les bras.`:g<0?`🔥 Enjeu : ${pts(g)} de retard sur le ${st.opp.n}. Il faut gagner, sinon le titre s'envole.`:`🔥 Enjeu : à égalité de points avec le ${st.opp.n}. Le vainqueur file vers le titre.`;
+  if(st.k==="titre") return g>0?`🔥 Enjeu : vous avez ${pts(g)} d'avance sur ${leC(st.opp.n)}. Gagnez, et le titre vous tend les bras.`:g<0?`🔥 Enjeu : ${pts(g)} de retard sur ${leC(st.opp.n)}. Il faut gagner, sinon le titre s'envole.`:`🔥 Enjeu : à égalité de points avec ${leC(st.opp.n)}. Le vainqueur file vers le titre.`;
   if(st.k==="maintien") return g>=0?`😰 Enjeu : ${pts(g)} d'avance sur la zone rouge. Une défaite, et c'est la panique.`:`😰 Enjeu : ${pts(g)} de retard sur le maintien. Il n'y a plus le choix.`;
-  return g>=0?`🎯 Enjeu : ${pts(g)} d'avance sur le ${st.opp.n} dans la course à l'objectif du club.`:`🎯 Enjeu : ${pts(g)} de retard sur le ${st.opp.n}. Une victoire, et vous le dépassez.`;
+  return g>=0?`🎯 Enjeu : ${pts(g)} d'avance sur ${leC(st.opp.n)} dans la course à l'objectif du club.`:`🎯 Enjeu : ${pts(g)} de retard sur ${leC(st.opp.n)}. Une victoire, et vous le dépassez.`;
 }

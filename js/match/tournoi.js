@@ -13,7 +13,7 @@ function newTourney(name,year){
   return {name,year,opps:group.concat(ko),stage:0,pts:0,gf:0,ga:0,res:[],cur:null,done:false,out:null,myG:0,myA:0,
     role:p.lvl>=COUNTRIES[p.country].nat-2?"titulaire":"remplaçant"};
 }
-const tourneyOpp = T=>{ const c = T.opps[T.stage]; return {name:COUNTRIES[c].name,country:c,str:COUNTRIES[c].nat}; };
+const tourneyOpp = T=>{ const c = T.opps[T.stage]; return {name:COUNTRIES[c].name,country:c,str:COUNTRIES[c].nat+Math.max(0,T.stage-2)*1.5}; };
 const usStr = ()=>COUNTRIES[p.country].nat+(p.lvl-80)*.3;
 // buts marqués sur une portion du match (share = fraction des 90 minutes)
 function tourneyGoals(share,opp){

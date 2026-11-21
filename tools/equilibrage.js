@@ -31,6 +31,10 @@ const lines = [
   ["Saisons jouées", r => r.seasons],
   ["Âge de la retraite", r => r.age],
   ["Niveau max", r => r.peak],
+  ["Potentiel final", r => r.pot],
+  ["Niveau à 23 ans", r => r.l23],
+  ["Note moyenne", r => r.rat],
+  ["Potentiel à la création", r => r.potC],
   ["Niveau max ≥ 80", null, r => r.peak >= 80],
   ["Niveau max ≥ 88", null, r => r.peak >= 88],
   ["Ballons d'Étoile", r => r.stars],
@@ -48,6 +52,7 @@ const lines = [
   ["Coupes des Champions gagnées", r => r.cdc],
   ["Matchs de saison joués", r => r.ord],
   ["Appels urgents", r => r.urg],
+  ["Saisons de transition", r => r.calm],
 ];
 const groups = [["Tous", all], ...POSITIONS.map(p => [p, all.filter(r => r.pos === p)])];
 const pad = (s, w) => String(s).padStart(w);

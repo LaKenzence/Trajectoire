@@ -26,12 +26,12 @@ EVENTS.push(
   ch:[{t:"L'appeler pour le féliciter",fx:{moral:10,rep:4,moment:"Son ancien protégé devient une star et lui rend hommage"},why:"Vous parlez une heure. Comme au centre, il y a quelques années."}]},
 
  // le club racheté
- {id:"rachat",cond:()=>p.club.str<=78&&p.age>=19&&!p.flags.rachat,weight:.6,txt:()=>`Un fonds d'investissement étranger veut racheter le ${p.club.name}. Les supporters sont divisés.`,
+ {id:"rachat",cond:()=>p.club.str<=78&&p.age>=19&&!p.flags.rachat,weight:.6,txt:()=>`Un fonds d'investissement étranger veut racheter ${leC(p.club.name)}. Les supporters sont divisés.`,
   ch:[{t:"Soutenir publiquement le projet",fx:{flag:"rachat",trust:3,seed:{ev:"rachatSuite",d:[1,2]}},why:"Les nouveaux propriétaires te remercient en privé."},
       {t:"Exprimer tes inquiétudes",fx:{flag:"rachat",rep:3,trust:-2},why:"Le virage déploie une banderole à ton nom."},
       {t:"Rester en dehors de tout ça",fx:{flag:"rachat"},why:"Tu te concentres sur le terrain."}]},
- {id:"rachatSuite",seedOnly:true,cond:()=>!p.loanFrom,txt:()=>`Un an après le rachat du ${p.club.name}, les nouveaux propriétaires dévoilent leurs ambitions.`,
-  ch:[{t:"Croire au projet et prolonger",risk:{p:.6,good:{clubStr:6,salary:1.25,moral:6,moment:()=>`Le ${p.club.name} change de dimension après son rachat`,txt:"Des stars signent, le stade est rénové : ton club joue désormais dans la cour des grands."},bad:{clubStr:-5,moral:-6,txt:"Le projet était un mirage : les investisseurs vendent tout et le club s'effondre."}}},
+ {id:"rachatSuite",seedOnly:true,cond:()=>!p.loanFrom,txt:()=>`Un an après le rachat ${duC(p.club.name)}, les nouveaux propriétaires dévoilent leurs ambitions.`,
+  ch:[{t:"Croire au projet et prolonger",risk:{p:.6,good:{clubStr:6,salary:1.25,moral:6,moment:()=>`${LeC(p.club.name)} change de dimension après son rachat`,txt:"Des stars signent, le stade est rénové : ton club joue désormais dans la cour des grands."},bad:{clubStr:-5,moral:-6,txt:"Le projet était un mirage : les investisseurs vendent tout et le club s'effondre."}}},
       {t:"Demander à partir avant qu'il soit trop tard",fx:{flag:"forceDepart",trust:-4},why:"Ton agent prospecte."}]},
 
  // le coach qui ne compte plus sur toi
@@ -71,6 +71,9 @@ const ALT = {
 for(const [id,alt] of Object.entries(ALT)){ const e = EVENTS.find(x=>x.id===id); if(e) e.alt = alt; }
 // texte affiché : l'original la première fois, puis une variante à chaque nouvelle occurrence
 function evText(e){
+  // une version qui parle de tes gens (EV_PERSO, evenements.js), quand ils existent
+  const per = typeof EV_PERSO!=="undefined"&&EV_PERSO[e.id]?EV_PERSO[e.id]():null;
+  if(per) return per;
   const v = [e.txt,...(e.alt||[])], t = v[(p.used[e.id]||0)%v.length];
   return typeof t==="function"?t():t;
 }

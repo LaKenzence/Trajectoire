@@ -24,33 +24,6 @@ function toggleVoice(btn){
 }
 const lastGoalLine = m=>(m.log.slice().reverse().find(l=>/But/.test(l))||"But !").replace(/^\S+\s+/,"");
 
-/* ============ Foule continue pendant le match clé ============ */
-let crowdNode = null;
-function ambient(on){
-  if(!on||!soundOn){
-    if(crowdNode&&AC){
-      const n = crowdNode; crowdNode = null;
-      try{ n.g.gain.setTargetAtTime(0,AC.currentTime,.35); setTimeout(()=>{ try{ n.src.stop(); }catch(e){} },1500); }catch(e){}
-    }
-    return;
-  }
-  if(crowdNode) return;
-  const a = ac(); if(!a) return;
-  const len = a.sampleRate*4, buf = a.createBuffer(1,len,a.sampleRate), d = buf.getChannelData(0);
-  for(let i=0;i<len;i++) d[i] = (Math.random()*2-1)*(.65+.35*Math.sin(i/a.sampleRate*Math.PI*.5));
-  const src = a.createBufferSource(); src.buffer = buf; src.loop = true;
-  const f = a.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 650; f.Q.value = .5;
-  const g = a.createGain(); g.gain.value = 0; g.gain.setTargetAtTime(.045,a.currentTime,.8);
-  src.connect(f).connect(g).connect(a.destination); src.start();
-  crowdNode = {src,g};
-}
-function crowdSwell(){
-  if(!crowdNode||!AC) return;
-  const g = crowdNode.g.gain, t = AC.currentTime;
-  g.cancelScheduledValues(t); g.setValueAtTime(g.value,t);
-  g.linearRampToValueAtTime(.16,t+.3); g.setTargetAtTime(.045,t+1.4,.9);
-}
-
 /* ============ Météo sur le mini-terrain ============ */
 function weatherFx(m){
   const w = m.weather||"";
@@ -72,14 +45,4 @@ SFX.boo = ()=>{ const a = ac(); if(!a) return;
   tone(190,1.2,"sawtooth",.025,150); };
 // battement de cœur : deux coups sourds
 SFX.heart = ()=>{ tone(62,.12,"sine",.22,45); setTimeout(()=>tone(55,.14,"sine",.18,40),150); };
-// chant des supporters après un but : quatre notes propres au club, portées par la foule
-SFX.chant = ()=>{
-  const h = p?hashStr(p.club.name):0, base = [262,294,330,349,392][h%5], seq = [0,4,7,4].map((s,i)=>base*Math.pow(2,((s+(h>>>i)%3)%12)/12));
-  crowd(2.4,.32); seq.forEach((f,i)=>setTimeout(()=>{ tone(f,.32,"square",.025); tone(f/2,.32,"triangle",.03); },300+i*340));
-};
-// la foule retient son souffle (penalties, coups francs) puis reprend
-function crowdHush(on){
-  if(!crowdNode||!AC) return;
-  const g = crowdNode.g.gain, t = AC.currentTime;
-  g.cancelScheduledValues(t); g.setTargetAtTime(on?.008:.045,t,on?.3:.8);
-}
+// la foule, ses chants et ses silences : voir stade-son.js

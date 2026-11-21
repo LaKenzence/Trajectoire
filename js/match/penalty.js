@@ -33,6 +33,8 @@ const Penalty = (() => {
 
   /** @type {any} */
   let S = null;
+  // issue du dernier tir joué (goal, saved, post, bar, over, wide, wall) : les récits qui suivent racontent le vrai raté
+  let LAST = null;
 
   // ---------- déroulé ----------
   function play(opts) {
@@ -41,6 +43,7 @@ const Penalty = (() => {
   }
   function start(opts) {
     return new Promise(resolve => {
+      LAST = null;
       if (S) { const old = S; close(); old.resolve({ success: false, us: 0, them: 0, mine: old.mine }); }
       S = { opts, resolve, us: [], them: [], kickIndex: 0, kick: null, flash: null, netShake: 0, state: "intro", t0: performance.now(), now: performance.now(), aim: null, power: 0,
         shake: 0, trail: [], parts: [], swipe: null, dt: 16,
@@ -57,7 +60,7 @@ const Penalty = (() => {
       build();
       S.prepStart = S.now;
       if (typeof crowdHush === "function") crowdHush(true);
-      hint(opts.mode === "save" || opts.mode === "fksave" ? "Concentre-toi…" : opts.mode === "shoot" ? "Le stade retient son souffle…" : opts.mode === "fk" ? "L'arbitre recule le mur de neuf mètres…" : "Les deux équipes se rassemblent au rond central…");
+      hint(opts.mode === "save" || opts.mode === "fksave" ? "Concentre-toi…" : opts.mode === "shoot" ? (opts.small ? "Le terrain retient son souffle…" : "Le stade retient son souffle…") : opts.mode === "fk" ? "L'arbitre recule le mur de neuf mètres…" : "Les deux équipes se rassemblent au rond central…");
       snd("whistle");
       S.raf = requestAnimationFrame(frame);
     });
@@ -165,7 +168,7 @@ const Penalty = (() => {
   // simulation instantanée (bouton « Simuler ») : même logique de probabilité que le jeu
   function skip() {
     if (!S || S.state === "end") return;
-    S.skipped = true;
+    S.skipped = true; LAST = null;
     const o = S.opts, k = o.skill, M = S.mine;
     showStyles(false); showGroup(".pen-rank", false);
     const mineShot = ok => { M.shots++; if (ok) M.goals++; return ok; }, mineFace = goal => { M.faced++; if (!goal) M.saves++; return goal; };
@@ -186,7 +189,7 @@ const Penalty = (() => {
   // ---------- interface ----------
   function build() {
     const o = S.opts, el = document.createElement("div");
-    el.className = "penmode" + (o.mode === "shootout" ? " shootout" : "");
+    el.className = "penmode pen-set" + (o.mode === "shootout" ? " shootout" : "");
     el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", o.title);
     const shootHelp = "Au doigt ou à la souris : glisse depuis le ballon vers le but. La direction choisit le coin, la vitesse donne la puissance, un geste plus long monte le ballon. Ou choisis ton tir (1, 2 ou 3) puis clique (ou Espace) pour viser, puis pour la puissance. Trop fort, et le ballon s'envole.";
     const help = o.mode === "save" ? "Le tireur peut trahir son côté dans ses appuis… ou feinter. Quand il frappe, clique là où part le ballon. Au clavier : ← ↑ →."
@@ -261,6 +264,13 @@ const Penalty = (() => {
   // décalage de la caméra (secousse sur un but) et passage écran → monde pour les clics et les glissés
   const shakeAt = () => S.shake > 0 && !reduceMotion ? { x: Math.sin(S.now * 0.09) * 9 * S.shake, y: Math.cos(S.now * 0.11) * 7 * S.shake } : { x: 0, y: 0 };
   function camOrigin() { const sh = shakeAt(); return { x: CAM.x - CAM.x * CAM.s + sh.x, y: CAM.y - CAM.y * CAM.s + sh.y }; }
+  // sur téléphone en portrait, la scène est agrandie et rognée sur les côtés (theme.css) : les jauges se décalent
+  // d'autant vers l'intérieur pour rester visibles
+  function cropX() {
+    const st = S.cv.parentElement; if (!st || !st.getBoundingClientRect) return 0;
+    const r = S.cv.getBoundingClientRect(), sr = st.getBoundingClientRect();
+    return r.width ? cl((sr.left - r.left) / r.width * W, 0, 140) : 0;
+  }
   function toScreen(e) { const r = S.cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
   function toWorld(e) {
     const r = S.cv.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W, sy = (e.clientY - r.top) / r.height * H, o = camOrigin();
@@ -658,7 +668,7 @@ const Penalty = (() => {
     if (k.blockU) out = "wall";
     else if (nearPost) out = "post"; else if (nearBar) out = "bar"; else if (!inside) out = y < G.t ? "over" : "wide";
     else { const kp = keeperPos(k, k.start + k.dur); out = Math.hypot(kp.x - x, kp.y - y) < k.reach ? "saved" : "goal"; }
-    k.outcome = out;
+    k.outcome = out; LAST = out;
     const wallAt = k.blockU ? fkBall(k, k.blockU) : null;
     k.post = {
       wall: wallAt && { x: wallAt.x + rnd(-70, 70), y: 548, r: 16, gy: 550, hop: 45, dur: 600 },
@@ -681,7 +691,7 @@ const Penalty = (() => {
     // un but secoue la caméra ; un geste réussi fait jaillir des paillettes là où le ballon a fini ; le téléphone vibre
     if (scored) S.shake = 1;
     if (good && !reduceMotion) for (let i = 0; i < 70; i++) { const a = rnd(0, Math.PI * 2), v = rnd(0.08, 0.42); S.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.18, life: rnd(700, 1300), age: 0, c: Math.random() < 0.6 ? "#f5c542" : Math.random() < 0.5 ? "#ffffff" : "#9a7bff" }); }
-    if ((k.player || k.youDive) && navigator.vibrate) { try { navigator.vibrate(good ? [30, 40, 90] : 180); } catch (e) {} }
+    if ((k.player || k.youDive) && navigator.vibrate && navigator.userActivation?.hasBeenActive) { try { navigator.vibrate(good ? [30, 40, 90] : 180); } catch (e) {} }
     snd(good ? (scored ? "goal" : "trophy") : "concede");
     const what = isFk() ? "Le coup franc" : "Le penalty";
     if (S.opts.mode !== "shootout") say({ goal: ours ? `${what} est au fond !` : `${what} est transformé.`, saved: ours ? "Arrêté par le gardien !" : "Quel arrêt !", post: "Sur le poteau !", bar: "Sur la barre !", over: "Au-dessus !", wide: "À côté !", wall: "Dans le mur !" }[out]);
@@ -724,7 +734,7 @@ const Penalty = (() => {
   // jauge de pression (en haut à gauche) : un cœur qui bat plus vite quand la tension monte
   function drawPressure(pr, now) {
     const ctx = S.ctx, beat = 1 + 0.18 * Math.max(0, Math.sin(now / (420 - pr * 220) * Math.PI * 2));
-    ctx.save();
+    ctx.save(); ctx.translate(cropX(), 0);
     ctx.fillStyle = "rgba(8,13,24,.7)"; ctx.fillRect(14, 14, 168, 34);
     ctx.font = '800 22px "Barlow Condensed", Impact, sans-serif'; ctx.textBaseline = "middle"; ctx.textAlign = "center";
     ctx.translate(34, 31); ctx.scale(beat, beat); ctx.fillStyle = "#ff6b6b"; ctx.fillText("♥", 0, 1);
@@ -797,7 +807,7 @@ const Penalty = (() => {
     if (["aim", "power", "curl"].includes(S.state) && pressureNow() > 0.15) drawPressure(pressureNow(), now);
     if (S.state === "curl") drawCurl(curlAt(now));
     if (S.state === "power") {
-      const p = powerAt(now), x = 712, y = 330, w = 26, h = 190;
+      const p = powerAt(now), x = 712 - cropX(), y = 330, w = 26, h = 190;
       ctx.fillStyle = "rgba(8,13,24,.75)"; ctx.fillRect(x - 6, y - 6, w + 12, h + 12);
       ctx.fillStyle = "rgba(224,80,63,.55)"; ctx.fillRect(x, y, w, h * 0.1);
       const g = ctx.createLinearGradient(0, y + h, 0, y);
@@ -910,7 +920,7 @@ const Penalty = (() => {
   }
 
   // debug : l’état de la séance en cours (pour les essais dans la console)
-  return { play, active: () => !!S, debug: () => S };
+  return { play, active: () => !!S, lastOut: () => LAST, debug: () => S };
 })();
 
 /* ============ Branchements dans la carrière ============ */
@@ -938,15 +948,38 @@ function recordPens(mode,mine){
   P.face += mine.faced; P.arret += mine.saves;
 }
 // joue un coup de pied arrêté (penalty ou coup franc, au tir ou dans les cages) et renvoie true si c'est réussi pour le joueur
+// le lieu du mini-jeu : au centre de formation, un petit terrain (sous la pluie le jour de l'essai et au premier
+// match) ; en carrière, le stade et la météo du match en cours
+function miniVenue(){
+  const c = typeof p!=="undefined"&&p?p.centre:null;
+  if(c&&typeof CF_BEATS!=="undefined"){ const b = CF_BEATS[c.i]; return {small:true,weather:b&&(b.k==="essai"||b.id==="m1")?"Pluie battante":"Grand soleil"}; }
+  return {small:false,weather:typeof p!=="undefined"&&p?p.match?.weather||null:null};
+}
+const SMALL_SUBS = {shoot:"Quelques parents le long de la main courante. Et Vasseur, qui note tout.",save:"Tu es dans les cages. Lis le tireur et plonge.",fk:"Le mur est en place. À toi de le contourner.",fksave:"Ton mur est en place. Ne quitte pas le ballon des yeux."};
+/* --- Un mini-jeu commencé ne se rejoue pas en rechargeant la page ---
+   Au coup d'envoi du mini-jeu, la sauvegarde note où l'on est. Si la page est rechargée pendant la partie et qu'on relance
+   le même mini-jeu au même endroit, il compte comme manqué (on ne peut plus retenter un raté). Ailleurs, la note s'efface. */
+function miniCtx(){ return [p.phase,p.evIdx,p.curEv,p.match?.step,p.match?.title,p.centre?.i,p.centre?.m?.a].join("|"); }
+function miniLockStart(kind){ if(!p) return; p.miniLock = {k:kind,c:miniCtx()}; save(); }
+function miniLockEnd(){ if(p&&p.miniLock){ delete p.miniLock; save(); } }
+function miniInterrupted(kind){
+  const L = p&&p.miniLock; if(!L) return false;
+  delete p.miniLock;
+  if(L.k!==kind||L.c!==miniCtx()) return false;
+  ui.toast = `<div class="tchoice">Mini-jeu interrompu</div><div>La partie a été quittée pendant le geste : il compte comme manqué.</div>`;
+  return true;
+}
 function playMini(mode,title,opp){
   if(ui.quick||typeof Penalty==="undefined"||!minisOn("pen")) return Promise.resolve(null);
-  return miniBrief(mode,title||MINI_TITLES[mode],opp?`Face à ${opp.name}`:"").then(go=>!go?Math.random()<(mode==="shoot"?0.72:mode==="fk"?0.3:0.35)+penSkill()*0.15:Penalty.play({mode,look:p.look,skill:penSkill(),pressure:penPressure(),title:title||MINI_TITLES[mode],sub:MINI_SUBS[mode],number:shirtNumber(),weather:p.match?.weather,...penTeams(opp)})
-    .then(r=>{ recordPens(mode,r.mine); if(!r.skipped) recordMini(mode,r.success); return r.success; }));
+  if(miniInterrupted(mode)) return Promise.resolve(false);
+  return miniBrief(mode,title||MINI_TITLES[mode],opp?`Face à ${opp.name}`:"").then(go=>!go?Math.random()<(mode==="shoot"?0.72:mode==="fk"?0.3:0.35)+penSkill()*0.15:(miniLockStart(mode),Penalty.play({mode,look:p.look,skill:penSkill(),pressure:penPressure(),title:title||MINI_TITLES[mode],sub:(miniVenue().small?SMALL_SUBS:MINI_SUBS)[mode],number:shirtNumber(),...miniVenue(),...penTeams(opp)}))
+    .then(r=>{ miniLockEnd(); recordPens(mode,r.mine); if(!r.skipped) recordMini(mode,r.success); return r.success; }));
 }
 function playShootout(m){
   if(ui.quick||typeof Penalty==="undefined"||!minisOn("pen")) return Promise.resolve(null);
-  return miniBrief("shootout","Tirs au but",`${m.us}-${m.them} à la fin du temps réglementaire`).then(go=>!go?Math.random()<0.5:Penalty.play({mode:"shootout",look:p.look,skill:penSkill(),pressure:penPressure(),title:"Tirs au but · "+m.title,sub:`${m.us}-${m.them} à la fin du temps réglementaire`,youGK:p.pos==="GB",number:shirtNumber(),weather:m.weather,...penTeams(m.opp)})
-    .then(r=>{ recordPens("shootout",r.mine); if(!r.skipped) recordMini("shootout",r.success); return r.success; }));
+  if(miniInterrupted("shootout")) return Promise.resolve(false);
+  return miniBrief("shootout","Tirs au but",`${m.us}-${m.them} à la fin du temps réglementaire`).then(go=>!go?Math.random()<0.5:(miniLockStart("shootout"),Penalty.play({mode:"shootout",look:p.look,skill:penSkill(),pressure:penPressure(),title:"Tirs au but · "+m.title,sub:`${m.us}-${m.them} à la fin du temps réglementaire`,youGK:p.pos==="GB",number:shirtNumber(),weather:m.weather,...penTeams(m.opp)}))
+    .then(r=>{ miniLockEnd(); recordPens("shootout",r.mine); if(!r.skipped) recordMini("shootout",r.success); return r.success; }));
 }
 // repère les actions de match qui mènent à un coup de pied arrêté jouable
 function tagPen(a){

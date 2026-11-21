@@ -38,15 +38,15 @@ function worldShift(){
   const bump = (c,d)=>{ w[c.name] = clamp((w[c.name]||0)+d,-18,18); };
   // un rachat par un fonds richissime
   const up = pick(CLUBS.filter(c=>c.str<=72&&c.name!==p.club.name));
-  if(up&&chance(.6)){ bump(up,RI(5,9)); news.push(`Rachat XXL : un fonds richissime reprend le ${up.name} et promet de le mener au sommet.`); }
+  if(up&&chance(.6)){ bump(up,RI(5,9)); news.push(`Rachat XXL : un fonds richissime reprend ${leC(up.name)} et promet de le mener au sommet.`); }
   // une chute : dette, descente, scandale
   const down = pick(CLUBS.filter(c=>c.str>=72&&c.name!==p.club.name));
-  if(down&&chance(.5)){ bump(down,-RI(5,9)); news.push(pick([`Le ${down.name}, criblé de dettes, doit vendre ses meilleurs joueurs.`,`Scandale financier : le ${down.name} écope d'une lourde sanction.`,`Le ${down.name} s'effondre : sa direction démissionne en bloc.`])); }
+  if(down&&chance(.5)){ bump(down,-RI(5,9)); news.push(pick([`${LeC(down.name)}, criblé de dettes, doit vendre ses meilleurs joueurs.`,`Scandale financier : ${leC(down.name)} écope d'une lourde sanction.`,`${LeC(down.name)} s'effondre : sa direction démissionne en bloc.`])); }
   // le reste du monde bouge un peu, et les écarts se résorbent lentement
   for(const c of shuffle(CLUBS).slice(0,8)) bump(c,RI(-2,2));
   for(const k in w) if(w[k]) w[k] -= Math.sign(w[k]);
   // ton propre club
-  if(chance(.12)){ const d = chance(.5)?RI(3,6):-RI(3,6); bump(p.club,d); news.push(d>0?`Ton club, le ${p.club.name}, investit massivement cet été.`:`Ton club, le ${p.club.name}, traverse une crise financière.`); }
+  if(chance(.12)){ const d = chance(.5)?RI(3,6):-RI(3,6); bump(p.club,d); news.push(d>0?`Ton club, ${leC(p.club.name)}, investit massivement cet été.`:`Ton club, ${leC(p.club.name)}, traverse une crise financière.`); }
   applyWorld();
   const mine = CLUBS.find(c=>c.name===p.club.name); if(mine) p.club.str = mine.str;
   return news;

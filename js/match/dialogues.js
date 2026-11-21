@@ -69,7 +69,7 @@ function situ(m,min){
   const d = m.us-m.them, sc = `${m.us}-${m.them}`;
   if(min>90) return pick([`Temps additionnel, ${sc}. `,`Dernières secondes ! `,`Le quatrième arbitre a levé son panneau. `]);
   if(d<0) return min>=75?pick([`Menés ${sc} et le temps file. `,`Il faut un exploit, vite. `]):pick([`Menés ${sc}, il faut réagir. `,`Le stade gronde, vous êtes menés. `]);
-  if(d>0) return min>=75?pick([`Vous menez ${sc}, encore un quart d'heure à tenir. `,`Ils jettent tout à l'attaque. `]):pick([`Vous menez ${sc}. `,`Dans l'élan du but, `]);
+  if(d>0) return min>=75?pick([`Vous menez ${sc}, encore un quart d'heure à tenir. `,`Ils jettent tout à l'attaque. `]):pick([`Vous menez ${sc}. `,`Portés par le but, vous poussez encore. `]);
   if(min>=80) return pick([`Toujours ${sc}, chaque ballon compte. `,`Ça sent la prolongation… `]);
   if(min<=20) return pick([`Le match vient de commencer. `,`Premières minutes, tout le monde se cherche. `,""]);
   return pick(["","",`Le match s'emballe. `,`${m.crowd>40000?"Le stade est en fusion. ":"Le public pousse. "}`]);
@@ -126,7 +126,7 @@ const MATCH_TALKS = [
     {t:"Te concentrer sur ton propre jeu",fx:{boost:.02},r:"Chacun pour soi. Ça peut marcher… ou pas."}]},
   {id:"menons",who:"⏱️ Le banc",cond:m=>m.us>m.them&&m.step>=2,txt:()=>"Vous menez. Le banc vous fait de grands signes : il faut gagner du temps.",o:[
     {t:"Garder le ballon au poteau de corner",fx:{calm:true},r:"Trois minutes grignotées. Les adversaires s'énervent."},
-    {t:"Chercher le but du break",fx:{boost:.06},r:"Tu veux tuer le match. Risqué, mais ambitieux."}]},
+    {get t(){ const m = p.match; return m&&m.us-m.them>=2?"Continuer d'attaquer pour corser l'addition":"Chercher le but du break"; },fx:{boost:.06},r:"Tu veux tuer le match. Risqué, mais ambitieux."}]},
   {id:"choc",who:"🩹 Le kiné",cond:()=>true,txt:()=>"Tu prends un coup sur la cheville. Le kiné arrive en courant.",o:[
     {t:"Serrer les dents et rester sur le terrain",risk:{p:()=>p.trait==="athl"?.75:.55,good:{rep:1,boost:.03,txt:"La douleur passe. Tu repars comme si de rien n'était."},bad:{form:-6,boost:-.07,txt:"Tu boites. Chaque appui fait mal."}}},
     {t:"Te faire soigner une minute",fx:{boost:-.02,form:2},r:"Une bombe de froid, un bandage, tu reviens."}]},
@@ -176,6 +176,8 @@ function pickTalk(m){
   const seen = m.talks||[], last = p.lastTalks||[];
   const ok = MATCH_TALKS.filter(t=>t.id!=="crampes"&&!seen.includes(t.id)&&t.cond(m));
   if(m.protege&&!seen.includes("protegeFace")) return "protegeFace";
+  if(m.exMate&&!seen.includes("c_exmate")&&MATCH_TALKS.some(t=>t.id==="c_exmate")) return "c_exmate";
+  if(m.chap&&!seen.includes("c_"+m.chap)&&MATCH_TALKS.some(t=>t.id==="c_"+m.chap)) return "c_"+m.chap;
   const fresh = ok.filter(t=>!last.includes(t.id));
   const t = pick(fresh.length?fresh:ok);
   return t?t.id:null;

@@ -232,21 +232,47 @@ Object.assign(ICONS, {
   card:"M7 3h10v18H7z",
   flag:"M5 21V4M5 4h12l-2 4 2 4H5",
   smile:"M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM8 14c1 1.5 2.5 2.3 4 2.3s3-.8 4-2.3M9 9.5h.01M15 9.5h.01",
-  meh:"M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM8 15h8M9 9.5h.01M15 9.5h.01"
+  meh:"M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM8 15h8M9 9.5h.01M15 9.5h.01",
+  // icônes dédiées, là où un emoji tombait à côté du sens (un transfert n'est pas un avion, un vétéran n'est pas une horloge)
+  loop:"M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3",
+  shirt:"M8 3 4 5 2 10l4 2v9h12v-9l4-2-2-5-4-2c-.6 1.5-2.1 2.5-4 2.5S8.6 4.5 8 3z",
+  boot:"M3 6h7l2 6h6a3 3 0 0 1 3 3v2H3zM6 17v3M10 17v3M14 17v3M18 17v3",
+  film:"M3 4h18v16H3zM7 4v16M17 4v16M3 8h4M3 12h4M3 16h4M17 8h4M17 12h4M17 16h4",
+  sprout:"M12 21v-9M12 12C12 7.5 8.5 5 4 5c0 4.5 3.5 7 8 7zM12 15c0-4 3-6.5 8-6.5 0 4-3 6.5-8 6.5z",
+  elder:"M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM5 22v-7a5 5 0 0 1 10 0v7M19 13v9M19 13a2 2 0 0 0-2-2",
+  armband:"M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM15.5 9.2a4 4 0 1 0 0 5.6",
+  glove:"M7 21v-8l-2-3V6a1 1 0 0 1 2 0v4M7 10V4a1 1 0 0 1 2 0v6M9 9V3a1 1 0 0 1 2 0v6M11 9V4a1 1 0 0 1 2 0v7l2-2a1.5 1.5 0 0 1 2.2 2l-4.2 5v5z",
+  stadium:"M2 9c0-2.2 4.5-4 10-4s10 1.8 10 4v8c0 2.2-4.5 4-10 4S2 19.2 2 17zM2 9c0 2.2 4.5 4 10 4s10-1.8 10-4M6 12.5v8M18 12.5v8M12 13v8",
+  baby:"M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM6 21a6 6 0 0 1 12 0M10 7h.01M14 7h.01",
+  book:"M2 4h7a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H2zM22 4h-7a3 3 0 0 0-3 3v14a2 2 0 0 1 2-2h8z",
+  news:"M4 4h13v16H6a2 2 0 0 1-2-2zM17 8h3v10a2 2 0 0 1-2 2M7 8h7M7 12h7M7 16h4",
+  bed:"M2 18V6M2 14h20v4M22 14v-2a3 3 0 0 0-3-3h-8v5M6 12.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z",
+  tv:"M3 6h18v12H3zM8 21h8M12 18v3M9 2l3 4 3-4",
+  broken:"M12 21 4.2 13.2a5 5 0 0 1 7.8-6.3 5 5 0 0 1 7.8 6.3zM12 7l-2 4 3 2-2 4",
+  sun:"M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4",
+  palm:"M12 22V11M12 11C10 7 6 6 3 7M12 11c2-4 6-5 9-4M12 11c-3-1-7 1-8 4M12 11c3-1 7 1 8 4M6 22h12",
+  whistle:"M3 10a5 5 0 1 0 10 0h8V6H8a5 5 0 0 0-5 4zM8 10h.01",
+  brain:"M9 3a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 3 3h1V3zM15 3a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-3 3h-1V3z",
+  swords:"M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M9.5 17.5 21 6V3h-3L6.5 14.5M11 19l-6-6M8 16l-4 4M5 21l-2-2",
+  bench:"M4 10h16v4H4zM3 14h18M5 14v6M19 14v6M6 10V6M18 10V6",
+  globe:"M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2c2.8 3 4 6.5 4 10s-1.2 7-4 10M12 2c-2.8 3-4 6.5-4 10s1.2 7 4 10",
+  sad:"M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM8 16.5c1-1.4 2.5-2.1 4-2.1s3 .7 4 2.1M9 9.5h.01M15 9.5h.01"
 });
 const EMOJI_IC = {
-  "⚔":"bolt","⚽":"ball","🏆":"trophy","✅":"check","❤":"heart","💙":"heart","♥":"heart","🫶":"heart","🕊":"heart","👶":"heart",
-  "📋":"idcard","🎟":"idcard","🎯":"target","🧠":"target","🅰":"target","🌟":"star","⭐":"star","✨":"star","💫":"star","🎉":"star","☀":"star","🧩":"star","💎":"star","🏝":"star","🏟":"star",
-  "🎲":"dice","⚠":"warning","💣":"warning","🔥":"fire","❌":"x","🩹":"cross","🩺":"cross","🎮":"play","▶":"play","⏩":"play","🎬":"play","◀":"back",
-  "🌱":"run","🏃":"run","🚴":"run","🦵":"run","🧤":"shield","🛡":"shield","⚖":"shield","🧱":"shield","©":"shield","🔴":"ball","🎱":"ball",
-  "⏱":"clock","⏳":"clock","🛌":"clock","📰":"chat","💬":"chat","✉":"chat","🗣":"megaphone","📣":"megaphone","🎤":"mic","🎙":"mic","🤝":"handshake",
-  "🔁":"plane","✈":"plane","🌍":"flag","🌏":"flag","🌐":"flag","🗺":"flag","🏁":"flag","📞":"phone","📱":"phone","💥":"bolt","🌀":"bolt","🚀":"bolt","🦈":"bolt",
+  "👟":"boot",
+  "👕":"shirt",
+  "⚔":"swords","⚽":"ball","🏆":"trophy","✅":"check","❤":"heart","💙":"heart","♥":"heart","🫶":"heart","🕊":"heart","👶":"baby",
+  "📋":"idcard","🎟":"idcard","🎯":"target","🧠":"brain","🅰":"target","🌟":"star","⭐":"star","✨":"star","💫":"star","🎉":"star","☀":"sun","🧩":"star","💎":"star","🏝":"palm","🏟":"stadium",
+  "🎲":"dice","⚠":"warning","💣":"warning","🔥":"fire","❌":"x","🩹":"cross","🩺":"cross","🎮":"play","▶":"play","⏩":"play","🎬":"film","🎞":"film","🎽":"shirt","◀":"back",
+  "🌱":"sprout","🏃":"run","🚴":"run","🦵":"run","🧤":"glove","🛡":"shield","⚖":"shield","🧱":"shield","©":"armband","🔴":"ball","🎱":"ball",
+  "⏱":"clock","⏳":"clock","🛌":"bed","📰":"news","💬":"chat","💭":"chat","🫂":"heart","✉":"chat","🗣":"megaphone","📣":"megaphone","🎤":"mic","🎙":"mic","🤝":"handshake",
+  "🔁":"loop","✈":"plane","🌍":"globe","🌏":"globe","🌐":"globe","🗺":"flag","🏁":"flag","📞":"phone","📱":"phone","💥":"bolt","🌀":"bolt","🚀":"bolt","🦈":"bolt",
   "👪":"users","👥":"users","🤜":"users","🙋":"users","👨‍👩‍👧":"users","🏋":"dumbbell","💪":"dumbbell","🦾":"dumbbell","🏠":"home","🏡":"home","🏘":"home","🏢":"home","🚪":"home","🏰":"home",
   "📅":"calendar","📆":"calendar","🥇":"medal","🥈":"medal","🥉":"medal","🏅":"medal","🎖":"medal","👑":"crown","🏛":"trophy","➖":"minus","✔":"check",
-  "📸":"camera","📹":"camera","📺":"camera","🖼":"camera","📊":"chart","📈":"chart","✏":"edit","✍":"edit","💾":"save","⏸":"pause",
-  "💰":"coins","💸":"coins","💼":"coins","🏦":"coins","🔊":"vol","🔇":"volx","⚙":"gear","🟥":"card","🟨":"card","🔓":"lock","🔒":"lock","📖":"edit","🔎":"target",
+  "📸":"camera","📹":"camera","📺":"tv","🖼":"camera","📊":"chart","📈":"chart","✏":"edit","✍":"edit","💾":"save","⏸":"pause",
+  "💰":"coins","💸":"coins","💼":"coins","🏦":"coins","🔊":"vol","🔇":"volx","⚙":"gear","🟥":"card","🟨":"card","🔓":"lock","🔒":"lock","📖":"book","🔎":"target",
   
-  "🪨":"run","🦁":"fire","🎒":"plane","👁":"eye","👀":"eye","🗿":"shield","🧊":"snow","❄":"snow","🌙":"moon","⚪":"ball","😱":"warning","🌪":"bolt","🙌":"users","🌳":"tree","🎈":"star","🧓":"clock","💔":"heart","🐈":"shield","⬇":"down","📂":"save","🤦":"meh","😘":"smile","😭":"meh","😂":"smile","😅":"smile","😏":"smile","😉":"smile","😴":"clock","😈":"fire","🙏":"handshake","😢":"meh","👏":"handshake","🥺":"meh","🤡":"meh","🌧":"cloud","🪑":"clock","🛷":"run","🤫":"chat","🤸":"run","🕺":"run","☝":"target","🏴":"flag",
+  "🪨":"shield","🦁":"fire","🎒":"plane","👁":"eye","👀":"eye","🗿":"shield","🧊":"snow","❄":"snow","🌙":"moon","⚪":"ball","😱":"warning","🌪":"bolt","🙌":"users","🌳":"tree","🎈":"star","🧓":"elder","💔":"broken","🐈":"shield","⬇":"down","📂":"save","🤦":"meh","😘":"smile","😭":"sad","😂":"smile","😅":"smile","😏":"smile","😉":"smile","😴":"bed","😈":"fire","🙏":"handshake","😢":"sad","👏":"handshake","🥺":"sad","🤡":"meh","🌧":"cloud","🪑":"bench","🛷":"run","🤫":"chat","🤸":"run","🕺":"run","☝":"target","🏴":"flag",
   "🗳":"check","🪖":"shield","⚡":"bolt","❔":"target","😰":"warning",
   "🙂":"smile","😄":"smile","😎":"smile","😐":"meh","😬":"meh","😠":"angry","😤":"angry","🤬":"angry","😒":"angry"
 };
@@ -302,9 +328,11 @@ function miniBrief(kind,title,sub,opts){
   return new Promise(res=>{
     const el = document.createElement("div");
     el.className = "brief"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); el.setAttribute("aria-label",title||b.title);
+    // déjà joué trois fois : la consigne se replie (on la rouvre d'un clic) et le compte à rebours est plus court
+    const known = typeof loadMiniStats==="function"&&(loadMiniStats()[kind]?.n||0)>=3;
+    const howto = `${typeof miniDemo==="function"?miniDemo(kind):""}<ol class="brief-steps">${b.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`;
     el.innerHTML = `<div class="brief-card"><span class="brief-ic">${ic(b.icon)}</span><p class="brief-eyebrow">Mini-jeu</p><h2>${esc(title||b.title)}</h2>${sub?`<p class="muted">${esc(sub)}</p>`:""}
-      ${typeof miniDemo==="function"?miniDemo(kind):""}
-      <ol class="brief-steps">${b.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
+      ${known?`<details class="brief-fold"><summary>Revoir la consigne</summary>${howto}</details>`:howto}
       <button class="btn primary brief-go" type="button">Je suis prêt</button><button class="btn ghost brief-sim" type="button">${esc(opts?.simLabel||"Laisser le jeu simuler")}</button>
       <div class="brief-count" aria-live="assertive"></div></div>`;
     document.body.appendChild(el);
@@ -314,7 +342,7 @@ function miniBrief(kind,title,sub,opts){
       el.querySelector(".brief-go").setAttribute("disabled",""); el.querySelector(".brief-sim").setAttribute("disabled","");
       if(matchMedia("(prefers-reduced-motion: reduce)").matches) return done(true);
       const c = /** @type {HTMLElement} */ (el.querySelector(".brief-count")); el.classList.add("counting");
-      let n = 3; const tick = ()=>{ if(n===0) return done(true); c.textContent = String(n); c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop"); if(typeof sfx==="function") sfx("click"); n--; setTimeout(tick,650); };
+      let n = 3; const tick = ()=>{ if(n===0) return done(true); c.textContent = String(n); c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop"); if(typeof sfx==="function") sfx("click"); n--; setTimeout(tick,known?420:650); };
       tick();
     };
     const key = e=>{ if(el.classList.contains("counting")) return; if(e.key==="Enter"||e.code==="Space"){ e.preventDefault(); e.stopPropagation(); go(); } else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); done(false); } };

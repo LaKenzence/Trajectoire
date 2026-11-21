@@ -128,6 +128,8 @@ function playCareer(seed, opts = {}) {
       route();
     })()`);
   } catch (e) { note("plantage", "création : " + (e.stack || e).toString().split("\n").slice(0, 3).join(" | ")); return { seed, issues }; }
+  // potentiel tiré à la création : s'il diffère entre postes, l'écart vient du tirage, pas du jeu
+  const potC = game.run("p?p.pot:0");
   let steps = 0, last = "";
   while (steps++ < 3000) {
     let step;
@@ -143,10 +145,10 @@ function playCareer(seed, opts = {}) {
   try { game.run("if(p){ save(); const k = slot; p = null; resume(k); }"); scanRenders("reprise"); }
   catch (e) { note("plantage", "reprise : " + String(e.stack || e).split("\n")[0]); }
   const stats = game.run(`p?(()=>{ const s = careerSummary(), u = Object.values(p.used||{});
-    return {pos:p.pos,seasons:p.seasons.length,age:p.age,peak:s.peak,stars:s.stars,trophies:s.trophies,goals:s.goals,clean:s.clean,caps:p.caps,money:p.money,
+    return {pos:p.pos,seasons:p.seasons.length,age:p.age,peak:s.peak,pot:p.pot,trT:p.trophies.map(t=>t.t.split(" – ")[0].split(" (")[0]),rat:p.seasons.reduce((a,x)=>a+ +x.rating,0)/Math.max(1,p.seasons.length),l23:(p.seasons.find(x=>x.age===23)||{lvl:0}).lvl,potC:${potC},stars:s.stars,trophies:s.trophies,goals:s.goals,clean:s.clean,caps:p.caps,money:p.money,
       echoes:p.echoes||0,after:p.after?.k||null,coach:(p.coachHist||[]).length,events:u.reduce((a,b)=>a+b,0),distinct:u.length,maxRepeat:Math.max(0,...u),
       pens:p.pens||null,defi:p.defi||null,intl:p.trophies.filter(t=>/^(Championnat du Monde|Coupe Continentale)/.test(t.t)).length,
-      tourneys:p.moments.filter(m=>/Convoqué pour le/.test(m)).length,cdc:p.trophies.filter(t=>t.t==="Coupe des Champions").length,ordWins:(p.ordinaires||[]).filter(o=>o.r==="w").length,ord:(p.ordinaires||[]).length,urg:p.urgentsN||0,story:p.story?p.story.ch:null,weekly:p.weekly||null,title:careerTitles()[0].id,ids:Object.keys(p.used||{})}; })():null`);
+      tourneys:p.moments.filter(m=>/Convoqué pour le/.test(m)).length,cdc:p.trophies.filter(t=>t.t==="Coupe des Champions").length,calm:p.calmN||0,ordWins:(p.ordinaires||[]).filter(o=>o.r==="w").length,ord:(p.ordinaires||[]).length,urg:p.urgentsN||0,story:p.story?p.story.ch:null,weekly:p.weekly||null,title:careerTitles()[0].id,ids:Object.keys(p.used||{}),acts:p.acts||{},danse:p.flags.danse||null,danseOk:typeof danseOk==="function"?danseOk():null,trTypes:p.trophies.map(t=>t.t.split(" (")[0].split(" – ")[0].replace(/ [0-9]{4}.*$/,""))}; })():null`);
   if (opts.carry) for (const k of CARRY) if (game.store.has(k)) opts.carry[k] = game.store.get(k);
   // les écrans déjà analysés ne servent plus : sans ça, des centaines de carrières saturent la mémoire
   game.renders.length = 0; game.store.clear();

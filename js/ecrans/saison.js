@@ -45,7 +45,7 @@ function simSeason(){
   if(rank===1) tr.push(`Champion – ${lg}`);
   const cupName = `Coupe nationale (${COUNTRIES[c.country].name})`;
   if(p.tmp.cup===true) tr.push(cupName);
-  else if(p.tmp.cup===undefined&&chance(clamp(.04+(c.str-60)*.006,.02,.22))) tr.push(cupName);
+  else if(p.tmp.cup===undefined&&chance(clamp(.02+(c.str-60)*.004,.01,.13))) tr.push(cupName);
   // la Coupe des Champions se joue seulement si le club est qualifié (tirage en début de saison)
   const cdc = p.cdc?cdcPath(c,impact,p.tmp.cdc):null;
   if(cdc?.won) tr.push("Coupe des Champions");
@@ -67,7 +67,8 @@ function simSeason(){
   // distinctions
   // le Ballon d'Étoile se décide plus bas, par le vote (ballonVote)
   let star = false;
-  if(p.age<=21&&rating>=7.1&&apps>=20&&chance(.5)) tr.push(`Révélation de l'année ${yEnd}`);
+  // la révélation ne se gagne qu'une fois : on n'est révélé qu'une fois
+  if(p.age<=21&&rating>=7.1&&apps>=20&&!p.trophies.some(t=>/^Révélation/.test(t.t))&&chance(.5)) tr.push(`Révélation de l'année ${yEnd}`);
   if(p.pos==="ATT"&&goals>=25&&rank<=5&&chance(.5)) tr.push(`Meilleur buteur – ${lg}`);
   // chaque poste a sa distinction individuelle, comme le titre de meilleur buteur pour les attaquants
   if(p.pos==="GB"&&clean>=12&&rank<=5&&chance(.5)) tr.push(`Gant d'or – ${lg}`);
@@ -84,7 +85,7 @@ function simSeason(){
   p.lvl = clamp(Math.round(p.lvl+g),20,99);
   // une saison de très haut niveau fait mentir les pronostics : le potentiel grimpe
   qualsSeason(p.lvl-old.lvl,apps);
-  if(rating>=7.45&&apps>=20&&p.age<=29&&p.pot<99) p.pot = Math.min(99,p.pot+(rating>=7.8?2:1));
+  if(rating>=7.55&&apps>=20&&p.age<=29&&p.pot<99) p.pot = Math.min(99,p.pot+(rating>=7.9?2:1));
   p.form = clamp(p.form+(78-p.form)*.5-(p.age>30?(p.age-30)*2:0)-(injury?8:0)-(p.life==="fete"?5:0)-(p.life==="star"?2:0)+(p.life==="pro"?3:0),10,100);
   p.moral = clamp(p.moral+(play-50)*.15+tr.length*5+(obj.ok?4:-4)+(p.trait==="lead"?3:0)+(55-p.moral)*.2+(p.life==="fete"?3:0)+(p.ent==="ami"?2:0)+familyMoral(),5,100);
   if(p.ent==="parent") p.moral = Math.max(p.moral,30);
@@ -123,7 +124,7 @@ function simSeason(){
 
   const table = league.map((x,i)=>({n:x.n,pos:i+1})).filter(x=>x.pos<=4||x.n===c.name);
   const full = fullTable(league), leaders = leagueLeaders(goals,assists,rival);
-  const cal = seasonCalendar(rank,apps,goals+clean,injury);
+  const cal = seasonCalendar(full.find(x=>x.n===c.name),apps,goals+clean,injury);
   const coachNews = coachSeasonEnd(obj.ok);
   p.last = {coachNews,full,leaders,cdc,cal,apps,starts,goals,assists,clean,rating:rating.toFixed(2),rank,tr,obj,caps,ig,intl,injury,match:M,rival,table,lg,star,ballon,news:worldShift().concat(worldNews()).slice(0,4),goal:p.goal?{t:p.goal.t,ok:goalOk}:null,
     d:{lvl:p.lvl-old.lvl,form:Math.round(p.form-old.form),moral:Math.round(p.moral-old.moral),rep:Math.round(p.rep-old.rep)},earn:Math.round(earn),inv};
@@ -140,6 +141,8 @@ function seasonScreen(){
   render(`${tip("season")}<div class="muted">Bilan de la saison ${p.seasons.at(-1).y}</div>
   <button class="btn story-btn" onclick="seasonStoryOpen()">📖 Ta saison en 5 cartes</button>
   <div class="paper"><div class="mast"><span>Le Quotidien du Ballon</span><span>${p.year+1}</span></div><h3>${h[0]}</h3><p>${h[1]}</p></div>
+  ${L.calm?`<div class="card pace calm"><span class="pace-k">⏩ Saison de transition</span><p>${L.match?`Match clé : ${esc(L.match.title)} · <b>${L.match.score}${L.match.tab||""}</b>, ${{w:"une victoire",d:"un match nul",l:"une défaite"}[L.match.res]}${L.match.myG?`, avec ${L.match.myG} but${L.match.myG>1?"s":""} de toi`:""}.`:"Une saison sans histoires."}</p></div>`:""}
+  ${typeof cfSeasonCard==="function"?cfSeasonCard(L):""}
   ${storyCard()}
   ${L.cal?calendarHtml(L.cal):""}
   ${L.ballon?ballonHtml(L.ballon):""}
@@ -202,7 +205,7 @@ function ballonVote(s){
   const yEnd = p.year+1, codes = Object.keys(COUNTRIES), POSN = ["ATT","MIL","DEF","GB"];
   const T = s.tr.join(" | ");
   const titles = (/Coupe des Champions/.test(T)?4:0)+(/Championnat du Monde/.test(T)?4:/Coupe Continentale/.test(T)?2.5:0)+(/Champion –/.test(T)?1.5:0)+(/Coupe nationale/.test(T)?.5:0);
-  const prod = p.pos==="ATT"?(s.goals-20)*.2:p.pos==="MIL"?(s.goals+s.assists-20)*.12:p.pos==="DEF"?(s.rating-7)*4+1:(s.clean-12)*.25+(s.rating-7)*3+1;
+  const prod = p.pos==="ATT"?(s.goals-20)*.2:p.pos==="MIL"?(s.goals+s.assists-20)*.12:p.pos==="DEF"?(s.rating-7)*3+.5:(s.clean-12)*.25+(s.rating-7)*3+1;
   // les votants se lassent un peu de couronner toujours le même
   const already = p.trophies.filter(x=>x.t.startsWith("Ballon")).length;
   const parts = {niveau:p.lvl,saison:(s.rating-7)*7,prod,titres:titles,banc:s.apps<25?-10:0,lassitude:-already*2};
@@ -213,16 +216,16 @@ function ballonVote(s){
   if(r&&!r.retired&&s.rival) cands.push({n:r.name,c:r.country,club:r.club.name,rival:true,s:r.lvl+(r.club.str-80)*.25+R(-3,6)});
   for(let i=0;i<4;i++){
     const h = hashStr("etoile"+yEnd+i), big = CLUBS.filter(c=>c.str>=82);
-    cands.push({n:FIRST[h%FIRST.length]+" "+LAST[(h>>>7)%LAST.length],c:codes[(h>>>3)%codes.length],club:big[(h>>>11)%big.length].name,pos:POSN[(h>>>5)%4],s:90+(h%100)/10+R(-3,3)});
+    cands.push({n:FIRST[h%FIRST.length]+" "+LAST[(h>>>7)%LAST.length],c:codes[(h>>>3)%codes.length],club:big[(h>>>11)%big.length].name,pos:POSN[(h>>>5)%4],s:95+(h%100)/9+R(-3,3)});
   }
   cands.sort((a,b)=>b.s-a.s);
   const myRank = cands.findIndex(x=>x.me)+1;
   // tu ne gagnes qu'avec une vraie saison de classe mondiale
-  if(myRank===1&&(p.lvl<86||s.apps<25)){ const me = cands.shift(); cands.splice(1,0,me); }
+  if(myRank===1&&(p.lvl<88||s.apps<25)){ const me = cands.shift(); cands.splice(1,0,me); }
   const rank = cands.findIndex(x=>x.me)+1;
   // pourquoi : ce qui t'a porté, ce qui t'a manqué, et l'écart avec le vainqueur
   const meC = cands.find(x=>x.me), win = cands[0];
-  const why = {parts:{saison:Math.round(parts.saison*10)/10,prod:Math.round(prod*10)/10,titres:titles,banc:parts.banc,lassitude:parts.lassitude},gap:rank===1?Math.round((meC.s-cands[1].s)*10)/10:Math.round((win.s-meC.s)*10)/10,lowLvl:rank===1&&myRank!==1?false:p.lvl<86};
+  const why = {parts:{saison:Math.round(parts.saison*10)/10,prod:Math.round(prod*10)/10,titres:titles,banc:parts.banc,lassitude:parts.lassitude},gap:rank===1?Math.round((meC.s-cands[1].s)*10)/10:Math.abs(Math.round((win.s-meC.s)*10)/10),lowLvl:rank!==1&&p.lvl<88,fewApps:rank!==1&&myRank===1&&p.lvl>=88};
   return {top:cands.slice(0,5),myRank:rank,year:yEnd,rivalWon:!!cands[0].rival,show:p.lvl>=80||!!cands[0].rival,why};
 }
 // l'explication du vote, en une ligne : ce qui t'a fait gagner ou ce qui t'a manqué
@@ -234,7 +237,7 @@ function ballonWhy(B){
   if(P.titres) items.push(`trophées +${fr(P.titres)}`);
   if(P.banc) items.push(`trop peu de matchs ${P.banc}`);
   if(P.lassitude) items.push(`lassitude des votants ${P.lassitude}`);
-  const lead = B.myRank===1?`🗳️ Tu l'emportes avec ${fr(w.gap)} point${w.gap>=2?"s":""} d'avance.`:w.lowLvl?`🗳️ Il faut au moins 86 de niveau pour être sacré.`:`🗳️ Il t'a manqué ${fr(w.gap)} point${w.gap>=2?"s":""}${P.titres<4?" : une Coupe des Champions ou un titre mondial aurait pu tout changer":""}.`;
+  const lead = B.myRank===1?`🗳️ Tu l'emportes avec ${fr(w.gap)} point${w.gap>=2?"s":""} d'avance.`:w.lowLvl?`🗳️ Il faut au moins 88 de niveau pour être sacré.`:w.fewApps?`🗳️ Les votants te plaçaient en tête, mais il faut au moins 25 matchs dans la saison pour être sacré.`:`🗳️ Il t'a manqué ${fr(w.gap)} point${w.gap>=2?"s":""}${P.titres<4?" : une Coupe des Champions ou un titre mondial aurait pu tout changer":""}.`;
   return `<p class="ballon-why">${lead}<br><small class="muted">Ton vote : niveau ${p.lvl} · ${items.join(" · ")}</small></p>`;
 }
 function ballonHtml(B){
@@ -297,33 +300,37 @@ function worldNews(){
   const star = ()=>pick(FIRST)+" "+pick(LAST), big = CLUBS.filter(c=>c.str>=80), any = ()=>pick(CLUBS);
   const a = pick(big), b = pick(big.filter(c=>c.name!==a.name)), c = any(), lg = COUNTRIES[c.country].league;
   const pool = [
-    `Transfert record : ${star()} quitte le ${a.name} pour le ${b.name} contre ${RI(90,190)} M€.`,
-    `Le ${c.name} remporte la ${lg} pour la ${RI(2,31)}e fois de son histoire.`,
+    `Transfert record : ${star()} quitte ${leC(a.name)} pour ${leC(b.name)} contre ${RI(90,190)} M€.`,
+    `${LeC(c.name)} remporte la ${lg} pour la ${RI(2,31)}e fois de son histoire.`,
     `${star()} annonce sa retraite à ${RI(34,40)} ans, après ${RI(600,900)} matchs.`,
-    `L'entraîneur du ${any().name} est limogé après ${RI(5,9)} défaites de suite.`,
+    `L'entraîneur ${duC(any().name)} est limogé après ${RI(5,9)} défaites de suite.`,
     `Insolite : un gardien marque de ${RI(60,95)} mètres en ${COUNTRIES[pick(Object.keys(COUNTRIES))].league}.`,
-    `${star()}, 17 ans, devient le plus jeune buteur de l'histoire du ${any().name}.`,
-    `Le ${any().name} inaugure un stade de ${RI(40,80)} 000 places.`,
+    `${star()}, 17 ans, devient le plus jeune buteur de l'histoire ${duC(any().name)}.`,
+    `${LeC(any().name)} inaugure un stade de ${RI(40,80)} 000 places.`,
     `${star()} suspendu ${RI(2,6)} matchs pour un geste d'humeur envers l'arbitre.`,
     `${COUNTRIES[pick(Object.keys(COUNTRIES))].name} change de sélectionneur avant le prochain tournoi.`,
-    `Le ${any().name}, promu, termine sur le podium. Le conte de fées de la saison.`
+    `${LeC(any().name)}, promu, termine sur le podium. Le conte de fées de la saison.`
   ];
   return shuffle(pool).slice(0,3);
 }
-const newsHtml = n=>`<div class="card news"><h3>🌐 Ailleurs dans le monde du foot</h3><ul class="log">${n.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
+const newsHtml = n=>`<div class="card news"><h3>🌐 Dans le monde du foot</h3><ul class="log">${n.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
 
 /* ============ Calendrier : la saison match par match ============ */
-// 38 journées cohérentes avec le classement final : victoires, nuls, défaites, tes matchs joués et tes buts (ou clean sheets)
-function seasonCalendar(rank,apps,mine,injury){
-  const pts = clamp(Math.round(88-(rank-1)*6.5+R(-4,4)),18,98), draws = RI(5,11), wins = clamp(Math.round((pts-draws)/3),0,38-draws);
-  const res = shuffle([...Array(wins).fill("w"),...Array(draws).fill("d"),...Array(Math.max(0,38-wins-draws)).fill("l")]);
+// les journées du championnat, tirées de la ligne de ton club au classement final (mêmes victoires, nuls, défaites
+// et points), avec tes matchs joués et tes buts (ou clean sheets). Tes matchs de coupe ne sont pas des journées.
+function seasonCalendar(row,apps,mine,injury){
+  const N = row.w+row.d+row.l, pts = row.pts;
+  apps = Math.min(apps,N);
+  const res = shuffle([...Array(row.w).fill("w"),...Array(row.d).fill("d"),...Array(row.l).fill("l")]);
   // blessure : une période d'absence d'un seul tenant ; sinon les matchs sans toi sont éparpillés (banc, rotation)
-  let played = new Array(38).fill(false);
-  if(injury&&apps<38){ const miss = 38-apps, start = RI(4,Math.max(4,37-miss)); played = played.map((_,i)=>i<start||i>=start+miss); }
-  else shuffle([...Array(38).keys()]).slice(0,apps).forEach(i=>played[i] = true);
+  let played = new Array(N).fill(false);
+  if(injury&&apps<N){ const miss = N-apps, start = RI(Math.min(4,apps),apps); played = played.map((_,i)=>i<start||i>=start+miss); }
+  else shuffle([...Array(N).keys()]).slice(0,apps).forEach(i=>played[i] = true);
   const cal = res.map((r,i)=>({r,on:played[i],g:0,inj:injury&&!played[i]}));
   const mine0 = cal.filter(c=>c.on);
-  for(let k=0;k<mine;k++){ if(!mine0.length) break; const c = pick(mine0.filter(x=>x.r!=="l").length&&chance(.75)?mine0.filter(x=>x.r!=="l"):mine0); c.g++; }
+  // un clean sheet ne tombe jamais un soir de défaite ; un but, rarement
+  const notLost = mine0.filter(x=>x.r!=="l"), gk = p.pos==="GB";
+  for(let k=0;k<mine;k++){ const pool = gk?notLost.filter(x=>!x.g):notLost.length&&chance(.75)?notLost:mine0; if(!pool.length) break; pick(pool).g++; }
   let best = 0, cur = 0; for(const c of cal){ cur = c.r==="w"?cur+1:0; best = Math.max(best,cur); }
   return {days:cal,pts,best};
 }

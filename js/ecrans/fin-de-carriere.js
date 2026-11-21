@@ -26,7 +26,7 @@ const AFTER_STORIES = {
          ()=>`Tu commentes la ${COUNTRIES[p.country].league} le dimanche soir pendant quinze ans. Tes formules font régulièrement le buzz.`,
          ()=>"Ta franchise et tes analyses font de toi le consultant le plus suivi du pays. Ton émission du lundi devient une institution."]},
   boss:{steps:[
-    {t:()=>`Ton premier mercato comme directeur sportif du ${p.clubsHist[0]}, ton club formateur. Le budget est minuscule.`,ch:[
+    {t:()=>`Ton premier mercato comme directeur sportif ${duC(p.clubsHist[0])}, ton club formateur. Le budget est minuscule.`,ch:[
       {t:"Miser sur les jeunes du centre",s:1,txt:"Trois gamins s'imposent en équipe première. Le public adore."},
       {t:"Recruter une vieille gloire pour remplir le stade",risk:{p:.5,good:{s:2,txt:"Il retrouve une seconde jeunesse et le stade affiche complet."},bad:{s:-1,txt:"Blessé dès le mois de septembre. Un gouffre financier."}}}]},
     {t:()=>"L'entraîneur que tu as nommé enchaîne cinq défaites. Le président te demande de trancher.",ch:[
@@ -36,7 +36,7 @@ const AFTER_STORIES = {
       {t:"Refuser et partir la tête haute",s:1,txt:"Tu pars, mais avec l'estime de tout un club."},
       {t:"Accepter et construire une armada",risk:{p:.5,good:{s:2,moment:"Bâtit une équipe championne comme dirigeant",txt:"L'argent bien dépensé : le club remporte son premier titre."},bad:{s:0,txt:"Les stars s'entendent mal. Beaucoup d'argent pour peu de joie."}}}]}],
     end:[()=>"Ton passage dans les bureaux te laisse un goût amer : on ne gère pas un club comme on joue au football.",
-         ()=>`Directeur sportif respecté, tu sauves le ${p.clubsHist[0]} de la faillite et rénoves son stade.`,
+         ()=>`Directeur sportif respecté, tu sauves ${leC(p.clubsHist[0])} de la faillite et rénoves son stade.`,
          ()=>`Huit ans plus tard, le club que tu as reconstruit dispute la Coupe des Champions pour la première fois de son histoire.`]},
   acad:{steps:[
     {t:()=>"Ton académie va ouvrir ses portes. Reste à choisir où.",ch:[
@@ -138,6 +138,7 @@ function endScreen(){
   <div class="muted">Bilan de carrière</div><h1>${esc(p.name)} ${flag(p.country)}</h1>
   <p class="story">${POS[p.pos].n} · ${TRAITS[p.trait].n} · ${p.seasons.length} saisons · retraite à ${p.age} ans<br><b>${verdict}</b></p>${gradeCard}
   ${titleCard()}
+  ${chaptersCard()}
   ${storyEndCard()}
   <div class="stats">
     <div class="stat"><b>${tot.apps}</b><span>matchs</span></div>
@@ -154,6 +155,7 @@ function endScreen(){
   ${unesCard()}
   ${(p.phone?.trends||[]).length?`<div class="card"><h3>📱 Tes années sur les réseaux</h3><div class="frise">${p.phone.trends.map(t=>`<span class="${t.good?"good":"bad"}"><small>${t.age} ans</small>${esc(t.tag)}</span>`).join("")}</div></div>`:""}
   ${newAch.length?`<div class="card celebrate"><h3>🔓 ${newAch.length} succès débloqué${newAch.length>1?"s":""} !</h3>${newAch.map(a=>`<div class="ach new"><span class="i">${a.i}</span><div><b>${a.n}</b><small>${a.d}</small></div></div>`).join("")}</div>`:""}
+  ${typeof gearNews==="function"&&!p.daily&&!p.friend?gearNews():""}
   ${p.daily||p.friend?"":foundCard()}
   ${p.after?`<div class="card"><h3>Après la carrière : ${p.after.n}</h3><p class="epi">${p.after.t}</p></div>`:""}
   ${coachCard()}
@@ -166,9 +168,12 @@ function endScreen(){
   <div class="card"><h3>Saison par saison</h3><div class="tablewrap"><table><tr><th>Saison</th><th>Club</th><th>Âge</th><th>MJ</th><th>${p.pos==="GB"?"CS":"B"}</th><th>PD</th><th>Note</th><th>Cl.</th></tr>
   ${p.seasons.map(s=>`<tr><td>${s.y}</td><td>${flag(s.cc)} ${esc(s.club)}</td><td>${s.age}</td><td>${s.apps}</td><td>${p.pos==="GB"?s.clean:s.goals}</td><td>${s.assists}</td><td>${s.rating}</td><td>${s.rank}${s.tr?" 🏆":""}</td></tr>`).join("")}</table></div></div>
   <div class="card"><h3>Moments marquants</h3><ul class="log">${p.moments.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>
-  <button class="btn primary" onclick="${p.weekly?"weeklyScreen()":p.daily?"dailyScreen()":p.friend?"friendsScreen()":"wipe();createStep(0)"}">${p.friend?"Retour aux défis entre amis":p.weekly?"Retour au défi de la semaine":p.daily?"Retour au défi du jour":"Nouvelle carrière dans cet emplacement"}</button>
+  <button class="btn primary" onclick="${p.weekly?"weeklyScreen()":p.daily?"dailyScreen()":p.friend?"friendsScreen()":"startCentre(slot)"}">${p.friend?"Retour aux défis entre amis":p.weekly?"Retour au défi de la semaine":p.daily?"Retour au défi du jour":"Nouvelle carrière dans cet emplacement"}</button>
   ${p.daily||p.friend?"":`<button class="btn" style="text-align:center;border-color:var(--accent)" onclick="startHeir()">👶 Continuer la dynastie<small>Ton enfant reprend le flambeau à 16 ans, dans cet emplacement</small></button>`}
+  <button class="btn" style="text-align:center" onclick="careerFilm()">🎬 Revoir le film de ta carrière</button>
   <button class="btn" style="text-align:center" onclick="exportCard(this)">🖼️ Télécharger ma carte en image</button>
+  ${typeof exportStory==="function"?`<button class="btn" style="text-align:center" onclick="exportStory(this)">📱 Image format story<small>Verticale, prête pour les réseaux</small></button>`:""}
+  ${typeof filmVideoOk==="function"&&filmVideoOk()?`<button class="btn" style="text-align:center" onclick="exportFilm(this)">🎞️ Exporter le film en vidéo<small>Une trentaine de secondes, format vertical</small></button>`:""}
   <button class="btn" style="text-align:center" onclick="copyCareer(this)">📋 Copier mon bilan pour le partager</button>
   <button class="btn ghost" onclick="hofScreen()">🏛️ Panthéon</button>
   <button class="btn ghost" onclick="home()">Accueil</button></div>`;
@@ -176,6 +181,33 @@ function endScreen(){
   if(p.daily) submitDaily();
   submitRecords();
   window.scrollTo(0,0);
+}
+
+/* ============ Le film de la carrière ============ */
+// joué une fois, juste avant le bilan ; « Revoir le film » le relance
+function careerFilm(){
+  const fr = careerFilmFrames();
+  filmDone = ()=>{ p.filmSeen = true; save(); endScreen(); };
+  filmShow(fr,"Le film de ta carrière");
+}
+// les images du film (HTML) : aussi lues par partage.js pour la vidéo
+function careerFilmFrames(){
+  const by = p.year-p.age, ms = p.moments.map(x=>{ const [y,...t] = x.split(" · "); return {y:+y,t:t.join(" · ")}; }).filter(x=>x.t&&x.y);
+  const big = ms.filter(x=>!(!p.cf&&x.t===`Premier contrat pro à ${p.clubsHist[0]}`)).filter(x=>BIG.test(x.t)||/S'impose comme titulaire|Au sommet|rendez-vous manqué|Premier contrat|Première sélection|Saison à \d+ buts|Triplé|finale de coupe/.test(x.t));
+  // au plus six moments, répartis sur toute la carrière
+  const pickN = (a,n)=>a.length<=n?a:Array.from({length:n},(_,i)=>a[Math.round(i*(a.length-1)/(n-1))]);
+  const fr = [filmFrame(`${p.cf?16:p.seasons[0]?.age??16} ans`,esc(p.cf?"Un dimanche de pluie, un penalty, un homme en imperméable.":`Tout a commencé à ${p.clubsHist[0]}.`),p.cf?cfSay("vasseur","« Ton nom. »"):"")];
+  const dot = t=>/[.!?…»]$/.test(t)?t:t+".";
+  for(const m of pickN(big.length?big:ms.slice(-4),6)) fr.push(filmFrame(`${m.y-by} ans`,esc(dot(m.t))));
+  if(p.cf){
+    const c = p.cf, r = p.rival, won = typeof rivalScore==="function"&&rivalScore()>0;
+    if(r&&r.cf) fr.push(filmFrame("Sacha",won?"La rivalité est pour toi.":"La rivalité est pour Sacha.",cfSay("sacha",won?(c.sacha>=1?"« Tu as gagné. Je ne te l'ai jamais dit en face. Voilà, c'est dit. »":"« Tu as gagné. Ça ne veut pas dire que tu avais raison. »"):(c.mem.nuit==="porte"?"« J'ai gagné. Mais sans toi, je n'aurais pas tenu la première nuit. »":"« On est quittes. Presque. »"))));
+    fr.push(filmFrame("Toujours là",T("{Par}, dans la tribune, le jour de ton dernier match."),cfSay("par","« Je suis venu{e} à tous les matchs que j'ai pu. Les autres, je les ai regardés en cachette, le son coupé, le cœur à cent à l'heure. »")));
+  }
+  const cr = typeof crewFilmFrame==="function"?crewFilmFrame():null; if(cr) fr.push(cr);
+  const t = careerTitles()[0], g = careerGrade();
+  fr.push(`<section class="cf-frame"><span class="cf-age">${p.age} ans · ${p.seasons.length} saison${p.seasons.length>1?"s":""}</span><h1 class="cf-endt">« ${esc(t.n)} »</h1><p class="cf-ft">${esc(g.label)} · ${g.v}/100</p></section>`);
+  return fr;
 }
 
 /* ============ Carrière d'entraîneur ============ */
@@ -216,7 +248,7 @@ function startCoach(){
   const club = pick(home.slice(0,5));
   p.coach = {lvl,club:{...club},age:p.age,year:p.year,hist:[],trophies:[],sack:0,step:"event",ev:null,b:0,clubs:[club.name],res:null};
   if(p.rival&&p.rival.retired&&chance(.6)) p.rival.coachClub = {...pick(CLUBS.filter(c=>c.str>=60))};
-  p.moments.push(`${p.year} · Débuts d'entraîneur au ${club.name}`);
+  p.moments.push(`${p.year} · Débuts d'entraîneur ${auC(club.name)}`);
   save(); route();
 }
 function coachRoute(){
@@ -274,13 +306,13 @@ function coachPlay(style){
   if(p.rival?.coachClub){
     const rc = p.rival.coachClub;
     if(rc.country===c.country){ const rr = league.findIndex(x=>x.n===rc.name)+1; rivalLine = `${p.rival.name} (${rc.name}) termine ${rr}e. ${rr>rank?"Tu le devances !":"Il te devance."}`; }
-    else rivalLine = `${p.rival.name} entraîne toujours le ${rc.name}.`;
+    else rivalLine = `${p.rival.name} entraîne toujours ${leC(rc.name)}.`;
   }
   k.hist.push({y:`${k.year}-${String(k.year+1).slice(2)}`,club:c.name,cc:c.country,rank,tr:tr.length,style});
   const won = rank<=3||tr.length>0;
   const n = won?RI(1,3):obj.ok?RI(0,2):RI(0,1);
   k.offers = shuffle(CLUBS.filter(x=>x.name!==c.name&&x.str>=c.str-4&&x.str<=c.str+(won?10:4)+(k.lvl-60)*.2)).slice(0,n).map(x=>({...x}));
-  if(sacked){ p.moments.push(`${k.year+1} · Limogé du ${c.name}`); if(!k.offers.length) k.offers = [{...pick(CLUBS.filter(x=>x.str<c.str&&x.str>=c.str-15))||pick(CLUBS)}]; }
+  if(sacked){ p.moments.push(`${k.year+1} · Limogé ${duC(c.name)}`); if(!k.offers.length) k.offers = [{...pick(CLUBS.filter(x=>x.str<c.str&&x.str>=c.str-15))||pick(CLUBS)}]; }
   k.res = {rank,tr,obj,sacked,rivalLine,table:league.map((x,i)=>({n:x.n,pos:i+1})).filter(x=>x.pos<=4||x.n===c.name),lg,style};
   k.year++; k.age++; k.b = 0; k.step = "result";
   save(); coachResultScreen();
@@ -297,7 +329,7 @@ function coachResultScreen(){
       ${r.rivalLine?`<p>⚔️ ${esc(r.rivalLine)}</p>`:""}
       ${r.sacked?`<p style="color:var(--bad)"><b>Le président te limoge.</b></p>`:""}</div>
     <div class="card"><h3>La suite</h3>
-      ${!r.sacked&&!end?`<button class="btn primary" onclick="coachStay()">Rester au ${esc(c.name)}</button>`:""}
+      ${!r.sacked&&!end?`<button class="btn primary" onclick="coachStay()">Rester ${auC(esc(c.name))}</button>`:""}
       ${!end?k.offers.map((x,i)=>`<button class="btn" onclick="coachSign(${i})">${flag(x.country)} ${esc(x.name)} <span class="muted">(${x.str})</span><small>${COUNTRIES[x.country].league}</small></button>`).join(""):`<p class="muted">À ${k.age} ans, il est temps de passer la main.</p>`}
       <button class="btn ghost" onclick="endCoach()">Raccrocher le survêtement</button></div>`);
 }
@@ -305,7 +337,7 @@ function coachStay(){ const k = p.coach; k.step = "event"; k.ev = null; k.note =
 function coachSign(i){
   const k = p.coach, x = k.offers[i];
   k.club = {...x}; if(!k.clubs.includes(x.name)) k.clubs.push(x.name);
-  k.sack = 10; p.moments.push(`${k.year} · Nommé entraîneur du ${x.name}`);
+  k.sack = 10; p.moments.push(`${k.year} · Nommé entraîneur ${duC(x.name)}`);
   coachStay();
 }
 function endCoach(){

@@ -60,6 +60,9 @@ let ui = {};       // état d'écran temporaire
 
 // trois emplacements de carrière, plus un pour le défi du jour
 let slot = (()=>{ try{ return localStorage.getItem("trajectoire_slot")||"1"; }catch(e){ return "1"; } })();
+// les articles devant un nom de club : « au Racing » mais « à l'Olympique », « du Racing » mais « de l'Olympique »
+const elide = n=>/^[aeiouyhàâéèêîôûAEIOUYHÀÂÉÈÊÎÔÛ]/.test(String(n||""));
+const auC = n=>(elide(n)?"à l'":"au ")+n, duC = n=>(elide(n)?"de l'":"du ")+n, leC = n=>(elide(n)?"l'":"le ")+n, LeC = n=>(elide(n)?"L'":"Le ")+n;
 const slotKey = k=>"trajectoire_save_"+k;
 function loadSlot(k){ try{ return JSON.parse(localStorage.getItem(slotKey(k))); }catch(e){ return null; } }
 function save(){ if(!p) return; try{ localStorage.setItem(slotKey(slot),JSON.stringify(p)); localStorage.setItem("trajectoire_slot",slot); }catch(e){} }

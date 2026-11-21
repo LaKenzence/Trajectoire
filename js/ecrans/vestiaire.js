@@ -15,7 +15,15 @@ function squad(){
   const set = (i,name,tag)=>{ out[i].name = name; out[i].tag = tag; };
   if(p.rel){ set(4,p.rel.mate,"pote"); set(7,p.rel.jealous,"jaloux"); }
   if(rivalActive()&&p.rival.club.name===c.name) set(8,p.rival.name,"rival");
-  if(!p.flags.cap) out[2].tag = out[2].tag||"capitaine";
+  // les coéquipiers qui comptent (coequipiers.js) : leur nom, leur âge et leur rôle, qui durent d'une saison à l'autre
+  const cw = typeof crew==="function"?crew():[];
+  for(const x of cw){
+    if(x.role==="pote") continue;
+    const i = x.role==="capitaine"?2:x.role==="mentor"?3:6;
+    Object.assign(out[i],{name:x.n,age:x.age,tag:x.role==="jeune"?"gamin":x.role,crew:x});
+  }
+  const pt = cw.find(x=>x.role==="pote"); if(pt&&p.rel){ out[4].crew = pt; out[4].age = pt.age; }
+  if(!p.flags.cap&&!cw.some(x=>x.role==="capitaine")) out[2].tag = out[2].tag||"capitaine";
   if(p.flags.pepite) out[6].tag = out[6].tag||"protégé";
   return out.filter(x=>x.pos!==p.pos||x.tag);
 }
@@ -23,18 +31,19 @@ function squad(){
 function mood(x){
   const L = p.last||{}, team = (L.rank?(5-L.rank)*6:0)+(L.match?.res==="w"?8:L.match?.res==="l"?-8:0)+((x.h>>>4)%21-10);
   const bonus = {pote:20,jaloux:p.flags.jealousPaix?5:-30,rival:-15,protégé:15,capitaine:5}[x.tag]||0;
-  const v = team+bonus;
+  const v = team+bonus+(x.crew?x.crew.aff*.6:0);
   return v>12?"😄":v>0?"🙂":v>-12?"😐":"😠";
 }
-const TAGS = {pote:"🤜 Ton meilleur pote",jaloux:"😒 Te jalouse",rival:"⚔️ Ton rival",capitaine:"© Capitaine",protégé:"🌱 Ton protégé"};
+const TAGS = {mentor:"🧓 Le vétéran",gamin:"🌱 Le gamin",pote:"🤜 Ton meilleur pote",jaloux:"😒 Te jalouse",rival:"⚔️ Ton rival",capitaine:"© Capitaine",protégé:"🌱 Ton protégé"};
 function vestiaireScreen(){
   if(!p) return;
   const k = clubColors(p.club), trust = p.rel?.trust??50;
   const card = x=>`<div class="mate"><span class="avatar" style="background:${k.a};color:${k.b==="#14171c"?"#fff":k.b}" aria-hidden="true">${initials(x.name)}</span>
     <div><b>${esc(x.name)}</b> <span aria-label="humeur">${mood(x)}</span><small>${POS[x.pos].n} · ${x.age} ans · niveau ${x.lvl}</small>${x.tag?`<small class="mate-tag">${TAGS[x.tag]}</small>`:""}</div></div>`;
   openOverlay(`<div class="sheet" role="document"><h2>👥 Vestiaire · ${esc(p.club.name)}</h2>
-    <div class="mate me"><span class="avatar">${avatarSvg(p.look,40,k.a)}</span><div><b>${esc(p.name)} (toi)</b>${p.flags.cap?' <small class="mate-tag">© Capitaine</small>':""}<small>${POS[p.pos].n} · niveau ${p.lvl}</small></div></div>
+    <div class="mate me"><span class="avatar">${avatarSvg(p.look,40,k.a)}</span><div><b>${esc(p.name)} (toi)</b>${p.flags.cap?' <small class="mate-tag">© Capitaine</small>':""}<small>${POS[p.pos].n} · niveau ${p.lvl}</small>${typeof gearLine==="function"?`<small class="mate-tag">${esc(gearLine())}</small>`:""}</div></div>
     <div class="mate"><span class="avatar" aria-hidden="true">📋</span><div><b>Le coach</b> <span>${trust>=65?"😄":trust>=45?"🙂":trust>=30?"😐":"😠"}</span><small>Confiance en toi : ${Math.round(trust)} / 100</small></div></div>
     <div class="mates">${squad().map(card).join("")}</div>
+    ${p.crew&&p.crew.gone.length?`<h3>Ils sont partis</h3><div class="mates">${p.crew.gone.slice(0,4).map(x=>`<div class="mate gone"><span class="avatar" aria-hidden="true">${initials(x.n)}</span><div><b>${esc(x.n)}</b><small>${CREW_ROLES[x.role]?.n||"Coéquipier"} · ${x.why==="retraite"?"a pris sa retraite":x.why==="transfert"?"joue "+esc(auC(x.club)):"toujours à "+esc(x.club)}</small></div></div>`).join("")}</div>`:""}
     <button class="btn" onclick="closeOverlay(this.closest('.overlay'))">Fermer</button></div>`,"Vestiaire");
 }
