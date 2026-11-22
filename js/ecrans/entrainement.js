@@ -2,17 +2,21 @@
 // Chaque mini-jeu joué, en carrière ou à l'entraînement, compte dans tes statistiques. Ton propre document
 // minis/<ton id> est envoyé au stockage partagé ; la page additionne ceux de tous les joueurs (aucun nom, que des totaux).
 const MINIS = {
-  shoot:{n:"Penalty (tir)",i:"⚽",help:"Choisis ton style (1 placé, 2 en force, 3 Panenka), puis Espace ou clic pour viser, et une deuxième fois pour la puissance. Trop fort, ça s'envole."},
-  save:{n:"Penalty (gardien)",i:"🧤",help:"Regarde les appuis du tireur pendant son élan, puis clique où part le ballon (ou ← ↑ →) au moment de la frappe."},
-  fk:{n:"Coup franc",i:"🌀",help:"Trois temps : la cible, la puissance (faible = lobe le mur mais lent), puis l'effet pour enrouler autour du mur."},
-  fksave:{n:"Coup franc (gardien)",i:"🧱",help:"Le ballon passe au-dessus ou autour de ton mur : suis-le et plonge au bon endroit."},
-  shootout:{n:"Tirs au but",i:"🎯",help:"Tu tires tous les penalties de ton équipe et tu plonges sur ceux d'en face. Choisis d'abord ton rang : premier, ou cinquième."},
-  dribble:{n:"Dribble",i:"🌪️",help:"Quand le cercle se referme sur le défenseur, appuie sur la flèche indiquée (↑ ou ↓, ou clic en haut ou en bas)."},
-  tacle:{n:"Tacle",i:"🦵",help:"Tacle (Espace ou clic) quand l'attaquant entre dans l'anneau jaune. Méfie-toi des feintes."},
-  aerien:{n:"Sortie aérienne",i:"🙌",help:"Sors (Espace ou clic) quand le ballon entre dans le cercle, avant que l'attaquant ne saute."},
-  passe:{n:"Passe décisive",i:"🎯",help:"Passe (Espace ou clic) quand la ligne vers ton attaquant devient verte, avant la fin du chrono."}
+  shoot:{n:"Penalty (tir)",i:"⚽",s:"Tire au but face au gardien"},
+  save:{n:"Penalty (gardien)",i:"🧤",s:"Dans les cages, devine le côté"},
+  fk:{n:"Coup franc",i:"🌀",s:"Enroule le ballon autour du mur"},
+  fksave:{n:"Coup franc (gardien)",i:"🧱",s:"Arrête un coup franc enroulé"},
+  shootout:{n:"Tirs au but",i:"🎯",s:"Toute la séance, des deux côtés"},
+  dribble:{n:"Dribble",i:"👟",s:"Efface deux défenseurs balle au pied"},
+  tacle:{n:"Tacle",i:"🦵",s:"Prends le ballon sans faire faute"},
+  aerien:{n:"Sortie aérienne",i:"🙌",s:"Sors sur le centre au bon moment"},
+  passe:{n:"Passe décisive",i:"🤝",s:"La passe juste, au bon moment"},
+  tete:{n:"Coup de tête",i:"🔥",s:"Reprends le corner avant ton défenseur"},
+  tete_def:{n:"Duel aérien",i:"⚔️",s:"Dégage le centre de la tête"},
+  transversale:{n:"Longue transversale",i:"✈️",s:"Change le jeu vers l'ailier opposé"},
+  frappe:{n:"Frappe de loin",i:"⭐",s:"Vise un poteau, de 25 mètres"}
 };
-const DUEL_KINDS = ["dribble","tacle","aerien","passe"];
+const DUEL_KINDS = ["dribble","tacle","aerien","passe","tete","tete_def","transversale","frappe"];
 
 /* ============ Statistiques des mini-jeux ============ */
 const loadMiniStats = ()=>{ try{ return JSON.parse(localStorage.getItem("trajectoire_minis_stats"))||{}; }catch(e){ return {}; } };
@@ -52,17 +56,18 @@ function trainingScreen(note){
   // le stade 3D et le joueur se chargent pendant qu'on choisit
   if(typeof Stade3D!=="undefined") Stade3D.load();
   const mine = loadMiniStats();
-  $("#app").innerHTML = `<div class="fade" tabindex="-1" style="padding-top:20px">
+  $("#app").innerHTML = `<div class="fade" tabindex="-1" style="padding-top:20px">${topHome()}
     <div class="muted">Sans enjeu, autant de fois que tu veux</div><h1><span class="emo" aria-hidden="true">🏋️</span> Entraînement</h1>
     ${note?`<div class="toast" role="status">${note}</div>`:""}
     <p class="story">Chaque mini-jeu peut tomber au pire moment d'une carrière. Ici, tu apprends les gestes au calme.</p>
-    <div class="train">${Object.entries(MINIS).map(([k,x])=>`<div class="card train-c"><h3>${x.i} ${x.n}</h3><p>${x.help}</p>
-      <p class="muted" style="font-size:.82rem;margin:4px 0 8px">Toi : <b style="color:var(--text)">${pct(mine[k])}</b>${mine[k]?.n?` sur ${mine[k].n}`:""} · tous les joueurs : <b class="glob" data-k="${k}" style="color:var(--text)">…</b></p>
-      <button class="btn" onclick="trainPlay('${k}')">Jouer</button></div>`).join("")}</div>
+    <div class="card train">${Object.entries(MINIS).map(([k,x])=>`<button class="btn train-c" onclick="trainPlay('${k}')">${x.i} ${x.n}<small>${x.s}${mine[k]?.n?` · toi : <b>${pct(mine[k])}</b> sur ${mine[k].n}`:""}<span class="glob-w"> · tous : <b class="glob" data-k="${k}">…</b></span></small></button>`).join("")}</div>
+    <p class="muted" style="font-size:.85rem;text-align:center">La consigne s'affiche avant chaque essai.</p>
     <button class="btn ghost" onclick="home()">← Accueil</button></div>`;
   window.scrollTo(0,0); focusScreen();
   globalMiniStats().then(tot=>document.querySelectorAll(".glob").forEach(el=>{ const s = tot&&tot[/** @type {HTMLElement} */ (el).dataset.k];
-    el.textContent = !tot?"disponible depuis le lien claude.ai":s&&s.n>=10?`${pct(s)} (${s.players} joueur${s.players>1?"s":""})`:"pas encore assez de parties"; }));
+    // sans stockage partagé (jeu hors ligne), la mention disparaît plutôt que d'afficher un message technique
+    if(!tot){ el.closest(".glob-w")?.remove(); return; }
+    el.textContent = s&&s.n>=10?`${pct(s)} (${s.players} joueur${s.players>1?"s":""})`:"pas encore assez de parties"; }));
 }
 // séance en cours sur un mini-jeu : on enchaîne les essais sans repasser par la liste
 /** @type {{k:string,n:number,ok:number,streak:number,best:number}|null} */
@@ -73,9 +78,9 @@ function trainPlay(k,again){
   const base = {skill:.55,pressure:.15,title:`Entraînement · ${MINIS[k].n}`,us:TRAIN_US,them:TRAIN_THEM,number:10,look:loadLook()};
   const launch = ()=>DUEL_KINDS.includes(k)
     ? Duel.play({...base,kind:k,sub:"Contre le sparring-partner"})
-    : Penalty.play({...base,mode:k,sub:"Personne ne te regarde. Ou presque.",youGK:k==="save"||k==="fksave"});
+    : Penalty.play({...base,mode:k,sub:"Personne ne te regarde. Ou presque.",youGK:k==="save"||k==="fksave",allRoles:k==="shootout"});
   // le tuto d'abord (sauf quand on rejoue) ; son second bouton ramène à la liste
-  (again?Promise.resolve(true):miniBrief(k,base.title,"",{simLabel:"← Autres mini-jeux"})).then(go=>{
+  (again?Promise.resolve(true):miniBrief(k,MINIS[k].n,"",{simLabel:"← Autres mini-jeux",eyebrow:"Entraînement"})).then(go=>{
     if(!go) return trainingScreen();
     launch().then(r=>{
       if(!r.skipped){ recordMini(k,r.success); const t = trainRun; t.n++; if(r.success){ t.ok++; t.streak++; t.best = Math.max(t.best,t.streak); } else t.streak = 0; }
@@ -83,7 +88,9 @@ function trainPlay(k,again){
     });
   });
 }
-// le résultat par-dessus la liste : Rejouer (Entrée), revoir le tuto, ou revenir (Échap)
+// le résultat par-dessus la liste : l'essai suivant part tout seul après un court compte à rebours (Entrée pour
+// ne pas attendre). Toucher la carte arrête le compte à rebours ; sinon revoir le tuto, changer de mini-jeu ou rentrer
+const TRAIN_AUTO = 3;
 function trainResult(k,ok,skipped){
   const t = trainRun, steps = MINI_BRIEF[k]?.steps||[];
   const tip = !ok&&!skipped&&steps.length ? steps[steps.length-1-(t.n-1)%steps.length] : "";
@@ -95,13 +102,20 @@ function trainResult(k,ok,skipped){
     ${tip?`<p class="train-tip"><b>Astuce :</b> ${esc(tip)}</p>`:""}
     <button class="btn primary" type="button" data-a="again">Rejouer</button>
     <button class="btn ghost" type="button" data-a="tuto">Revoir le tuto</button>
-    <button class="btn ghost" type="button" data-a="back">← Autres mini-jeux</button></div>`;
+    <button class="btn ghost" type="button" data-a="back">← Autres mini-jeux</button>
+    <button class="btn ghost" type="button" data-a="home">← Accueil</button></div>`;
   document.body.appendChild(el);
-  const act = a=>{ removeEventListener("keydown",key,true); el.remove(); if(a==="again") trainPlay(k,true); else if(a==="tuto") trainPlay(k); else { trainRun = null; trainingScreen(); } };
+  const again = /** @type {HTMLElement} */ (el.querySelector("[data-a=again]"));
+  // compte à rebours : plus long quand une astuce est à lire ; aucun après un essai simulé
+  let left = skipped?0:TRAIN_AUTO+(tip?2:0), timer = 0;
+  const stop = ()=>{ clearInterval(timer); timer = 0; again.textContent = "Rejouer"; };
+  const act = a=>{ stop(); removeEventListener("keydown",key,true); el.remove(); if(a==="again") trainPlay(k,true); else if(a==="tuto") trainPlay(k); else if(a==="home"){ trainRun = null; home(); } else { trainRun = null; trainingScreen(); } };
+  if(left){ again.textContent = `Rejouer (${left})`; timer = setInterval(()=>{ if(--left<=0) return act("again"); again.textContent = `Rejouer (${left})`; },1000); }
+  el.addEventListener("pointerdown",e=>{ if(!/** @type {HTMLElement} */ (e.target).closest("[data-a=again]")) stop(); });
   const key = e=>{ if(e.key==="Enter"&&!document.activeElement?.closest(".train-res button")){ e.preventDefault(); e.stopPropagation(); act("again"); } else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); act("back"); } };
   addEventListener("keydown",key,true);
   el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>act(/** @type {HTMLElement} */ (b).dataset.a)));
-  /** @type {HTMLElement} */ (el.querySelector("[data-a=again]")).focus({preventScroll:true});
+  again.focus({preventScroll:true});
 }
 // dernier avatar créé, pour que le joueur de l'entraînement te ressemble
 const loadLook = ()=>{ try{ return JSON.parse(localStorage.getItem("trajectoire_look"))||null; }catch(e){ return null; } };

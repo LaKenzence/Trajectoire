@@ -5,7 +5,7 @@ function setupMatch(){
   let type, opp;
   const nat = COUNTRIES[p.country].nat;
   if((p.year+1)%4===2&&p.age>=19&&p.caps>0&&p.lvl>=nat-6&&chance(clamp((nat-74)*.02+.04,.04,.2))){ type="monde"; const oc = pick(Object.keys(COUNTRIES).filter(k=>k!==p.country&&COUNTRIES[k].nat>=80)); opp = {name:COUNTRIES[oc].name,country:oc,str:COUNTRIES[oc].nat}; }
-  else if(p.cdc&&chance(clamp((c.str-78)*.014,.03,.14))){ type="cdc"; opp = pick(CLUBS.filter(x=>x.country!==c.country&&x.str>=80)); }
+  else if(p.cdc&&!p.tmp?.cdcOut&&chance(clamp((c.str-78)*.014,.03,.14))){ type="cdc"; opp = pick(CLUBS.filter(x=>x.country!==c.country&&x.str>=80)); }
   else if(rivalActive()&&p.rival.club.name!==c.name&&p.age>=17&&chance(.35)){ type="rival"; opp=p.rival.club; }
   else if(chance(cupFinalChance(c))){ type="final"; opp=pick(lg.filter(x=>x.str>=c.str-8))||pick(lg); }
   else { type="derby"; opp=lg.sort((a,b)=>Math.abs(a.str-c.str)-Math.abs(b.str-c.str))[RI(0,2)]; }
@@ -34,20 +34,22 @@ function simGap(from,to){
   m.calm = false;
   const evs = [];
   const rf = [(m.redThem?1.3:1)*(m.redUs?.7:1),(m.redUs?1.3:1)*(m.redThem?.7:1)];
-  if(!m.redUs&&!m.redThem&&span>.15&&chance(.06)){ const mine = chance(.5); if(mine) m.redUs = true; else m.redThem = true; m.log.push(`🟥 ${RI(from+1,Math.max(from+1,to-1))}' Carton rouge ${mine?"pour un de tes coéquipiers":`pour un joueur ${duC(m.opp.name)}`} !`); }
+  // le carton rouge prend place dans le fil à sa minute, entre les buts
+  if(!m.redUs&&!m.redThem&&span>.15&&chance(.06)){ const mine = chance(.5); if(mine) m.redUs = true; else m.redThem = true; evs.push({min:RI(from+1,Math.max(from+1,to-1)),red:true,mine}); }
   for(let i=poisson(lu*rf[0]);i>0;i--) evs.push({min:RI(from+1,Math.max(from+1,to-1)),us:true});
   for(let i=poisson(lt*rf[1]);i>0;i--) evs.push({min:RI(from+1,Math.max(from+1,to-1)),us:false});
   const half = ()=>{ if(!m.half){ m.half=true; m.log.push(`⏸️ Mi-temps : ${m.us}-${m.them}`); } };
   evs.sort((a,b)=>a.min-b.min).forEach(e=>{
     if(e.min>45) half();
-    if(e.us){ m.us++; m.log.push(`⚽ ${e.min}' But de ton équipe ! (${pick(GOAL_US)})`); }
+    if(e.red) m.log.push(`🟥 ${e.min}' Carton rouge ${e.mine?"pour un de tes coéquipiers":`pour un joueur ${duC(m.opp.name)}`} !`);
+    else if(e.us){ m.us++; m.log.push(`⚽ ${e.min}' But de ton équipe ! (${pick(GOAL_US)})`); }
     else { m.them++; m.log.push(`🔴 ${e.min}' But ${duC(m.opp.name)} (${pick(GOAL_THEM)}).`); }
   });
   if(to>45) half();
 }
 function matchActions(){
   const m = p.match;
-  const b = clamp(.45+(p.lvl-m.opp.str)*.012+(p.form-60)*.002+(p.moral-50)*.003-(p.hard?.06:0)+(m.boost||0),.15,.85);
+  const b = clamp(.49+(p.lvl-m.opp.str)*.007+(p.form-80)*.002+(p.moral-70)*.003+(p.age<19?.04:0)-(p.hard?.06:0)+(m.boost||0),.15,.85);
   const tech = p.trait==="tech"?.12:0, inst = p.trait==="inst"?.1:0, ath = p.trait==="athl"?.1:0;
   return {
    ATT:[
@@ -96,7 +98,7 @@ function matchActions(){
       {t:"Sortir de ta surface pour dégager",p:b+.05,ok:{txt:"Dégagement de la tête, propre."},ko:{them:.7,txt:"Tu manques ton intervention…"}},
       {t:"Attendre dans tes cages",p:b-.05,ok:{txt:"Tu bloques sa frappe."},ko:{them:.55,txt:"Il a tout son temps…"}},
       {t:"Capter puis relancer vite à la main",p:b-.15+tech,ok:{us:1,me:"a",txt:"Arrêt puis relance éclair : ton équipe marque en contre !"},ko:{them:.3,txt:"Ta relance est interceptée…"}}]}]
-  }[p.pos].concat(moreActions(b,tech,inst,ath),extraActions(b,tech,inst,ath),bonusActions(b,tech,inst,ath)).map(tagPen).map(counterAct).map(altText);
+  }[p.pos].concat(moreActions(b,tech,inst,ath),extraActions(b,tech,inst,ath),bonusActions(b,tech,inst,ath),sceneActions(b,tech,inst,ath)).map(tagPen).map(counterAct).map(altText);
 }
 // Un moment décisif doit peser autant pour tous les postes : une action défensive réussie relance
 // ton équipe (contre), une action offensive ratée laisse un contre à l'adversaire.
@@ -126,30 +128,43 @@ function matchScreen(){
     body = talkHtml(m);
   } else if(m.pending&&m.celebAsk){
     body = `<p class="story">${m.pending}</p><h3>🎉 Ton premier but dans un grand match ! Ta célébration ?</h3><p class="muted" style="margin-top:0;font-size:.88rem">Elle deviendra ta signature.</p>
-      <div class="celebs">${Object.entries(CELEBS).map(([k,c],n)=>`<button class="btn" onclick="celebChoose('${k}')"><kbd>${n+1}</kbd>${c.i} ${c.n}</button>`).join("")}</div>`;
+      <div class="celebs">${Object.entries(CELEBS).map(([k,c],n)=>`<button class="btn" onclick="celebChoose('${k}')"><span class="cic t${n%3}">${c.i}<kbd>${n+1}</kbd></span><span class="ctext">${c.n}</span></button>`).join("")}</div>`;
   } else if(m.pending){
     body = `<p class="story">${m.pending}</p><button class="btn primary" onclick="matchNext()">${m.step>=m.mins.length-1?"Fin du match →":"Continuer →"}</button>`;
   } else if(!done){
-    const a = matchActions()[m.tpl[m.step]];
+    const a = matchActions()[m.tpl[m.step]], best = bestOpt(a.o);
     if(m.sitStep!==m.step){ m.sit = situ(m,m.mins[m.step]); m.sitStep = m.step; }
     body = `<p><span class="minute">${m.mins[m.step]}'</span></p><p class="story">${m.sit||""}${a.txt}</p>
       ${a.o.map((o,i)=>{ const q = o.p+talentBonus(o.t), tb = (p.talents||[]).filter(t=>TALENTS[t].re&&TALENTS[t].re.test(o.t)).map(t=>TALENTS[t].i).join("");
-        return `<button class="btn" onclick="matchPick(${i})">${choiceLead(o.t,i)}<span class="ctext">${o.t}</span>${miniChip(o)}<small>${riskHtml(q)}${tb?` · ${tb} talent`:""}</small></button>`; }).join("")}`;
+        return `<button class="btn" onclick="matchPick(${i})">${choiceLead(o.t,i)}<span class="ctext">${o.t}</span>${miniChip(o)}<small>${riskHtml(q)}${bestTag(i,best)}${tb?` · ${tb} talent`:""}</small></button>`; }).join("")}`;
   }
   render(`${tip("match")||tip("minis")}<div class="muted">Match clé · saison ${p.year}-${String(p.year+1).slice(2)}</div>
-  <div class="card"><h2 style="text-align:center">${esc(m.title)}</h2>${m.weather?`<p class="muted" style="text-align:center;margin:-4px 0 6px;font-size:.85rem">🏟️ ${m.crowd.toLocaleString("fr-FR")} spectateurs · ${m.weather}</p>`:""}
+  <div class="card">${matchTitleHtml(m.title)}${m.weather?`<p class="muted" style="text-align:center;margin:-4px 0 6px;font-size:.85rem">🏟️ ${m.crowd.toLocaleString("fr-FR")} spectateurs · ${m.weather}</p>`:""}
     ${(()=>{ const usName = m.type==="monde"?COUNTRIES[p.country].name:p.club.name;
       const clock = m.simDone?"FIN":m.awaitTactic?"MT":`${m.mins[Math.min(m.step,m.mins.length-1)]}'`;
-      return `<div class="broadcast" aria-label="Score : ${esc(usName)} ${m.us}, ${esc(m.opp.name)} ${m.them}"><div class="bc-team">${crest(usName,30)}<span>${esc(usName)}</span></div><div class="bc-score"><b>${m.us}</b><i>–</i><b>${m.them}</b><span class="bc-clock">${clock}</span></div><div class="bc-team r"><span>${esc(m.opp.name)}</span>${crest(m.opp,30)}</div></div>`; })()}
+      return `<div class="broadcast${clock==="FIN"?" done":""}" aria-label="Score : ${esc(usName)} ${m.us}, ${esc(m.opp.name)} ${m.them}"><div class="bc-team">${crest(usName,30)}<span>${esc(usName)}</span></div><div class="bc-score"><b>${m.us}</b><i>–</i><b>${m.them}</b><span class="bc-clock">${clock}</span></div><div class="bc-team r"><span>${esc(m.opp.name)}</span>${crest(m.opp,30)}</div></div>`; })()}
     ${pitchSvg(m)}
-    ${m.log.length?`<ul class="mlog">${m.log.map(l=>`<li>${l}</li>`).join("")}</ul>`:""}
+    ${m.log.length?`<ul class="mlog">${m.log.map((l,i)=>mlogLi(l,i,m)).join("")}</ul>`:""}
     <div class="decide">${body||`<button class="btn primary" onclick="finishMatch()">Terminer le match →</button>`}</div></div>`);
   if(typeof liveTicker==="function") liveTicker(m);
   animateBall();
 }
+// une ligne du fil du match : nos buts en vert, les leurs en rouge ; la ligne qui double le résultat affiché est masquée
+function mlogLi(l,i,m){
+  const cls = [/^⚽/.test(l)?"g-us":/^🔴/.test(l)?"g-them":/^🟥/.test(l)?"rc":"",m&&m.pending&&i===m.log.length-1&&/^✅/.test(l)?"mdup":""].filter(Boolean).join(" ");
+  return `<li${cls?` class="${cls}"`:""}>${l}</li>`;
+}
+// le titre d'un match : la compétition en petit, l'adversaire en grand
+function matchTitleHtml(t){
+  const i = t.lastIndexOf(" face ");
+  if(i<0) return `<h2 class="m-title">${esc(t)}</h2>`;
+  return `<p class="m-kick">${esc(t.slice(0,i))}</p><h2 class="m-title">Face ${esc(t.slice(i+6))}</h2>`;
+}
+// la dernière action d'un match serré : elle décide vraiment (le bandeau « Moment décisif » de direct.js le dit)
+const isDecisive = m=>!m.simDone&&m.step<m.mins.length&&(m.step>=m.mins.length-1||m.mins[m.step]>=80)&&Math.abs(m.us-m.them)<=1;
 function matchPick(i){
   const m = p.match, a = matchActions()[m.tpl[m.step]], o = a.o[i];
-  const bu = m.us, bt = m.them, bp = m.perf;
+  const bu = m.us, bt = m.them, bp = m.perf, dec = isDecisive(m);
   if(o.duel&&ui.penOk==null&&!ui.quick&&minisOn("duel")){ playDuel(o.duel).then(ok=>{ ui.penOk = ok; matchPick(i); }); return; }
   if(o.pen&&ui.penOk==null&&!ui.quick&&typeof Penalty!=="undefined"&&minisOn("pen")){
     if(o.pen==="save"||o.pen==="fksave"){ playMini(o.pen,o.pen==="save"?"Penalty contre ton équipe":"Coup franc contre ton équipe",m.opp).then(ok=>{ ui.penOk = ok; matchPick(i); }); return; }
@@ -167,11 +182,13 @@ function matchPick(i){
     if(r.rep) p.rep = clamp(p.rep+r.rep,0,100);
     if(r.calm) m.calm = true;
     if(r.us){
-      if(penRes!=null?penRes:chance(r.us)){
+      // au moment décisif, une action réussie va presque toujours au bout
+      if(penRes!=null?penRes:chance(dec?Math.max(r.us,.85):r.us)){
         m.us++;
-        if(r.me==="g"){ m.myG++; if(m.et) p.flags.etGoal = true; m.log.push(`⚽ ${min}' BUT de ${esc(p.name)} !${p.celeb?` ${CELEBS[p.celeb].i} ${CELEBS[p.celeb].n} !`:""}`); celebrate(m); }
+        if(r.me==="g"){ m.myG++; if(m.et) p.flags.etGoal = true; if(dec&&m.us>m.them) m.clutch = min; m.log.push(`⚽ ${min}' BUT de ${esc(p.name)} !${p.celeb?` ${CELEBS[p.celeb].i} ${CELEBS[p.celeb].n} !`:""}`); celebrate(m); }
         else { if(r.me==="a") m.myA++; m.log.push(`⚽ ${min}' But de ton équipe${r.me==="a"?` (passe de ${esc(p.name)})`:""} !`); }
         if(r.us<1) txt += " Et c'est au fond !";
+        else if(r.me==="g"&&m.crewHelp&&chance(.5)) txt += ` Sur une passe de ${esc(m.crewHelp)}, les yeux fermés.`;
       } else txt += " …mais l'action n'aboutit pas.";
     } else {
       m.log.push(`✅ ${min}' ${esc(r.txt)}`);
@@ -179,7 +196,8 @@ function matchPick(i){
       if(c){ m.us++; m.log.push(`⚽ ${Math.min(min+1,90)}' But de ton équipe en contre !`); txt += " "+c; }
     }
   } else {
-    const r = o.ko; txt = r.txt; m.perf--;
+    // au moment décisif, une erreur se paie plus souvent
+    const r = dec?{...o.ko,them:o.ko.them?Math.min(1,o.ko.them+.15):o.ko.them,ctr:o.ko.ctr!=null?o.ko.ctr+.15:o.ko.ctr}:o.ko; txt = r.txt; m.perf--;
     if(r.moral) p.moral = clamp(p.moral+r.moral,0,100);
     if(r.them && chance(r.them)){ m.them++; m.log.push(`🔴 ${min}' But ${duC(m.opp.name)}.`); txt += " But adverse."; }
     else if(r.them) txt += " Ouf, ça passe à côté.";
@@ -229,20 +247,22 @@ function finishMatch(){
   if(m.type==="monde") p.tmp.world = res==="w";
   if(res==="w"&&(m.type==="cdc"||m.type==="monde")) p.moments.push(`${p.year+1} · Vainqueur de la ${lc1(m.title.split(" face")[0])} (${score})`);
   if(m.type==="final"&&res==="w") p.finals = (p.finals||0)+1;
-  const mr = clamp(6.2+m.perf*.5+m.myG*.6+m.myA*.4+(res==="w"?.3:0),3,10).toFixed(1);
+  const clutch = res==="w"&&m.clutch!=null&&m.us-m.them===1;
+  const mr = clamp(6.2+m.perf*.5+m.myG*.6+m.myA*.4+(res==="w"?.3:0)+(clutch?.8:0),3,10).toFixed(1);
+  if(clutch&&m.type!=="ordinaire") p.moments.push(`${p.year+1} · But de la victoire à la ${m.clutch}e minute : ${lc1(m.title)}`);
   if(m.type==="final"&&res==="w") p.moments.push(`${p.year+1} · Vainqueur de la finale de coupe (${score})${m.underdog?`, l'exploit historique ${duC(p.club.name)}`:""}`);
-  if(m.type==="rival"&&p.rival){ p.rival.h2h[res]++; if(res==="w"&&m.myG+m.myA>=1) p.moments.push(`${p.year+1} · Décisif dans le choc face à ${p.rival.name} (${score})`); }
+  if(m.type==="rival"&&p.rival){ p.rival.h2h[res]++; if(res==="w"&&m.myG+m.myA>=1&&!clutch) p.moments.push(`${p.year+1} · Décisif dans le choc face à ${p.rival.name} (${score})`); }
   if(m.myG>=3) p.moments.push(`${p.year+1} · Triplé : ${lc1(m.title)}`);
   p.tmp.match = {title:m.title,score,res,myG:m.myG,myA:m.myA,tab,mr};
   phoneAfterMatch(p.tmp.match,m.type);
   p.match = null;
   p.phase = "season"; simSeason(); save();
   const label = {w:"Victoire",d:"Match nul",l:"Défaite"}[res];
-  render(`<div class="card ${res==="w"?"celebrate":""}"><h2>${label} ${score}${tab}</h2>
-    <p class="story">${res==="w"?(m.type==="monde"?"CHAMPION DU MONDE ! Tout un pays descend dans la rue.":m.type==="cdc"?"La Coupe des Champions est à vous ! Le sommet du football de club.":m.type==="final"?(m.underdog?"L'exploit est total : le petit poucet soulève la coupe ! On en parlera encore dans vingt ans.":"La coupe est à vous ! Les tribunes chantent ton nom."):"Les trois points, et une soirée que tu n'oublieras pas."):res==="d"?"Un match accroché, rien de décidé.":"Une soirée à oublier… ou à retenir pour la prochaine fois."}</p>
-    <ul class="mlog">${m.log.map(l=>`<li>${l}</li>`).join("")}</ul>
+  render(`<div class="card ${res==="w"?"celebrate":""}"><h2>${tab?`${tab.trim().replace(/\s*[!…]$/,"")} (${score})`:`${label} ${score}`}</h2>
+    <p class="story">${res==="w"?(m.type==="monde"?"CHAMPION DU MONDE ! Tout un pays descend dans la rue.":m.type==="cdc"?"La Coupe des Champions est à vous ! Le sommet du football de club.":m.type==="final"?(m.underdog?"L'exploit est total : le petit poucet soulève la coupe ! On en parlera encore dans vingt ans.":"La coupe est à vous ! Les tribunes chantent ton nom."):pick(["Les trois points, et une soirée que tu n'oublieras pas.","Victoire. Dans le vestiaire, la musique est déjà à fond.","Le genre de soirée qui fait une saison."])):res==="d"?pick(["Un match accroché, rien de décidé.","Un point chacun. Personne n'est vraiment content.","Match nul, et des regrets des deux côtés."]):pick(["Une soirée à oublier… ou à retenir pour la prochaine fois.","Le silence dans le vestiaire en dit plus long que tous les discours.","Défaite. Tu restes longtemps assis sur le banc, les crampons encore aux pieds."])}</p>
+    <ul class="mlog">${m.log.map((l,i)=>mlogLi(l,i,null)).join("")}</ul>
     <div class="stats"><div class="stat"><b style="color:${+mr>=7.5?"var(--good)":+mr<6?"var(--bad)":"var(--text)"}">${mr}</b><span>ta note</span></div>
-      <div class="stat"><b>${m.myG}</b><span>but(s)</span></div><div class="stat"><b>${m.myA}</b><span>passe(s) déc.</span></div></div>
+      <div class="stat"><b>${m.myG}</b><span>${m.myG>1?"buts":"but"}</span></div><div class="stat"><b>${m.myA}</b><span>${m.myA>1?"passes déc.":"passe déc."}</span></div></div>
     <button class="btn primary" onclick="route()">Voir le bilan de la saison →</button>
     ${p.rep>=8?`<button class="btn" style="text-align:center" onclick="pressConference()">🎙️ Passer en conférence de presse<small>Trois questions, peu de temps pour répondre : à toi de soigner ton image</small></button>`:""}</div>`);
   if(res==="w"&&m.type!=="derby") confetti();
@@ -260,11 +280,25 @@ function setTactic(t){
   simGap(45,m.mins[2]);
   save(); matchScreen();
 }
+// le vestiaire à la pause dépend du score : on ne parle pas pareil mené 0-2 ou devant 1-0
+function halftimeText(m){
+  const d = m.us-m.them, s = `${m.us}-${m.them}`;
+  const mood = d<=-2?[`Mi-temps, menés ${s}. Personne ne parle. On n'entend que les crampons sur le carrelage.`,`${s} à la pause. Le coach entre, regarde le tableau, et le jette par terre.`]
+    :d===-1?["Un but de retard à la pause. Le coach efface le tableau d'un revers de main.","Menés à la mi-temps. Quelqu'un shoote dans une bouteille d'eau, elle roule jusqu'à tes pieds."]
+    :d===0&&m.us===0?["0-0 à la pause. Un match fermé, tendu, où personne n'ose vraiment.","Rien n'est fait à la mi-temps. Le coach fait les cent pas devant le tableau noir."]
+    :d===0?[`${s} à la pause, un match fou. Le vestiaire est en ébullition.`,`${s} : tout le monde parle en même temps dans le vestiaire. Un coup de sifflet, et le silence tombe.`]
+    :d===1?["Devant à la pause, mais rien n'est fait. Le coach ne sourit pas : « Ils vont revenir. »","Un but d'avance. Dans le vestiaire, ça parle fort, peut-être un peu trop."]
+    :[`Mi-temps, ${s}. L'ambiance est légère, presque trop. Le coach referme la porte derrière lui.`,`${s} à la pause. Le coach lève la main : « Personne ne fête rien. Il reste quarante-cinq minutes. »`];
+  const ask = p.flags.cap?["Il se tourne vers toi, son capitaine : « Qu'est-ce qu'on fait ? »","Tous les regards se posent sur ton brassard. Le coach attend ton avis."]
+    :p.age<=20&&p.rep<40?["Personne n'ose proposer quoi que ce soit. Tu lèves la main : « Coach, et si on… »","Les cadres débattent. Toi, le plus jeune, tu as une idée. Tu te lances : « Et si on… »"]
+    :["Il se tourne vers les cadres : « Qu'est-ce qu'on fait ? »","Il te prend à part : « Tu sens quoi, sur le terrain ? »","Il réunit les cadres autour du tableau et te regarde : « Ton avis ? »"];
+  return `${pick(mood)} ${pick(ask)}`;
+}
 function tacticHtml(){
-  return `<p><span class="minute">MT</span></p><p class="story">${p.flags.cap?"Mi-temps dans le vestiaire. Le coach se tourne vers toi, son capitaine : « Qu'est-ce qu'on fait ? »":p.age<=20&&p.rep<40?"Mi-temps dans le vestiaire. Le coach hésite, les cadres se taisent. Tu oses lever la main : « Coach, et si on… »":"Mi-temps dans le vestiaire. Le coach se tourne vers les cadres : « Qu'est-ce qu'on fait ? »"}</p>
-    <button class="btn" onclick="setTactic('att')"><kbd>1</kbd>⚔️ Tout pour l'attaque<small>Plus de buts… des deux côtés</small></button>
-    <button class="btn" onclick="setTactic('eq')"><kbd>2</kbd>⚖️ Garder le plan<small>Rien ne change</small></button>
-    <button class="btn" onclick="setTactic('def')"><kbd>3</kbd>🛡️ Verrouiller<small>Moins d'occasions, moins de risques</small></button>`;
+  const m = p.match;
+  if(!m.mtTxt) m.mtTxt = halftimeText(m); // tiré une fois : le texte ne change pas si l'écran se redessine
+  return `<p><span class="minute">MT</span></p><p class="story">${m.mtTxt}</p>
+    ${[["att","fire","Tout pour l'attaque","Plus de buts… des deux côtés"],["eq","target","Garder le plan","Rien ne change"],["def","shield","Verrouiller","Moins d'occasions, moins de risques"]].map(([k,i,t,d],n)=>`<button class="btn" onclick="setTactic('${k}')"><span class="cic t${n}">${ic(i)}<kbd>${n+1}</kbd></span><span class="ctext">${t}</span><small>${d}</small></button>`).join("")}`;
 }
 
 /* ============ Mini-terrain du match clé ============ */
@@ -300,6 +334,13 @@ const PITCH_SCENES = [
   [/Long ballon dans le dos/,  {att:0, me:[5,30], ball:[24,25], opp:[[24,25]], mates:[[22,34]]}],
   [/Frappe lointaine/,         {att:0, me:[3,30], ball:[30,28], opp:[[30,28],[16,36]], mates:[[16,24]]}],
   [/Corner tendu dans ta surface/,{att:0, me:[3,30], ball:[1,59], opp:[[8,26],[9,34],[1,59]], mates:[[7,30],[10,22]]}],
+  // nouvelles situations
+  [/mauvais pied/,             {att:1, me:[84,44], ball:[84,44], opp:[[87,40]], mates:[[76,24]]}],
+  [/passe en retrait vers son gardien/, {att:1, me:[80,22], ball:[90,30], opp:[[86,28],[97,30]], mates:[[74,40]]}],
+  [/flotte au second poteau/,  {att:1, me:[92,38], ball:[94,36], opp:[[93,30],[90,42]], mates:[[90,24]]}],
+  [/épaule contre épaule/,     {att:0, me:[8,28], ball:[14,2], opp:[[8,31],[14,2]], mates:[[10,40]]}],
+  [/excentré/,                 {att:0, me:[3,27], ball:[12,12], opp:[[12,12],[10,34]], mates:[[16,30]]}],
+  [/25 mètres, plein axe/,     {att:0, me:[3,30], ball:[25,30], opp:[[25,30]], mates:[[14,26],[14,36]]}],
   [/passe en retrait trop courte/,{att:0, me:[6,30], ball:[10,32], opp:[[14,30]], mates:[[25,32]]}]
 ];
 function pitchScene(m){
@@ -358,7 +399,7 @@ function pitchSvg(m){
     ${trail}
     ${groups}
     ${weatherFx(m)}
-    ${m.pendingGoal?`<text class="goalflash" x="50" y="34" text-anchor="middle" font-size="12" font-weight="800" fill="${m.pendingGoal==="us"?"#f5c542":"#ff6b6b"}" font-family="Barlow Condensed,Arial Narrow,sans-serif">${m.pendingGoal==="us"?"BUT !":"BUT ADVERSE"}</text>`:""}
+    ${m.pendingGoal?`<text class="goalflash" x="50" y="34" text-anchor="middle" font-size="12" font-weight="800" stroke="rgba(8,10,30,.7)" stroke-width=".8" paint-order="stroke" fill="${m.pendingGoal==="us"?"#f5c542":"#ff6b6b"}" font-family="Barlow Condensed,Arial Narrow,sans-serif">${m.pendingGoal==="us"?"BUT !":"BUT ADVERSE"}</text>`:""}
   </svg>`;
 }
 // fait glisser chaque joueur et le ballon de leur ancienne position vers la nouvelle

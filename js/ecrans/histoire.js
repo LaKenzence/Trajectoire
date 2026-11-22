@@ -3,12 +3,12 @@
 // il réutilise le défi du jour : p.daily porte la clé de la semaine (« S2026-45 ») et le même classement partagé
 const trophyAge = t=>p.seasons.find(s=>+s.y.slice(0,4)===t.y-1)?.age??p.age;
 const WEEKLY = [
-  {id:"gbPrecoce",n:"Gardien précoce",d:"Gardien : être champion avant 22 ans",pos:"GB",t:()=>p.trophies.some(t=>t.t.startsWith("Champion –")&&trophyAge(t)<22)},
-  {id:"buteurFou",n:"Buteur fou",d:"Attaquant : une saison à 40 buts",pos:"ATT",t:()=>p.seasons.some(s=>s.goals>=40)},
+  {id:"gbPrecoce",n:"Gardien précoce",d:"Gardien, champion avant 22 ans",pos:"GB",t:()=>p.trophies.some(t=>t.t.startsWith("Champion –")&&trophyAge(t)<22)},
+  {id:"buteurFou",n:"Buteur fou",d:"Attaquant, une saison à 40 buts",pos:"ATT",t:()=>p.seasons.some(s=>s.goals>=40)},
   {id:"uneVie",n:"Une vie, un club",d:"15 saisons dans le même club",t:()=>careerSummary().loyal>=15},
   {id:"tourEurope",n:"Conquérant",d:"Être champion dans 2 pays différents",t:()=>careerSummary().leagues>=2},
-  {id:"muraille",n:"La muraille",d:"Défenseur : 80 sélections",pos:"DEF",t:()=>p.caps>=80},
-  {id:"chefOrchestre",n:"Chef d'orchestre",d:"Milieu : remporter un Ballon d'Étoile",pos:"MIL",t:()=>careerSummary().stars>=1},
+  {id:"muraille",n:"La muraille",d:"Défenseur, 80 sélections",pos:"DEF",t:()=>p.caps>=80},
+  {id:"chefOrchestre",n:"Chef d'orchestre",d:"Milieu, un Ballon d'Étoile",pos:"MIL",t:()=>careerSummary().stars>=1},
   {id:"jeuneGraal",n:"Jeune et sacré",d:"Gagner la Coupe des Champions avant 24 ans",t:()=>p.trophies.some(t=>t.t==="Coupe des Champions"&&trophyAge(t)<24)},
   {id:"globeSemaine",n:"Globe-trotter",d:"Jouer dans 4 pays différents",t:()=>new Set(p.seasons.map(s=>s.cc)).size>=4}
 ];
@@ -36,7 +36,7 @@ function weeklyScreen(){
   p = null; unseed();
   const {o,w} = weeklyDraft(), saved = loadSlot("semaine");
   const inProgress = saved&&saved.daily===o.daily&&!saved.after;
-  $("#app").innerHTML = `<div class="fade" style="padding-top:20px">
+  $("#app").innerHTML = `<div class="fade" style="padding-top:20px">${topHome()}
     <div class="muted">Défi de la semaine · ${o.daily}</div><h1><span class="emo" aria-hidden="true">🎯</span> ${w.n}</h1>
     <p class="story">Toute la semaine, tout le monde part du même joueur avec le même objectif : <b>${w.d}</b>. Réussir l'objectif rapporte 150 points de plus au classement.</p>
     <div class="card"><h3>${flag(o.country)} ${esc(o.name)}</h3>
@@ -107,7 +107,7 @@ function storyEndCard(){
 function storyHome(){
   const saved = loadSlot("histoire"), live = saved&&saved.story&&!(saved.retired&&saved.after);
   p = null;
-  $("#app").innerHTML = `<div class="fade" style="padding-top:20px">
+  $("#app").innerHTML = `<div class="fade" style="padding-top:20px">${topHome()}
     <div class="muted">Mode Histoire</div><h1><span class="emo" aria-hidden="true">📖</span> La trajectoire de Noah Diallo</h1>
     <img class="story-cover" src="img/histoire.webp" alt="Un joueur en maillot bleu frappe le ballon, sous un ciel étoilé au-dessus du stade" width="620" height="827">
     <p class="story">Un milieu de terrain né dans un quartier populaire, élevé par son père. Cinq chapitres, de ses 16 ans à ses adieux. Les grandes étapes sont écrites, à toi de remplir les pages.</p>

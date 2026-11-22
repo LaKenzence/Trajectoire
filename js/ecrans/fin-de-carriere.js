@@ -74,8 +74,8 @@ function afterScreen(){
     <div class="muted">${esc(p.retired)} · ${p.age} ans</div>
     <h1>Et maintenant ?</h1>
     ${p.jubile?`<div class="card"><b>🎟️ Ton jubilé</b><p class="story" style="margin:6px 0 0">${esc(p.jubile)}</p></div>`:""}
-    <p class="story">Les crampons sont rangés. ${p.seasons.length} saisons, ${p.clubsHist.length} club(s), ${p.trophies.length} trophée(s). Il te reste toute une vie à écrire.</p>
-    <div class="card">${opts.map(([k,a])=>`<button class="btn" onclick="chooseAfter('${k}')">${a.n}<small>${a.d}</small></button>`).join("")}</div></div>`;
+    <p class="story">Les crampons sont rangés. ${p.seasons.length} saisons, ${nPl(p.clubsHist.length,"club")}, ${nPl(p.trophies.length,"trophée")}. Il te reste toute une vie à écrire.</p>
+    <div class="card">${opts.map(([k,a],i)=>`<button class="btn" onclick="chooseAfter('${k}')">${choiceLead(a.n,i,{coach:"whistle",tv:"tv",boss:"idcard",acad:"sprout",agent:"handshake",calme:"palm"}[k])}<span class="ctext">${a.n}</span><small>${a.d}</small></button>`).join("")}</div></div>`;
   window.scrollTo(0,0);
 }
 function chooseAfter(k){
@@ -147,7 +147,7 @@ function endScreen(){
     <div class="stat"><b>${avg}</b><span>note moy.</span></div>
     <div class="stat"><b>${p.caps}</b><span>sélections</span></div>
     <div class="stat"><b>${peak}</b><span>niveau max</span></div>
-    <div class="stat"><b>${money(p.money)}</b><span>gains</span></div>
+    <div class="stat money"><b>${money(p.money)}</b><span>fortune</span></div>
   </div>
   <div class="card"><h3>Trajectoire</h3><div class="muted" style="font-size:.8rem">Niveau saison par saison · une couleur par club · ★ saison avec trophée</div>
     <div class="timeline">${p.seasons.map(s=>`<div class="${s.tr?"t":""}" title="${s.y} · ${esc(s.club)} · niveau ${s.lvl}" style="height:${clamp((s.lvl-30)/70*100,6,100)}%;background:hsl(${clubHue(s.club)} 65% 55%)"></div>`).join("")}</div>
@@ -168,7 +168,7 @@ function endScreen(){
   <div class="card"><h3>Saison par saison</h3><div class="tablewrap"><table><tr><th>Saison</th><th>Club</th><th>Âge</th><th>MJ</th><th>${p.pos==="GB"?"CS":"B"}</th><th>PD</th><th>Note</th><th>Cl.</th></tr>
   ${p.seasons.map(s=>`<tr><td>${s.y}</td><td>${flag(s.cc)} ${esc(s.club)}</td><td>${s.age}</td><td>${s.apps}</td><td>${p.pos==="GB"?s.clean:s.goals}</td><td>${s.assists}</td><td>${s.rating}</td><td>${s.rank}${s.tr?" 🏆":""}</td></tr>`).join("")}</table></div></div>
   <div class="card"><h3>Moments marquants</h3><ul class="log">${p.moments.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>
-  <button class="btn primary" onclick="${p.weekly?"weeklyScreen()":p.daily?"dailyScreen()":p.friend?"friendsScreen()":"startCentre(slot)"}">${p.friend?"Retour aux défis entre amis":p.weekly?"Retour au défi de la semaine":p.daily?"Retour au défi du jour":"Nouvelle carrière dans cet emplacement"}</button>
+  <button class="btn primary" onclick="${p.weekly?"weeklyScreen()":p.daily?"dailyScreen()":p.friend?"friendsScreen()":"startCentre(slot)"}">${p.friend?"Retour aux défis entre amis":p.weekly?"Retour au défi de la semaine":p.daily?"Retour au défi du jour":"Nouvelle carrière"}</button>
   ${p.daily||p.friend?"":`<button class="btn" style="text-align:center;border-color:var(--accent)" onclick="startHeir()">👶 Continuer la dynastie<small>Ton enfant reprend le flambeau à 16 ans, dans cet emplacement</small></button>`}
   <button class="btn" style="text-align:center" onclick="careerFilm()">🎬 Revoir le film de ta carrière</button>
   <button class="btn" style="text-align:center" onclick="exportCard(this)">🖼️ Télécharger ma carte en image</button>
@@ -193,10 +193,10 @@ function careerFilm(){
 // les images du film (HTML) : aussi lues par partage.js pour la vidéo
 function careerFilmFrames(){
   const by = p.year-p.age, ms = p.moments.map(x=>{ const [y,...t] = x.split(" · "); return {y:+y,t:t.join(" · ")}; }).filter(x=>x.t&&x.y);
-  const big = ms.filter(x=>!(!p.cf&&x.t===`Premier contrat pro à ${p.clubsHist[0]}`)).filter(x=>BIG.test(x.t)||/S'impose comme titulaire|Au sommet|rendez-vous manqué|Premier contrat|Première sélection|Saison à \d+ buts|Triplé|finale de coupe/.test(x.t));
+  const big = ms.filter(x=>!(!p.cf&&x.t.startsWith("Premier contrat pro"))).filter(x=>BIG.test(x.t)||/S'impose comme titulaire|Au sommet|rendez-vous manqué|Premier contrat|Première sélection|Saison à \d+ buts|Triplé|finale de coupe/.test(x.t));
   // au plus six moments, répartis sur toute la carrière
   const pickN = (a,n)=>a.length<=n?a:Array.from({length:n},(_,i)=>a[Math.round(i*(a.length-1)/(n-1))]);
-  const fr = [filmFrame(`${p.cf?16:p.seasons[0]?.age??16} ans`,esc(p.cf?"Un dimanche de pluie, un penalty, un homme en imperméable.":`Tout a commencé à ${p.clubsHist[0]}.`),p.cf?cfSay("vasseur","« Ton nom. »"):"")];
+  const fr = [filmFrame(`${p.cf?16:p.seasons[0]?.age??16} ans`,esc(p.cf?"Un dimanche de pluie, un penalty, un homme en imperméable.":`Tout a commencé ${auC(p.clubsHist[0])}.`),p.cf?cfSay("vasseur","« Ton nom. »"):"")];
   const dot = t=>/[.!?…»]$/.test(t)?t:t+".";
   for(const m of pickN(big.length?big:ms.slice(-4),6)) fr.push(filmFrame(`${m.y-by} ans`,esc(dot(m.t))));
   if(p.cf){
@@ -239,7 +239,31 @@ const COACH_EVENTS = [
    {t:"Rester concentré sur ton club",fx:{b:1},why:"Le club te remercie de ta loyauté."}]},
  {cond:()=>p.rival&&p.rival.coachClub,t:()=>`Avant le choc contre ${esc(p.rival.coachClub.name)}, ton ancien rival ${esc(p.rival.name)}, désormais entraîneur, te chambre dans la presse.`,ch:[
    {t:"Répondre sur le terrain",risk:{p:.5,good:{b:2,lvl:1,moment:"Bat son ancien rival sur le banc",txt:"Tactiquement, tu l'as dominé. Il te serre la main, beau joueur."},bad:{b:-1,txt:"Il gagne la bataille des bancs. Pour cette fois."}}},
-   {t:"L'inviter à dîner après le match",fx:{b:1},why:"Deux anciens rivaux, enfin amis."}]}
+   {t:"L'inviter à dîner après le match",fx:{b:1},why:"Deux anciens rivaux, enfin amis."}]},
+ {t:"Ton gardien titulaire enchaîne les boulettes. Le public réclame la doublure.",ch:[
+   {t:"Le maintenir : « Il reste mon numéro 1. »",risk:{p:.55,good:{b:2,txt:"Il sort le match de sa vie le week-end suivant. Il ne l'oubliera jamais."},bad:{b:-2,sack:10,txt:"Encore une erreur. Les sifflets visent maintenant ton banc."}}},
+   {t:"Lancer la doublure",fx:{b:1,sack:-5},why:"Le jeune tient la baraque. Le titulaire boude."}]},
+ {t:"Un grand club vient chercher ton meilleur joueur en plein hiver.",ch:[
+   {t:"Supplier la direction de refuser",fx:{b:1,sack:5},why:"Il reste, mais le président a perdu une fortune."},
+   {t:"Le laisser partir et recruter avec l'argent",risk:{p:.5,good:{b:2,lvl:1,txt:"Tes deux recrues font mieux que lui. Le flair du coach."},bad:{b:-3,txt:"Personne ne le remplace. Ton équipe perd son âme."}}}]},
+ {t:"Avant un match capital, la presse révèle ta composition d'équipe. Il y a une taupe dans le vestiaire.",ch:[
+   {t:"Chercher la fuite",risk:{p:.5,good:{b:1,lvl:1,txt:"Tu trouves la taupe. Le groupe sort ressoudé."},bad:{b:-2,txt:"La chasse aux sorcières empoisonne le vestiaire."}}},
+   {t:"Changer de plan au dernier moment",fx:{b:2},why:"L'adversaire avait préparé le mauvais match."}]},
+ {t:"Tes joueurs se plaignent : tes séances sont trop dures.",ch:[
+   {t:"Lever le pied",fx:{b:1},why:"Le sourire revient aux entraînements."},
+   {t:"Serrer la vis",risk:{p:.5,good:{b:3,txt:"En fin de saison, ils courent encore quand les autres marchent."},bad:{b:-2,sack:10,txt:"Les cadres vont se plaindre au président."}}}]},
+ {t:"La fédération te propose de suivre une formation d'entraîneur de haut niveau, en pleine saison.",ch:[
+   {t:"T'inscrire",fx:{lvl:2,b:-1},why:"Tu apprends énormément. Ton adjoint gère les séances du lundi."},
+   {t:"Plus tard",fx:{},why:"Ta saison d'abord."}]},
+ {t:"Un documentaire veut te suivre toute la saison, caméras dans le vestiaire.",ch:[
+   {t:"Accepter",risk:{p:.5,good:{lvl:1,sack:-10,txt:"La série cartonne. Tout le pays découvre ta méthode."},bad:{b:-2,txt:"Tes joueurs jouent pour les caméras, plus pour le maillot."}}},
+   {t:"Refuser",fx:{b:1},why:"Ce qui se passe dans le vestiaire reste dans le vestiaire."}]},
+ {t:"Ton capitaine, 35 ans, te demande s'il doit prolonger d'un an.",ch:[
+   {t:"« Reste, j'ai besoin de toi. »",fx:{b:1},why:"Il sera ta voix dans le vestiaire."},
+   {t:"« Il est temps de passer le relais. »",risk:{p:.5,good:{b:2,txt:"Le nouveau capitaine prend le groupe en main."},bad:{b:-2,txt:"Le vestiaire perd son repère."}}}]},
+ {t:"Un match se joue sous la neige. L'arbitre hésite à le reporter.",ch:[
+   {t:"Pousser pour jouer : ton équipe est prête",risk:{p:.5,good:{b:2,txt:"Vous gagnez dans la poudreuse. Victoire de caractère."},bad:{b:-1,txt:"Deux blessés sur un terrain gelé."}}},
+   {t:"Demander le report",fx:{},why:"Le match est rejoué un mardi, sans histoire."}]}
 ];
 function startCoach(){
   const peak = Math.max(...p.seasons.map(s=>s.lvl),p.lvl);
@@ -254,21 +278,30 @@ function startCoach(){
 function coachRoute(){
   const k = p.coach;
   if(k.step==="event") return coachEventScreen();
+  if(k.step==="mercato") return coachMercatoScreen();
   if(k.step==="style") return coachStyleScreen();
+  if(k.step==="match") return coachMatchScreen();
   return coachResultScreen();
 }
 function coachHead(){
   const k = p.coach;
-  return `<div class="hud"><div class="top"><b>📋 Coach ${esc(p.name)} ${flag(p.country)}</b><span class="muted">${k.age} ans · ${k.hist.length} saison(s) sur le banc</span><span>${flag(k.club.country)} ${esc(k.club.name)} <span class="muted">(${k.club.str})</span></span></div>
+  return `<div class="hud"><div class="top"><b>📋 Coach ${esc(p.name)} ${flag(p.country)}</b><span class="muted">${k.age} ans · ${k.hist.length?`${nPl(k.hist.length,"saison")} sur le banc`:"première saison sur le banc"}</span><span>${flag(k.club.country)} ${esc(k.club.name)} <span class="muted">(${k.club.str})</span></span></div>
   <div class="bars">${bar("Talent de coach",k.lvl,"var(--accent)")}${bar("Pression du président",clamp(k.sack,0,100),"var(--bad)")}${bar("Trophées",Math.min(100,k.trophies.length*10),"var(--good)")}</div></div>`;
 }
-function coachRender(html){ $("#app").innerHTML = coachHead()+`<div class="fade">${html}</div>`; window.scrollTo(0,0); }
+// sur le banc aussi, on peut revenir à l'accueil ou ouvrir le menu
+const coachNav = ()=>`<nav class="navbar" aria-label="Navigation"><button class="nav-b" onclick="home()">${ic("home")}<span>Accueil</span></button><button class="nav-b" onclick="menuSheet()">${ic("menu")}<span>Menu</span></button></nav>`;
+function coachRender(html){ $("#app").innerHTML = coachHead()+`<div class="fade">${html}</div>`+coachNav(); window.scrollTo(0,0); }
 function coachEventScreen(){
   const k = p.coach;
-  if(k.ev===null){ const ok = COACH_EVENTS.map((e,i)=>i).filter(i=>!COACH_EVENTS[i].cond||COACH_EVENTS[i].cond()); k.ev = pick(ok); save(); }
+  if(k.ev===null){
+    // pas deux fois la même situation tant qu'il en reste de nouvelles
+    const ok = COACH_EVENTS.map((e,i)=>i).filter(i=>!COACH_EVENTS[i].cond||COACH_EVENTS[i].cond()), seen = k.seen||[];
+    const fresh = ok.filter(i=>!seen.includes(i));
+    k.ev = pick(fresh.length?fresh:ok); k.seen = [...seen,k.ev]; save();
+  }
   const e = COACH_EVENTS[k.ev], txt = typeof e.t==="function"?e.t():e.t;
   coachRender(`<div class="muted">Saison ${k.year}-${String(k.year+1).slice(2)} · sur le banc</div>
-    <div class="card"><p class="story">${txt}</p>${e.ch.map((c,i)=>`<button class="btn" onclick="coachChoose(${i})"><kbd>${i+1}</kbd>${c.t}</button>`).join("")}</div>`);
+    <div class="card"><p class="story">${txt}</p>${e.ch.map((c,i)=>`<button class="btn" onclick="coachChoose(${i})">${choiceLead(c.t,i)}<span class="ctext">${c.t}</span>${c.risk?'<span class="chip">🎲 Risqué</span>':""}</button>`).join("")}</div>`);
 }
 function coachChoose(i){
   const k = p.coach, c = COACH_EVENTS[k.ev].ch[i];
@@ -276,15 +309,65 @@ function coachChoose(i){
   if(c.risk){ res = chance(c.risk.p)?c.risk.good:c.risk.bad; txt = res.txt; }
   if(res.b) k.b += res.b; if(res.lvl) k.lvl = clamp(k.lvl+res.lvl,30,99); if(res.sack) k.sack = clamp(k.sack+res.sack,0,100);
   if(res.moment) p.moments.push(`${k.year} · ${res.moment}`);
-  k.step = "style"; k.note = txt; save(); coachStyleScreen();
+  k.step = "mercato"; k.note = txt; save(); coachMercatoScreen();
+}
+// l'été du coach : le mercato, en une décision
+const COACH_REC = {
+  star:{i:"💸",n:"Exiger une star",d:"Un gros coup tout de suite. Le président attend des résultats.",b:2},
+  jeunes:{i:"🌱",n:"Lancer les jeunes du centre",d:"Plus faible cette saison, mais ils grandiront avec toi",b:-1},
+  groupe:{i:"🤝",n:"Garder le groupe",d:"La stabilité, et un président rassuré",b:.5}
+};
+function coachMercatoScreen(){
+  const k = p.coach;
+  coachRender(`${k.note?`<div class="card"><p class="story" style="margin:0">${k.note}</p></div>`:""}
+    <div class="card"><h2>☀️ Ton mercato d'été</h2>${k.youth?`<p class="muted">Tes jeunes lancés les saisons passées : ${nPl(k.youth,"génération")} qui progresse.</p>`:""}
+    ${Object.entries(COACH_REC).map(([id,r],i)=>`<button class="btn" onclick="coachRecruit('${id}')"><span class="cic t${i}">${ic(({star:"coins",jeunes:"tree",groupe:"handshake"})[id])}<kbd>${i+1}</kbd></span><span class="ctext">${r.n}</span><small>${r.d}</small></button>`).join("")}</div>`);
+}
+function coachRecruit(id){
+  const k = p.coach, r = COACH_REC[id];
+  // les jeunes lancés les étés précédents finissent par porter l'équipe (jusqu'à +3)
+  k.b += r.b+Math.min(3,k.youth||0); k.rec = id;
+  if(id==="jeunes"){ k.youth = (k.youth||0)+1; if(k.youth===3) p.moments.push(`${k.year} · Entraîneur : sa génération dorée du centre éclot ${auC(k.club.name)}`); }
+  if(id==="groupe") k.sack = clamp(k.sack-3,0,100);
+  k.note = null; k.step = "style"; save(); coachStyleScreen();
 }
 function coachStyleScreen(){
   const k = p.coach;
   coachRender(`${k.note?`<div class="card"><p class="story" style="margin:0">${k.note}</p></div>`:""}
     <div class="card"><h2>Ton style de jeu cette saison</h2>
-    <button class="btn" onclick="coachPlay('att')"><kbd>1</kbd>⚔️ Offensif<small>Spectaculaire et risqué : grosses saisons ou gros trous</small></button>
-    <button class="btn" onclick="coachPlay('eq')"><kbd>2</kbd>⚖️ Équilibré<small>Le juste milieu</small></button>
-    <button class="btn" onclick="coachPlay('def')"><kbd>3</kbd>🛡️ Défensif<small>Régulier, rarement brillant</small></button></div>`);
+    ${[["att","fire","Offensif","Spectaculaire et risqué : grosses saisons ou gros trous"],["eq","target","Équilibré","Le juste milieu"],["def","shield","Défensif","Régulier, rarement brillant"]].map(([k,i,t,d],n)=>`<button class="btn" onclick="coachPickStyle('${k}')"><span class="cic t${n}">${ic(i)}<kbd>${n+1}</kbd></span><span class="ctext">${t}</span><small>${d}</small></button>`).join("")}</div>`);
+}
+// le match clé de la saison, vu du banc : une décision à la 70e minute
+const COACH_MATCH = [
+  {t:c=>`Derby, 70e minute, 0-0. Les tribunes ${duC(c.name)} grondent. Ton adjoint attend ta décision.`,o:[
+    {t:"Faire entrer le gamin de 18 ans",p:.45,ok:"Il marque sur son premier ballon. Le stade chavire, la presse parle de coup de génie.",ko:"Il se liquéfie. Défaite 0-1, et la presse se demande ce qui t'est passé par la tête."},
+    {t:"Passer à trois derrière et attendre le contre",p:.55,ok:"Un contre, un but, 1-0. Du grand art tactique.",ko:"Ils marquent quand même, sur coup de pied arrêté. 0-1."},
+    {t:"Ne rien changer",p:.5,ok:"Ton équipe finit par faire craquer la défense. 1-0 à la 88e.",ko:"0-0. Un point, et des sifflets."}]},
+  {t:c=>`Choc au sommet, 70e minute, vous êtes menés 0-1. Ton capitaine te regarde depuis la pelouse.`,o:[
+    {t:"Tout pour l'attaque : trois attaquants",p:.42,ok:"Égalisation, puis 2-1 dans le temps additionnel. Ton banc envahit le terrain.",ko:"Contre adverse, 0-2. Tu as perdu le match et le vestiaire grogne."},
+    {t:"Changer de système, sans paniquer",p:.52,ok:"Ton équipe reprend le contrôle et égalise. 1-1, un point qui vaut de l'or.",ko:"Rien n'y fait. 0-1."}]},
+  {t:c=>`Finale de la coupe nationale, prolongation, 1-1. Tes joueurs ont des crampes. Il te reste un changement.`,o:[
+    {t:"Faire entrer ton tireur de penalties",p:.5,ok:"Tirs au but. Il marque le dernier. La coupe est à vous !",ko:"Tirs au but perdus. Ton tireur marque, les autres tremblent."},
+    {t:"Faire entrer un attaquant frais",p:.45,ok:"118e minute, une tête plongeante. La coupe est à vous !",ko:"Il manque l'occasion du match à la 119e. Tirs au but perdus."}]},
+  {t:c=>`Dernière journée, il faut gagner pour rester dans la course. Mi-temps, 0-0. Le vestiaire attend ton discours.`,o:[
+    {t:"Hausser le ton",p:.5,ok:"Ils reviennent sur la pelouse comme des fauves. 2-0.",ko:"Le groupe se crispe. 0-0, et des larmes dans le vestiaire."},
+    {t:"Les rassurer, calmement",p:.5,ok:"Libérés, ils jouent enfin. 1-0 à l'heure de jeu.",ko:"Trop calmes. Ils encaissent sur la première occasion adverse."}]}
+];
+function coachPickStyle(style){
+  const k = p.coach; k.style = style; k.mi = RI(0,COACH_MATCH.length-1); k.step = "match"; save(); coachMatchScreen();
+}
+function coachMatchScreen(){
+  const k = p.coach, M = COACH_MATCH[k.mi||0];
+  coachRender(`<div class="card"><h2>📋 Le match clé, depuis le banc</h2><p class="story">${esc(M.t(k.club))}</p>
+    ${M.o.map((o,i)=>`<button class="btn" onclick="coachMatch(${i})">${choiceLead(o.t,i)}<span class="ctext">${esc(o.t)}</span><small>${riskHtml(o.p+(k.lvl-60)*.005)}</small></button>`).join("")}</div>`);
+}
+function coachMatch(i){
+  const k = p.coach, o = COACH_MATCH[k.mi||0].o[i], ok = chance(clamp(o.p+(k.lvl-60)*.005,.1,.9));
+  k.b += ok?1.5:-1; if(ok) k.lvl = clamp(k.lvl+1,30,99);
+  k.matchNote = (ok?"✅ ":"❌ ")+(ok?o.ok:o.ko);
+  // la scène de la finale de coupe décide vraiment du trophée
+  k.cupForced = /^Finale de la coupe/.test(COACH_MATCH[k.mi||0].t(k.club))?ok:null;
+  coachPlay(k.style||"eq");
 }
 function coachPlay(style){
   const k = p.coach, c = k.club;
@@ -294,11 +377,11 @@ function coachPlay(style){
   const rank = league.findIndex(x=>x.n===c.name)+1, lg = COUNTRIES[c.country].league;
   const tr = [];
   if(rank===1) tr.push(`Champion – ${lg}`);
-  if(chance(clamp(.05+(power-60)*.008,.02,.3))) tr.push(`Coupe nationale (${COUNTRIES[c.country].name})`);
+  if(k.cupForced!=null?k.cupForced:chance(clamp(.05+(power-60)*.008,.02,.3))) tr.push(`Coupe nationale (${COUNTRIES[c.country].name})`);
   if(c.str>=78&&chance(clamp((power-76)*.015,0,.3))) tr.push("Coupe des Champions");
   const obj = c.str>=85?{t:"Être champion",ok:rank<=1}:c.str>=76?{t:"Finir sur le podium",ok:rank<=3}:c.str>=64?{t:"Finir dans la première moitié",ok:rank<=5}:{t:"Éviter la dernière place",ok:rank<10};
   k.lvl = clamp(k.lvl+(obj.ok?RI(1,3):-RI(0,2))+tr.length*2,30,99);
-  k.sack = clamp(k.sack+(obj.ok?-12:16)+(rank>=league.length-1?15:0)-tr.length*10,0,100);
+  k.sack = clamp(k.sack+(obj.ok?-12:16)+(rank>=league.length-1?15:0)-tr.length*10+(k.rec==="star"&&!obj.ok?10:0),0,100);
   const sacked = k.sack>=45&&chance(.7);
   tr.forEach(t=>{ k.trophies.push({t,y:k.year+1}); });
   if(tr.length) p.moments.push(`${k.year+1} · Entraîneur : ${tr.join(", ")} avec ${c.name}`);
@@ -313,8 +396,8 @@ function coachPlay(style){
   const n = won?RI(1,3):obj.ok?RI(0,2):RI(0,1);
   k.offers = shuffle(CLUBS.filter(x=>x.name!==c.name&&x.str>=c.str-4&&x.str<=c.str+(won?10:4)+(k.lvl-60)*.2)).slice(0,n).map(x=>({...x}));
   if(sacked){ p.moments.push(`${k.year+1} · Limogé ${duC(c.name)}`); if(!k.offers.length) k.offers = [{...pick(CLUBS.filter(x=>x.str<c.str&&x.str>=c.str-15))||pick(CLUBS)}]; }
-  k.res = {rank,tr,obj,sacked,rivalLine,table:league.map((x,i)=>({n:x.n,pos:i+1})).filter(x=>x.pos<=4||x.n===c.name),lg,style};
-  k.year++; k.age++; k.b = 0; k.step = "result";
+  k.res = {match:k.matchNote||null,rank,tr,obj,sacked,rivalLine,table:league.map((x,i)=>({n:x.n,pos:i+1})).filter(x=>x.pos<=4||x.n===c.name),lg,style};
+  k.year++; k.age++; k.b = 0; k.rec = null; k.matchNote = null; k.cupForced = null; k.step = "result";
   save(); coachResultScreen();
   if(tr.length){ confetti(); sfx("trophy"); }
 }
@@ -322,6 +405,7 @@ function coachResultScreen(){
   const k = p.coach, r = k.res, c = k.club;
   const end = k.age>=70;
   coachRender(`<div class="muted">Bilan de la saison ${k.hist.at(-1).y} · style ${({att:"offensif",eq:"équilibré",def:"défensif"})[r.style]}</div>
+    ${r.match?`<div class="card"><p class="story" style="margin:0">📋 ${esc(r.match)}</p></div>`:""}
     ${r.tr.length?`<div class="card celebrate">${r.tr.map(t=>`<div class="trophy" style="font-size:1.1rem">🏆 ${t}</div>`).join("")}</div>`:""}
     <div class="card"><h2>${flag(c.country)} ${esc(c.name)} · ${r.rank}<sup>e</sup></h2>
       <table class="mini"><tr><th>#</th><th>${esc(r.lg)}</th></tr>${r.table.map(x=>`<tr class="${x.n===c.name?"me":""}"><td>${x.pos}</td><td>${esc(x.n)}</td></tr>`).join("")}</table>
@@ -343,7 +427,7 @@ function coachSign(i){
 function endCoach(){
   const k = p.coach, titles = k.trophies.length;
   const leagues = k.trophies.filter(t=>t.t.startsWith("Champion")).length, cdc = k.trophies.filter(t=>t.t==="Coupe des Champions").length;
-  const t = `${k.hist.length} saison(s) sur le banc, ${k.clubs.length} club(s) entraîné(s)${titles?`, ${titles} trophée(s) dont ${leagues} titre(s) de champion${cdc?` et ${cdc} Coupe(s) des Champions`:""}`:", sans trophée, mais avec le respect de tes joueurs"}. ${k.lvl>=85?"Les écoles d'entraîneurs étudient tes méthodes.":k.lvl>=70?"Un entraîneur respecté partout où il est passé.":"Le banc t'aura appris l'humilité."}`;
+  const t = `${nPl(k.hist.length,"saison")} sur le banc, ${k.clubs.length} ${k.clubs.length>1?"clubs entraînés":"club entraîné"}${titles?`, ${nPl(titles,"trophée")} dont ${nPl(leagues,"titre")} de champion${cdc?` et ${nPl(cdc,"Coupe")} des Champions`:""}`:", sans trophée, mais avec le respect de tes joueurs"}. ${k.lvl>=85?"Les écoles d'entraîneurs étudient tes méthodes.":k.lvl>=70?"Un entraîneur respecté partout où il est passé.":"Le banc t'aura appris l'humilité."}`;
   p.after = {k:"coach",n:"Entraîneur",t};
   p.coachHist = k.hist; p.coachTrophies = k.trophies;
   save(); endScreen();
@@ -383,7 +467,7 @@ function dynastyCard(){
   if(!p.dynasty?.length) return "";
   const s = careerSummary(), fam = p.name.split(" ").slice(1).join(" ")||p.name;
   const gens = p.dynasty.concat({name:p.name,pos:p.pos,peak:s.peak,trophies:s.trophies,stars:s.stars,seasons:p.seasons.length,me:true});
-  return `<div class="card"><h3>🌳 La dynastie ${esc(fam)}</h3>${gens.map((g,i)=>`<div class="ach"><span class="i">${i+1}</span><div><b>${esc(g.name)}</b>${g.me?" (toi)":""}<small>${POS[g.pos].n} · ${g.seasons} saisons · ${g.trophies} trophée(s)${g.stars?` · 🌟 ${g.stars}`:""} · niveau max ${g.peak}</small></div></div>`).join("")}</div>`;
+  return `<div class="card"><h3>🌳 La dynastie ${esc(fam)}</h3>${gens.map((g,i)=>`<div class="ach"><span class="i">${i+1}</span><div><b>${esc(g.name)}</b>${g.me?" (toi)":""}<small>${POS[g.pos].n} · ${g.seasons} saisons · ${nPl(g.trophies,"trophée")}${g.stars?` · 🌟 ${g.stars}`:""} · niveau max ${g.peak}</small></div></div>`).join("")}</div>`;
 }
 function dynHof(h){
   if(!h.dyn?.length) return "";

@@ -126,7 +126,7 @@ EVENTS.push(
   {id:"chClans",scene:"vestiaire",weight:2,cond:()=>inAct("sommet")&&p.age>=25,
     txt:()=>"Le vestiaire s'est coupé en deux : les anciens, qui veulent que le coach parte, et les jeunes, qui le défendent. Tout le monde attend de savoir de quel côté tu te ranges.",
     ch:[{t:"Réunir tout le monde, sans le coach",risk:{p:()=>clamp(.4+p.rep/150+(typeof qd==="function"?qd("lea")/100:0),.25,.85),good:{rep:3,trust:4,moral:3,txt:"Une heure de vérité. Le lendemain, le groupe s'entraîne comme jamais. On te regarde autrement."},bad:{moral:-4,trust:-3,txt:"Ça s'est fini en cris. Le président a eu vent de la réunion."}}},
-        {t:"Rester en dehors de ça",fx:{form:2},why:"Tu te concentres sur ton jeu. Personne ne peut te le reprocher. Personne ne te remercie non plus."}]},
+        {t:"Rester en dehors de ça",fx:{form:2,trust:-3,rep:-2},why:"Tu te concentres sur ton jeu. Personne ne peut te le reprocher. Personne ne te remercie non plus."}]},
   // la dernière danse
   {id:"chRecup",scene:"sante",weight:3,cond:()=>inAct("fin"),
     txt:()=>"Il te faut maintenant deux jours pour récupérer d'un match. Le préparateur physique te propose un programme sur mesure : cryothérapie, sommeil surveillé, plus de dessert.",
@@ -159,11 +159,11 @@ function danseOk(){
 function chaptersCard(){
   if(p.daily||p.friend) return "";
   const a = p.acts||{}, d = danseOk();
-  const row = (act,st,txt)=>`<div class="ach ${st===false?"off":""}"><span class="i">${st===true?"✓":st===false?"✗":"·"}</span><div><b>Chapitre ${actIdx(act)} · ${act.n}</b><small>${txt}</small></div></div>`;
+  const row = (act,st,txt)=>`<div class="ach ${st===false?"off":st===null?"na":""}"><span class="i">${st===true?"✓":st===false?"✗":"–"}</span><div><b>Chapitre ${actIdx(act)} · ${act.n}</b><small>${txt}</small></div></div>`;
   return `<div class="card chap-end"><h3>📖 Tes chapitres</h3>
     ${row(ACTS[0],a.percee==="ok"?true:a.percee==="ko"?false:null,a.percee==="ok"?"Titulaire avant 23 ans.":a.percee==="ko"?"Pas de place de titulaire avant 23 ans.":"Carrière terminée avant la fin du chapitre.")}
     ${row(ACTS[1],a.sommet==="ok"?true:a.sommet==="ko"?false:null,a.sommet==="ok"?esc(cap1((p.moments.find(m=>/Au sommet :/.test(m))||"").split("Au sommet : ")[1]||"Un grand titre"))+".":a.sommet==="ko"?"Aucun grand titre avant 30 ans.":"Carrière terminée avant la fin du chapitre.")}
-    ${row(ACTS[2],d,d===null?(p.age>=30?"Tu n'as pas choisi comment partir.":"Jamais atteint."):d?{club:`Fin de carrière à ${esc(p.club.name)}, comme promis.`,racines:"De retour là où tout a commencé.",exotique:"Un dernier voyage, sous d'autres lumières."}[p.flags.danse]:"Le choix fait à 30 ans ne s'est pas réalisé.")}</div>`;
+    ${row(ACTS[2],d,d===null?(p.age>=30?"Tu n'as pas choisi comment partir.":"Jamais atteint."):d?{club:`Fin de carrière ${esc(auC(p.club.name))}, comme promis.`,racines:"De retour là où tout a commencé.",exotique:"Un dernier voyage, sous d'autres lumières."}[p.flags.danse]:"Le choix fait à 30 ans ne s'est pas réalisé.")}</div>`;
 }
 
 /* ============ La saison décisive ============ */

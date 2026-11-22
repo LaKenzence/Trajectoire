@@ -239,13 +239,136 @@ const ACT_ALT = {
   "Face-à-face : leur avant-centre fonce vers ton but.":["Leur avant-centre a passé toute la défense : il est seul face à toi.","Ta défense est battue, il ne reste que toi face à l'attaquant."],
   "Long ballon dans le dos de ta défense.":["Un long ballon passe au-dessus de tes défenseurs.","Ballon en profondeur : la course entre toi et l'attaquant commence."],
   "Frappe lointaine flottante sous la pluie.":["Frappe des trente mètres, le ballon flotte et change de trajectoire.","Ils tentent de loin : une frappe qui flotte bizarrement."],
-  "Corner tendu dans ta surface encombrée.":["Corner pour eux, ta surface est noire de monde.","Ils envoient le corner dans la mêlée, devant ta ligne."]
+  "Corner tendu dans ta surface encombrée.":["Corner pour eux, ta surface est noire de monde.","Ils envoient le corner dans la mêlée, devant ta ligne."],
+  // les situations de extraActions, moreActions et bonusActions
+  "Le défenseur central qui te marque a déjà pris un jaune. Il hésite à s'engager.":["Ton marqueur a un carton jaune. Il garde ses distances, il a peur de la faute.","Averti dès la première période, leur central n'ose plus te toucher."],
+  "Leur défense joue très haut. Ton milieu lève la tête.":["Leur ligne défensive est montée jusqu'au milieu. Ton meneur relève les yeux vers toi.","Il y a cinquante mètres dans le dos de leur défense. Ton milieu a vu ton appel."],
+  "Le gardien adverse est très avancé. Tu reçois le ballon au rond central.":["Tu récupères le ballon au rond central. Leur gardien est à l'entrée de sa surface.","Au rond central, tu lèves la tête : leur gardien est sorti très loin de sa ligne."],
+  "Ballon en retrait de l'ailier, tu arrives lancé au point de penalty.":["Ton ailier arrive au bout de la ligne et remet en retrait. Tu arrives lancé.","Centre en retrait au point de penalty : tu es le premier sur le ballon."],
+  "Le ballon rebondit devant toi après un tir de ton coéquipier repoussé par le gardien.":["Le gardien repousse la frappe de ton coéquipier. Le ballon rebondit devant toi.","Parade du gardien, ballon relâché… il tombe pile dans ta zone."],
+  "Ton équipe défend. Tu es le seul attaquant, et le ballon arrive vers toi en chandelle.":["Ton équipe recule. Un dégagement en chandelle redescend vers toi, seul devant.","Seul en pointe, tu vois arriver un long dégagement de ta défense."],
+  "Leur gardien sort loin de sa ligne pour couper un ballon. Tu arrives lancé.":["Leur gardien jaillit hors de sa surface. Tu arrives à pleine vitesse sur le même ballon.","Une passe en profondeur : leur gardien sort, toi aussi. Qui arrivera le premier ?"],
+  "Le ballon arrive à toi plein axe, à 25 mètres. Deux coéquipiers appellent.":["À 25 mètres, plein axe, tu as le ballon. Tes deux attaquants lèvent le bras.","Tu reçois face au jeu, à 25 mètres. Deux appels, et le but en face."],
+  "L'adversaire défend à dix derrière le ballon depuis vingt minutes.":["Ils ont garé le bus : dix joueurs derrière le ballon depuis vingt minutes.","Plus aucun adversaire ne dépasse le milieu de terrain. Il faut trouver la faille."],
+  "Leur numéro 10 cherche à se retourner dans ton dos.":["Leur meneur de jeu se faufile dans ton dos pour recevoir.","Leur 10 décroche dans ta zone et cherche à pivoter."],
+  "Corner pour ton équipe. C'est toi qui le tires.":["Corner pour vous. Tu poses le ballon dans l'arc de cercle.","Le ballon sort en corner : c'est ton coup de pied arrêté."],
+  "Le ballon traîne au milieu après un duel aérien. Tu es le premier dessus.":["Après un duel de la tête, le ballon retombe au milieu. Tu es le plus rapide.","Un ballon perdu au rond central : tu arrives le premier."],
+  "Penalty pour ton équipe. Le tireur habituel est sorti sur blessure.":["Penalty ! Votre tireur attitré est sur le banc, une poche de glace sur la cuisse.","L'arbitre montre le point de penalty. Votre spécialiste est sorti à la pause."],
+  "Leur sentinelle est fatiguée. Tu peux jouer dans son dos.":["Leur milieu défensif marche. Il y a un trou dans son dos.","Leur sentinelle a les mains sur les hanches : l'espace s'ouvre derrière elle."],
+  "Leur avant-centre, un colosse, attend le long ballon.":["Leur numéro 9 fait une tête de plus que toi. Leur gardien arme un long dégagement.","Le colosse d'en face se place devant toi, attendant le dégagement de son gardien."],
+  "Tu as le ballon dans les pieds, personne ne te presse.":["Ils ont reculé : tu as le ballon et tout le temps du monde.","Personne ne vient te presser. Tu peux relancer comme tu veux."],
+  "Leur attaquant s'écroule dans ta surface après un contact léger. L'arbitre consulte la vidéo.":["Leur attaquant tombe au moindre contact dans ta surface. L'arbitre met la main à l'oreillette.","Un effleurement, et leur attaquant se roule par terre. Arrêt de jeu : vidéo."],
+  "Le ballon traîne sur ta ligne de but, ton gardien est battu !":["Ton gardien est à terre, le ballon roule vers la ligne !","Le ballon file vers le but vide, ton gardien est hors de position !"],
+  "Leur attaquant reçoit dos au but dans ta surface.":["Dans ta surface, leur attaquant reçoit le ballon, dos au but, contre toi.","Leur avant-centre se fait servir dos au jeu. Tu es collé à lui."],
+  "Coup franc pour ton équipe, loin du but. Le coach veut que tu le tires long.":["Coup franc dans ton camp. Le coach mime un long ballon vers le second poteau.","Faute sur ton attaquant, loin du but. Le banc te crie de balancer."],
+  "Tu es averti. Leur ailier le sait et fonce sur toi.":["Avec ton jaune, leur ailier sent l'occasion : il accélère droit sur toi.","Leur ailier a vu ton carton. Il te provoque, ballon au pied."],
+  "Coup franc adverse à vingt mètres, plein axe. Leur tireur pose le ballon.":["Coup franc pour eux, plein axe, à vingt mètres. Tu places ton mur.","Leur spécialiste dépose le ballon à vingt mètres. Tu organises le mur."],
+  "Ton défenseur te fait une passe en retrait trop courte.":["La passe en retrait de ton défenseur s'arrête à mi-chemin.","Ton défenseur te remet le ballon… beaucoup trop court."],
+  "Leur ailier centre à ras de terre devant ton but.":["Centre en retrait à ras de terre, devant ta ligne.","Leur ailier déborde et envoie un ballon rasant devant ton but."],
+  "Tu captes un corner. Ton attaquant est seul à la ligne médiane.":["Tu bloques le corner. Là-bas, ton attaquant est resté seul à la ligne médiane.","Corner capté. Tu relèves la tête : ton attaquant attend tout seul au milieu."],
+  "Un contre un : leur attaquant feinte, tu dois choisir.":["L'attaquant arrive seul, épaule droite, épaule gauche…","Leur avant-centre est face à toi. Il feinte. Tu dois deviner."],
+  "Une frappe enroulée part vers ta lucarne.":["Frappe brossée : le ballon tourne vers ta lucarne.","Le ballon part en effet, droit vers ta lucarne opposée."],
+  "Leur attaquant tire un penalty contre ton équipe. Il a l'air nerveux.":["Penalty contre vous. Leur tireur s'essuie les mains sur son short, nerveux.","Leur tireur pose le ballon sur le point de penalty. Il évite ton regard."],
+  "Un coéquipier dévie le ballon vers ton but par erreur !":["Ton défenseur veut dégager… et le ballon part vers ta cage !","Une déviation malheureuse de ton coéquipier file vers ton but !"],
+  "Fin de match. Tu as le ballon dans les mains, ton équipe veut accélérer.":["Dernières minutes. Tu tiens le ballon, tes coéquipiers te réclament une relance rapide.","Le chrono tourne. Le ballon dans les gants, toute ton équipe te fait signe d'aller vite."],
+  "Penalty pour l'adversaire !":["L'arbitre siffle et montre le point de penalty. Contre vous.","Faute dans ta surface : penalty pour eux. Tu reviens sur ta ligne."],
+  // les situations de sceneActions
+  "Le ballon arrive sur ton mauvais pied, à l'angle de la surface.":["Une passe un peu décalée : le ballon arrive sur ton mauvais pied, à l'angle des seize mètres.","À l'angle de la surface, tu es servi… du mauvais côté."],
+  "Leur défenseur central tente une passe en retrait vers son gardien. Elle est trop molle.":["Leur central temporise et glisse une passe en retrait vers son gardien. Beaucoup trop molle.","La passe en retrait de leur défenseur s'arrête presque dans l'herbe."],
+  "Une tête de ton défenseur prolonge le corner. Le ballon flotte au second poteau.":["Corner prolongé au premier poteau : le ballon redescend lentement au second.","Ton défenseur dévie le corner de la tête. Le ballon flotte vers toi, au second poteau."],
+  "Ton coach te fait signe de presser leur gardien sur chaque relance.":["Depuis le banc, le coach mime le pressing : il veut que tu harcèles leur gardien.","Le coach hurle ton prénom et montre leur gardien : « Va le chercher ! »"],
+  "Un adversaire est au sol, soigné au bord du terrain. Ils jouent à dix, une brèche s'ouvre à droite.":["Leur latéral se fait soigner hors du terrain. À dix, ils laissent un trou côté droit.","Un adversaire boite le long de la ligne : ils sont à dix, l'espace s'ouvre à droite."],
+  "Leur milieu défensif te suit partout depuis le début du match.":["Leur sentinelle ne te lâche pas d'un mètre depuis le coup d'envoi.","Où que tu ailles, leur milieu défensif est collé à ton dos."],
+  "Le ballon arrive en l'air à l'entrée de la surface. Personne autour de toi.":["Un dégagement de la tête retombe à l'entrée de la surface. Tu es seul dessous.","Le ballon redescend du ciel, à vingt mètres du but. Personne ne t'a suivi."],
+  "Les jambes de ton équipe sont lourdes. L'adversaire court plus que vous.":["Ton équipe tire la langue. Eux arrivent les premiers sur chaque ballon.","Vous êtes cuits, et ils le sentent : ils courent deux fois plus que vous."],
+  "Touche longue pour ton équipe, près de leur surface.":["Ton latéral s'essuie les mains : touche longue, à hauteur de leur surface.","Touche pour vous près de leur surface. Ça se bouscule déjà au point de penalty."],
+  "Leur meilleur joueur vient d'entrer en jeu. Il se place dans ta zone.":["Leur star sort du banc et vient s'installer pile dans ta zone.","Le stade adverse se lève : leur meilleur joueur entre, et il vient sur toi."],
+  "Centre de la gauche. Leur avant-centre et toi, épaule contre épaule.":["Le centre part de la gauche. Leur avant-centre te pousse de tout son poids.","Ballon aérien venu de la gauche : toi et leur numéro 9, au coude à coude."],
+  "Ton gardien te passe le ballon sous pression. Un attaquant fonce sur toi.":["Ton gardien te donne un ballon brûlant. Leur attaquant arrive déjà à pleine vitesse.","Relance courte de ton gardien… et un attaquant qui te fond dessus."],
+  "Leur numéro 9 fait un appel dans le dos de ton partenaire de charnière.":["Leur avant-centre file dans le dos de ton coéquipier de charnière.","Ton partenaire en défense centrale n'a pas vu l'appel de leur numéro 9."],
+  "Ils balancent tous les ballons dans ta surface. La pression monte.":["Ils n'ont plus qu'une idée : envoyer chaque ballon dans ta surface.","Long ballon après long ballon, ils pilonnent ta surface."],
+  "Contre pour ton équipe : tu peux suivre l'action ou rester en couverture.":["Ton équipe part en contre. Tu as de l'espace devant toi, mais personne derrière.","Ballon récupéré, contre lancé : suivre ou garder la maison ?"],
+  "Une frappe déviée par un défenseur : le ballon change de trajectoire.":["La frappe heurte la jambe d'un défenseur et part à contre-pied.","Un contre de ton défenseur : le ballon change brusquement de direction."],
+  "Leur attaquant est seul, mais excentré. Il hésite entre frapper et centrer.":["Leur ailier entre dans la surface par le côté. Frappe ou centre ? Il hésite.","Seul sur le côté de la surface, leur attaquant lève la tête."],
+  "Corner pour eux. Leur grand défenseur central se place juste devant toi.":["Corner adverse : leur défenseur de deux mètres vient se coller à toi.","Avant le corner, leur géant de défenseur se plante devant toi, sur ta ligne."],
+  "Ton équipe joue très haut. Une passe en profondeur passe ta défense.":["Ta défense est montée jusqu'au rond central. Une passe la transperce.","Ligne haute, passe en profondeur : il y a quarante mètres de pelouse entre l'attaquant et toi."],
+  "Leur meilleur tireur prend sa chance de 25 mètres, plein axe.":["Leur spécialiste arme une frappe de 25 mètres, en plein axe.","Le ballon arrive à leur meilleur tireur, plein axe, à 25 mètres. Il frappe."]
 };
 function altText(a){
   a.scene = a.txt;
   const alts = ACT_ALT[a.txt];
   if(alts){ const m = p.match, h = hashStr(a.txt+(m?.title||"")+(m?.mins||[]).join()+(m?.step||0)); a.txt = [a.txt,...alts][h%(alts.length+1)]; }
   return a;
+}
+
+/* ============ Nouvelles situations (ajoutées à la fin : les index des parties en cours restent valables) ============ */
+function sceneActions(b,tech,inst,ath){
+  return {
+   ATT:[
+    {txt:"Le ballon arrive sur ton mauvais pied, à l'angle de la surface.",o:[
+      {t:"Frapper quand même du mauvais pied",p:b-.15+inst,ok:{us:1,me:"g",rep:2,txt:"Du mauvais pied ! Le gardien ne l'a pas vue partir."},ko:{txt:"Ta frappe molle finit dans les bras du gardien."}},
+      {t:"Crochet pour revenir sur ton bon pied",duel:"dribble",p:b-.06+tech,ok:{us:.75,me:"g",txt:"Crochet, le défenseur passe tout droit, frappe enroulée…"},ko:{txt:"Le temps du crochet, le défenseur a fermé l'angle."}}]},
+    {txt:"Leur défenseur central tente une passe en retrait vers son gardien. Elle est trop molle.",o:[
+      {t:"Sprinter pour l'intercepter",p:b+ath,ok:{us:.85,me:"g",txt:"Tu coupes la passe, tu contournes le gardien…"},ko:{txt:"Le gardien arrive juste avant toi."}},
+      {t:"Couper la ligne de passe vers l'autre défenseur",p:b+.1,ok:{us:.5,me:"a",txt:"Le gardien panique et te donne le ballon : tu sers ton coéquipier…"},ko:{txt:"Le gardien dégage loin."}}]},
+    {txt:"Une tête de ton défenseur prolonge le corner. Le ballon flotte au second poteau.",o:[
+      {t:"Tête plongeante",p:b-.08+ath,ok:{us:1,me:"g",txt:"Tête plongeante à bout portant, au fond !"},ko:{txt:"Ta tête passe au-dessus de la barre."}},
+      {t:"Remettre en retrait de la tête",p:b+.04,ok:{us:.55,me:"a",txt:"Ta remise trouve ton milieu, qui reprend…"},ko:{txt:"La remise tombe dans les pieds d'un défenseur."}}]},
+    {txt:"Ton coach te fait signe de presser leur gardien sur chaque relance.",o:[
+      {t:"Presser comme un fou",p:b-.05+ath,ok:{us:.6,me:"g",txt:"Tu contres la relance du gardien ! Le ballon file vers le but…"},ko:{txt:"Le gardien t'élimine d'une feinte. Le stade siffle… toi."}},
+      {t:"Couper la passe vers leur milieu",p:b+.08,ok:{calm:true,txt:"Leur relance s'étouffe : ils dégagent loin, vous récupérez."},ko:{them:.2,txt:"Ils trouvent leur milieu libre. Contre adverse…"}}]},
+    {txt:"Un adversaire est au sol, soigné au bord du terrain. Ils jouent à dix, une brèche s'ouvre à droite.",o:[
+      {t:"Plonger dans l'espace",p:b+.02+ath,ok:{us:.8,me:"g",txt:"Personne pour te suivre : tu files et frappes au premier poteau !"},ko:{txt:"Ton centre-tir ne trouve personne."}},
+      {t:"Fair-play : attendre qu'il revienne",p:.95,ok:{rep:2,calm:true,txt:"Le stade applaudit ton geste. Le jeu reprend, apaisé."},ko:{txt:"Ton capitaine te reproche de ne pas en avoir profité."}}]}],
+   MIL:[
+    {txt:"Leur milieu défensif te suit partout depuis le début du match.",o:[
+      {t:"L'emmener loin de sa zone pour libérer l'espace",p:b+.08,ok:{us:.5,me:"a",txt:"Il te suit, un couloir s'ouvre : ton attaquant s'y engouffre…"},ko:{txt:"Personne ne profite de l'espace."}},
+      {t:"Le défier en un contre un",duel:"dribble",p:b-.1+tech,ok:{us:.65,me:"g",txt:"Tu l'élimines enfin, la voie est libre jusqu'à la surface !"},ko:{them:.25,txt:"Il te chipe le ballon et lance le contre…"}}]},
+    {txt:"Le ballon arrive en l'air à l'entrée de la surface. Personne autour de toi.",o:[
+      {t:"Reprise de volée",p:b-.22+inst*1.5,ok:{us:1,me:"g",rep:3,txt:"Volée parfaite, le ballon gicle sous la barre !"},ko:{txt:"Ta volée finit au troisième étage de la tribune."}},
+      {t:"Amortir et servir l'attaquant",p:b+.03+tech,ok:{us:.55,me:"a",txt:"Amorti de la poitrine, passe dans la course de ton attaquant…"},ko:{txt:"L'amorti est trop long."}}]},
+    {txt:"Les jambes de ton équipe sont lourdes. L'adversaire court plus que vous.",o:[
+      {t:"Ralentir le tempo, garder le ballon",p:b+.12,ok:{calm:true,txt:"Tu poses le jeu, ton équipe souffle enfin."},ko:{them:.3,txt:"Une passe trop lente, ils jaillissent…"}},
+      {t:"Te sacrifier pour presser",p:b-.02+ath,ok:{us:.4,me:"a",txt:"Ton pressing arrache le ballon haut, ton équipe se rue vers le but…"},ko:{them:.35,txt:"Tu presses seul, ils ressortent proprement…"}}]},
+    {txt:"Touche longue pour ton équipe, près de leur surface.",o:[
+      {t:"Faire la remise en retrait",p:b+.05,ok:{us:.45,me:"a",txt:"Ta remise trouve un coéquipier lancé, frappe !"},ko:{txt:"La remise est contrée."}},
+      {t:"Te placer pour la deuxième balle",p:b-.06+ath,ok:{us:.6,me:"g",txt:"La deuxième balle est pour toi : demi-volée au ras du poteau !"},ko:{txt:"Le dégagement passe au-dessus de toi."}}]},
+    {txt:"Leur meilleur joueur vient d'entrer en jeu. Il se place dans ta zone.",o:[
+      {t:"Le gêner d'entrée, physiquement",duel:"tacle",p:b+ath-.03,ok:{rep:1,txt:"Premier duel gagné. Il comprend que la soirée sera longue."},ko:{them:.35,moral:-1,txt:"Il t'efface d'un crochet et décale…"}},
+      {t:"Le laisser venir, couper ses passes",p:b+.04+tech,ok:{txt:"Il ne trouve aucune solution et commence à s'énerver."},ko:{them:.3,txt:"Il trouve une passe que tu n'avais pas vue…"}}]}],
+   DEF:[
+    {txt:"Centre de la gauche. Leur avant-centre et toi, épaule contre épaule.",o:[
+      {t:"Dégager de la tête",duel:"aerien",p:b+ath,ok:{txt:"Tu t'imposes et dégages loin du but."},ko:{them:.55,txt:"Il te devance d'un rien et place sa tête…"}},
+      {t:"Le pousser discrètement pour le déséquilibrer",p:.5,ok:{txt:"Il rate sa tête. L'arbitre n'a rien vu."},ko:{them:.75,moral:-2,txt:"Penalty ! L'arbitre a tout vu."}}]},
+    {txt:"Ton gardien te passe le ballon sous pression. Un attaquant fonce sur toi.",o:[
+      {t:"Dribbler l'attaquant pour relancer",duel:"dribble",p:b-.1+tech,ok:{us:.35,me:"a",txt:"Feinte, l'attaquant passe tout droit : tu relances dans la course du milieu…"},ko:{them:.6,txt:"Il te prend le ballon aux abords de ta surface…"}},
+      {t:"Dégager en touche",p:b+.18,ok:{calm:true,txt:"En touche, sans prendre le moindre risque."},ko:{them:.2,txt:"Ton dégagement le heurte et revient vers ton but…"}}]},
+    {txt:"Leur numéro 9 fait un appel dans le dos de ton partenaire de charnière.",o:[
+      {t:"Lâcher ton joueur pour couvrir",p:b+.03,ok:{rep:1,txt:"Ta couverture est parfaite : tu coupes la passe."},ko:{them:.5,txt:"L'attaquant que tu as lâché reçoit le ballon, seul…"}},
+      {t:"Faire monter la ligne pour le hors-jeu",p:b-.03+tech,ok:{txt:"Le drapeau se lève : hors-jeu, ton piège a marché."},ko:{them:.7,txt:"Ton latéral n'a pas suivi : il est seul face au gardien…"}}]},
+    {txt:"Ils balancent tous les ballons dans ta surface. La pression monte.",o:[
+      {t:"Tout repousser de la tête",duel:"aerien",p:b+ath-.02,ok:{rep:2,txt:"Tête après tête, tu repousses tout. Un mur."},ko:{them:.45,txt:"Un ballon t'échappe, il traîne dans la surface…"}},
+      {t:"Organiser la défense à la voix",p:b+.06,ok:{calm:true,txt:"Ta voix couvre le stade. Chacun prend son homme."},ko:{them:.35,txt:"Un attaquant oublié surgit au second poteau…"}}]},
+    {txt:"Contre pour ton équipe : tu peux suivre l'action ou rester en couverture.",o:[
+      {t:"Monter en soutien",p:b-.05+ath,ok:{us:.55,me:"a",txt:"Tu déboules sur l'aile, centre en retrait parfait…"},ko:{them:.35,txt:"Le ballon est perdu, et tu es loin de ta zone…"}},
+      {t:"Rester en couverture",p:b+.15,ok:{calm:true,txt:"Tu restes derrière. Leur contre meurt dans tes pieds."},ko:{txt:"L'action de ton équipe s'éteint d'elle-même."}}]}],
+   GB:[
+    {txt:"Une frappe déviée par un défenseur : le ballon change de trajectoire.",o:[
+      {t:"Changer d'appui au dernier moment",p:b-.08+ath,ok:{rep:3,txt:"Tu te détends à contre-pied ! Un arrêt de classe mondiale."},ko:{them:.8,txt:"Impossible de revenir : le ballon passe de l'autre côté."}},
+      {t:"Rester sur ta trajectoire",p:b-.15,ok:{rep:1,txt:"Le ballon te tombe dessus. Chanceux, mais efficace."},ko:{them:.85,txt:"Le ballon file dans le petit filet."}}]},
+    {txt:"Leur attaquant est seul, mais excentré. Il hésite entre frapper et centrer.",o:[
+      {t:"Fermer le premier poteau",p:b,ok:{rep:1,txt:"Il frappe sur toi. Tu bloques."},ko:{them:.6,txt:"Il centre en retrait, reprise à bout portant…"}},
+      {t:"Couper la ligne du centre",p:b-.04+ath,ok:{rep:2,txt:"Tu interceptes le centre en plongeant. Superbe lecture."},ko:{them:.7,txt:"Il frappe au premier poteau, celui que tu as laissé ouvert…"}}]},
+    {txt:"Corner pour eux. Leur grand défenseur central se place juste devant toi.",o:[
+      {t:"Sortir pour boxer le ballon",duel:"aerien",p:b-.03+ath,ok:{rep:1,txt:"Tu t'élèves au-dessus de tout le monde et boxes le ballon loin."},ko:{them:.6,txt:"Tu manques le ballon, il le reprend de la tête…"}},
+      {t:"Rester sur ta ligne",p:b-.06,ok:{rep:1,txt:"Il reprend, tu captes en deux temps."},ko:{them:.55,txt:"Sa tête est trop près, trop forte…"}}]},
+    {txt:"Ton équipe joue très haut. Une passe en profondeur passe ta défense.",o:[
+      {t:"Sortir loin de ta surface pour couper",p:b-.04+ath,ok:{rep:2,txt:"Tu sors à quarante mètres, tacle propre. Le public adore."},ko:{them:.7,txt:"Il te lobe depuis le rond central…"}},
+      {t:"Reculer et attendre",p:b,ok:{txt:"Tu gagnes du temps, tes défenseurs reviennent."},ko:{them:.5,txt:"Il a eu tout le temps d'ajuster…"}}]},
+    {txt:"Leur meilleur tireur prend sa chance de 25 mètres, plein axe.",o:[
+      {t:"Capter le ballon",p:b-.03+tech,ok:{txt:"Tu bloques le ballon contre ta poitrine. Le stade respire."},ko:{them:.5,txt:"Le ballon glisse de tes gants…"}},
+      {t:"Détourner en corner",p:b+.08,ok:{txt:"Tu détournes en corner, sans prendre de risque."},ko:{them:.3,txt:"Ta parade retombe dans ses pieds…"}}]}]
+  }[p.pos];
 }
 
 /* ============ Encore des situations, poste par poste ============ */

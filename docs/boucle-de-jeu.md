@@ -60,5 +60,25 @@ carrière qui passe vite, sans changer les niveaux, trophées ni Ballons d'Étoi
 ## À faire plus tard
 
 - Des conséquences plus fortes sur moins de choix : revoir les scènes aux effets trop faibles (±2).
+  Fait en partie (2026-11-22) : le moral et la réputation ne restent plus collés à 100 (avant, dès 20 et 23 ans,
+  tous les « Moral +2 » et « Réputation +1 » étaient sans effet). En fin de saison, le moral se rapproche de
+  l'humeur de la saison (temps de jeu, trophées, objectif) et la réputation de ce que vaut la saison (note, club,
+  trophées, sélection, niveau). Milieu de carrière : moral ~86, réputation ~84, le plafond est réservé aux stars.
+  Les effets affichés sont les vrais (« Moral au max » au lieu d'un faux « +4 »), et les événements dont aucun
+  choix ne pesait ont été renforcés. Reste : relire les autres choix à ±2 maintenant que les jauges bougent.
 - Un match clé plus intense : le score en direct, deux ou trois décisions vraiment décisives.
+  Fait en partie (2026-11-22) : la dernière action d'un match serré décide vraiment, et les chances affichées
+  ne sont plus presque toutes « Plutôt sûr » en milieu de carrière (~73 % au lieu de ~81 %).
 - Tester avec 3 ou 4 joueurs et noter où ils décrochent.
+
+## Ajouté le 2026-11-22
+
+- Fil d'actu (js/ecrans/actu.js) : deux brèves sous chaque moment (rival, classement, ancien club, protégé,
+  anciens coéquipiers, mercato, sélection). Purement narratif.
+- Soirées de Coupe des Champions (ordinaires.js) : un match de groupe joué au 2e moment, puis le huitième de finale
+  retour au 3e si le club passe. Leurs résultats décident du parcours (cdcPath).
+- Vestiaire qui réagit (coequipiers.js) : le mode de vie fait bouger l'affection chaque saison ; en match, le
+  coéquipier qui t'adore te cherche (petit élan), celui que tu as froissé t'ignore.
+- Projet d'une saison de transition (rythme.js) : un chantier perso au choix, qui paie au bilan.
+- Rupture des croisés en plusieurs saisons : le match du retour après l'opération, ou le genou fragile du
+  retour express qui se rappelle à toi (evenements.js : genouRetour, genouAlerte).

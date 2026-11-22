@@ -122,7 +122,8 @@ function qualsRadar(size=180){
   const q = ensureQuals(), ks = Object.keys(QUALS), c = size/2, r = size/2-26;
   const pt = (i,v)=>{ const a = -Math.PI/2+i*2*Math.PI/ks.length, d = r*clamp((v-30)/69,0,1); return [c+Math.cos(a)*d,c+Math.sin(a)*d]; };
   const ring = f=>ks.map((_,i)=>pt(i,30+69*f).join(",")).join(" ");
-  return `<svg class="radar" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="Qualités : ${ks.map(k=>qualName(k)+" "+q[k]).join(", ")}">
+  // marge de 28 de chaque côté : les libellés (« Leadership 48 ») ne sont jamais coupés
+  return `<svg class="radar" viewBox="-28 0 ${size+56} ${size}" width="${size+56}" height="${size}" style="max-width:100%" role="img" aria-label="Qualités : ${ks.map(k=>qualName(k)+" "+q[k]).join(", ")}">
     ${[.33,.66,1].map(f=>`<polygon points="${ring(f)}" fill="none" stroke="rgba(255,255,255,.15)"/>`).join("")}
     <polygon points="${ks.map((k,i)=>pt(i,q[k]).join(",")).join(" ")}" fill="rgba(247,197,72,.35)" stroke="#f7c548" stroke-width="2"/>
     ${ks.map((k,i)=>{ const [x,y] = pt(i,104); return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#fff" font-family="Barlow,sans-serif">${qualName(k)} ${q[k]}</text>`; }).join("")}</svg>`;
@@ -238,7 +239,8 @@ function careerGrade(){
   const s = careerSummary(), peak = Math.max(p.lvl,...p.seasons.map(x=>x.lvl));
   const dream = DREAMS[p.dream]&&DREAMS[p.dream].ok(s);
   const v = clamp(Math.round((peak-55)*1.25+Math.min(18,p.trophies.length*.9)+s.stars*6+Math.min(6,p.seasons.length*.3)+(dream?10:0)),0,100);
-  const label = v>=95?"Immortel":v>=85?"Légende":v>=72?"Star":v>=58?"Grand joueur":v>=42?"Bon pro":"Carrière modeste";
+  // paliers alignés sur le verdict de fin de carrière (niveau max ~70 : bon pro, ~80 : grand joueur, ~88 : star)
+  const label = v>=95?"Immortel":v>=82?"Légende":v>=62?"Star":v>=45?"Grand joueur":v>=26?"Bon pro":"Carrière modeste";
   return {v,label,dream,peak};
 }
 function gradeHtml(){

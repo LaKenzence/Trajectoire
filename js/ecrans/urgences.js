@@ -9,11 +9,11 @@ const urgentSalary = c=>Math.round(Math.pow(Math.max(c.str-35,5),2)*.95*(1+p.rep
 const URGENTS = [
   {id:"clubAppel",when:"ete",from:"agent",kind:"appel",cond:()=>!defiOn("fidele")&&!p.loanFrom&&p.age<33&&!!urgentClub(),data:()=>({club:urgentClub()}),
    txt:d=>`Ton agent, essoufflé : « ${d.club.name} vient d'appeler ! Ils veulent une réponse dans l'heure, sinon ils prennent un autre joueur. »`,o:[
-    {t:"« Fonce, je signe ! »",run:d=>{ p.offers = [{club:d.club,years:RI(2,4),salary:urgentSalary(d.club),loan:false},...(p.offers||[])]; p.moments.push(`${p.year} · Signe en une heure à ${d.club.name}`); sign(0,true); return null; }},
+    {t:"« Fonce, je signe ! »",run:d=>{ p.offers = [{club:d.club,years:RI(2,4),salary:urgentSalary(d.club),loan:false},...(p.offers||[])]; p.moments.push(`${p.year} · Signe en une heure ${auC(d.club.name)}`); sign(0,true); return null; }},
     {t:"« Dis-leur que je réfléchis »",run:d=>{ if(chance(.5)){ p.offers = [{club:d.club,years:RI(2,4),salary:urgentSalary(d.club),loan:false},...(p.offers||[])]; return `${d.club.name} accepte d'attendre : leur offre t'attend dans ta liste.`; } return `Trop tard : ${d.club.name} a signé quelqu'un d'autre dans l'heure.`; }},
     {t:"« Je suis bien ici »",fx:{trust:3,moral:1},r:"Ton agent soupire. Ton coach, lui, l'apprend et apprécie.",next:{id:"clubAppel",d:[1,2]}}]},
   {id:"rivalAppel",when:"ete",from:"rival",kind:"appel",cond:()=>!defiOn("fidele")&&rivalActive()&&clubAllowed(p.rival.club)&&p.rival.club.name!==p.club.name&&p.rival.club.str>=p.club.str-4,data:()=>({club:{...p.rival.club}}),
-   txt:d=>`Numéro masqué… C'est ${p.rival.name} : « Mon club cherche un joueur comme toi. ${d.club.name}, toi et moi dans la même équipe. Tu imagines ? »`,o:[
+   txt:d=>`Numéro masqué, mais tu reconnais tout de suite sa voix : « Mon club cherche un joueur comme toi. ${d.club.name}, toi et moi dans la même équipe. Tu imagines ? »`,o:[
     {t:"« Pourquoi pas… »",run:d=>{ p.offers = [{club:d.club,years:RI(2,3),salary:urgentSalary(d.club),loan:false},...(p.offers||[])]; return `${d.club.name} t'envoie une offre dans la soirée. Elle est dans ta liste.`; }},
     {t:"« Plutôt arrêter le foot. »",fx:{moral:2,rival:1},r:"Il éclate de rire. « Je m'en doutais. À bientôt sur le terrain. »"}]},
   {id:"scoop",when:"ete",from:"dm",kind:"message",cond:()=>p.rep>=25,data:()=>({}),
@@ -36,7 +36,7 @@ const URGENTS = [
     {t:"« Je serai prêt. »",fx:{flag:"cap",rep:3,moral:3,play:4,moment:"Capitaine pour la première fois, appelé la veille au soir"},r:"Tu ne dors pas de la nuit. Le lendemain, tu mènes l'équipe."},
     {t:"« Je ne me sens pas prêt. »",fx:{moral:-1,trust:-1},r:"Il respecte ta réponse. Le brassard va à un autre."}]},
   {id:"selection",when:"saison",from:"dm",kind:"appel",cond:()=>p.age>=18&&p.caps<5&&p.lvl>=COUNTRIES[p.country].nat-10,data:()=>({}),
-   txt:()=>`Le sélectionneur de ${COUNTRIES[p.country].name} : « Un joueur s'est blessé. Tu es dans l'avion demain matin. »`,o:[
+   txt:()=>`Le sélectionneur ${pays(p.country,"de")} : « Un joueur s'est blessé. Tu es dans l'avion demain matin. »`,o:[
     {t:"« J'arrive ! »",fx:{nat:10,moral:5,moment:"Appelé en urgence en sélection"},r:"Tu fais ta valise en cinq minutes. Ta mère pleure de joie au téléphone."},
     {t:"« J'ai une petite gêne… »",fx:{form:3,nat:-4},r:"Il raccroche sèchement. Ce genre d'appel ne revient pas souvent."}]},
   {id:"pote",when:"saison",from:"pote",kind:"message",cond:()=>p.money>=60,data:()=>({}),

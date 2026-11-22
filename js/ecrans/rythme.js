@@ -53,7 +53,7 @@ function calmMatch(){
 function bigMatch(m){
   if(!m) return false;
   const big = m.type!=="derby"||!!m.stake;
-  if(big&&p.calm) m.log.unshift("🔥 La saison a été calme, mais ce match-là, tout le monde l'attendait.");
+  if(big&&p.calm) m.log.unshift("🔥 "+pick(["La saison a été calme, mais ce match-là, tout le monde l'attendait.","Une saison sans relief, jusqu'à ce soir. Ce match-là, personne ne veut le rater.","Tout le reste était un échauffement. Le vrai rendez-vous de la saison, c'est maintenant."]));
   return big;
 }
 // l'écran d'avant-saison : grande saison (et pourquoi) ou saison de transition (et le bouton pour la jouer quand même)
@@ -62,7 +62,7 @@ function paceCard(){
   const th = seasonThreads();
   const threads = th.length?`<ul class="threads">${th.map(x=>`<li>${x}</li>`).join("")}</ul>`:"";
   if(p.calm) return `<div class="card pace calm"><span class="pace-k">⏩ Saison de transition</span><p>Rien de décisif à l'horizon : cette saison passe vite. Deux moments, puis le match clé se joue sans toi à l'écran.</p>${threads}
-    <button class="btn ghost" onclick="playFullSeason()">Vivre cette saison en détail<small>Trois moments, les matchs de championnat et le match clé à jouer</small></button></div>`;
+    ${projectCard()}<button class="btn ghost" onclick="playFullSeason()">Vivre cette saison en détail<small>Trois moments, les matchs de championnat et le match clé à jouer</small></button></div>`;
   return `<div class="card pace big"><span class="pace-k">🔥 Grande saison</span><p>${esc(p.bigWhy||"")}</p>${threads}</div>`;
 }
 
@@ -73,7 +73,7 @@ function seasonThreads(){
   const cw = typeof crew==="function"?crew():[];
   for(const x of cw){
     const n = `<b>${esc(x.n)}</b>`;
-    if(x.role==="capitaine"&&x.age>=33&&!x.mem.adieu) out.push(`©️ ${n}, ton capitaine, approche de la fin. Il cherche à qui confier le brassard.`);
+    if(x.role==="capitaine"&&x.age>=33&&!x.mem.adieu) out.push(`©️ ${n}, ton capitaine, approche de la fin. ${["Il cherche à qui confier le brassard.","Il te regarde de plus en plus souvent à l'entraînement.","Dans le vestiaire, on se demande qui portera le brassard après lui."][p.year%3]}`);
     else if(x.role==="capitaine"&&!x.mem.repas) out.push(`©️ ${n}, le capitaine, observe comment tu t'intègres au groupe.`);
     else if(x.role==="mentor"&&!x.mem.seances) out.push(`🧓 ${n}, le vétéran, t'a à l'œil.`);
     else if(x.role==="mentor"&&x.age>=35&&!x.mem.crampons) out.push(`🧓 ${n} dispute sa dernière saison.`);
@@ -92,4 +92,58 @@ function threadBoost(e){
   if(/^rival/.test(id)&&rivalActive()) return 2;
   if(/^protege/i.test(id)&&p.protege) return 1.6;
   return 1;
+}
+
+/* ============ Le projet d'une saison de transition ============ */
+// Une saison calme n'est pas une saison vide : avant la reprise, le joueur se fixe un chantier personnel. Il ne
+// change rien au terrain pendant la saison ; il paie au bilan (qualités, confiance du coach, réputation, diplôme…).
+// État : p.project = {id, y}.
+const PROJECTS = {
+  poste:{i:"🔁",n:"Apprendre un second poste",d:"Le coach adore les joueurs polyvalents",ok:()=>p.pos!=="GB",
+    end:()=>{ const q = ensureQuals(); q.tec = clamp(q.tec+3,20,99); return {t:"Tu peux dépanner à un autre poste. Le coach t'appelle « mon couteau suisse ».",fx:{trust:6}}; }},
+  pied:{i:"🎯",n:"Travailler ton mauvais pied",d:"Une heure de plus, chaque jour, contre un mur",ok:()=>true,
+    end:()=>{ const q = ensureQuals(); q.tec = clamp(q.tec+4,20,99); q.sig = clamp(q.sig+2,20,99); return {t:"Ton mauvais pied n'en est plus vraiment un. Les défenseurs ne savent plus de quel côté te fermer.",fx:{}}; }},
+  corps:{i:"💪",n:"Prendre soin de ton corps",d:"Nutritionniste, sommeil, cryothérapie",ok:()=>p.age>=27,
+    end:()=>{ const q = ensureQuals(); q.phy = clamp(q.phy+4,20,99); return {t:"Ton corps te remercie. Le préparateur parle d'un « âge physique de 25 ans ».",fx:{form:8}}; }},
+  gamin:{i:"🌱",n:"Parrainer un gamin du centre",d:"Un jeune de 17 ans te suivra toute la saison",ok:()=>p.age>=25&&!p.protege,
+    start:()=>{ p.protege = {name:pick(FIRST)+" "+pick(LAST),age:17,lvl:RI(55,62),pot:RI(80,92),club:p.club.name}; },
+    end:()=>{ const q = ensureQuals(); q.lea = clamp(q.lea+4,20,99); return {t:`${p.protege?.name||"Ton filleul"} a signé son premier contrat pro. Il t'a offert le maillot de ses débuts.`,fx:{rep:3,moral:5}}; }},
+  langue:{i:"🌍",n:"Apprendre la langue du pays",d:"Des cours le soir, et la télé locale sans sous-titres",ok:()=>p.club.country!==p.country,
+    end:()=>({t:"Tu fais rire tout le vestiaire avec ton accent, mais on te comprend. Tu n'es plus l'étranger du groupe.",fx:{moral:6,trust:4}})},
+  image:{i:"📸",n:"Soigner ton image",d:"Un attaché de presse, des interviews choisies",ok:()=>p.rep>=25,
+    end:()=>({t:"Les journalistes parlent de toi autrement. Tu es devenu « un bon client ».",fx:{rep:6}})},
+  diplome:{i:"📋",n:"Diplômes d'entraîneur",d:"Des cours le lundi, pour préparer l'après",ok:()=>p.age>=28&&!p.flags.diplome,
+    end:()=>{ p.flags.diplome = true; p.moments.push(`${p.year+1} · Obtient son diplôme d'entraîneur`); return {t:"Diplôme en poche. Le jour où tu raccrocheras, un banc t'attendra peut-être.",fx:{moral:3}}; }},
+  video:{i:"📊",n:"Séances vidéo",d:"Chaque lundi avec l'analyste du club",ok:()=>true,
+    end:()=>{ const q = ensureQuals(); q.men = clamp(q.men+3,20,99); return {t:"Tu lis le jeu une seconde avant les autres. L'analyste dit que tu es son meilleur élève.",fx:{trust:4}}; }},
+  mental:{i:"🧠",n:"Préparation mentale",d:"Respiration, visualisation, gestion de la pression",ok:()=>true,
+    end:()=>{ const q = ensureQuals(); q.men = clamp(q.men+4,20,99); return {t:"Les grands soirs ne te font plus trembler. Tu dors même la veille des derbys.",fx:{moral:5}}; }},
+  affaires:{i:"💼",n:"Préparer tes affaires",d:"Un conseiller, des placements, un projet de restaurant",ok:()=>p.money>=200,
+    end:()=>({t:"Tes placements rapportent. Ton restaurant ouvre au printemps, ton nom en lettres dorées sur la façade.",fx:{money:Math.round(clamp(p.money*.08,40,600))}})}
+};
+// trois chantiers proposés, toujours les mêmes pour une saison donnée
+function projectChoices(){
+  const ok = Object.keys(PROJECTS).filter(k=>PROJECTS[k].ok());
+  return ok.map(k=>({k,h:hashStr(k+p.year+p.name)})).sort((a,b)=>a.h-b.h).slice(0,3).map(x=>x.k);
+}
+function setProject(k){
+  const P = PROJECTS[k]; if(!P) return;
+  p.project = {id:k,y:p.year};
+  if(P.start) P.start();
+  save(); route();
+}
+function projectCard(){
+  if(!p.calm||!paceOn()) return "";
+  const cur = p.project&&p.project.y===p.year?PROJECTS[p.project.id]:null;
+  if(cur) return `<p class="proj-now">${cur.i} Projet de la saison : <b>${esc(cur.n)}</b>. Le résultat tombera au bilan.</p>`;
+  return `<div class="proj-pick"><p><b>🎯 Ton projet pour cette saison calme</b><br><small class="muted">Un chantier perso, qui paie au bilan. Facultatif.</small></p>
+    ${projectChoices().map(k=>{ const P = PROJECTS[k]; return `<button class="btn" onclick="setProject('${k}')">${P.i} ${esc(P.n)}<small>${esc(P.d)}</small></button>`; }).join("")}</div>`;
+}
+// au bilan : le projet de la saison paie (à appeler après la mise à jour des jauges de fin de saison)
+function projectEnd(){
+  const pr = p.project; if(!pr||pr.y!==p.year) return null;
+  const P = PROJECTS[pr.id]; p.project = null; if(!P) return null;
+  const q0 = {...ensureQuals()}, r = P.end(), q1 = ensureQuals();
+  const dq = Object.keys(q1).filter(k=>q1[k]!==q0[k]).map(k=>({k:qualName(k),v:q1[k]-q0[k]}));
+  return {n:P.n,i:P.i,t:r.t,d:dq.concat(applyFx(r.fx))};
 }

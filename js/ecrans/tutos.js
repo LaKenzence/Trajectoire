@@ -74,6 +74,35 @@ const MINI_DEMO = {
     ${dTap(150, 30, .46)}${dSay("PASSE DÉCISIVE !", .64, .88)}${dCap("Passe dès que la ligne devient verte")}`)
 };
 MINI_DEMO.shootout = MINI_DEMO.shoot;
+// le corner arrive au cercle : on saute avant le défenseur, le ballon file au fond
+MINI_DEMO.tete = () => dGoalScene(`${dKeeper("#4f6bd8", [[0, "175 108"], [.55, "175 108"], [.66, "205 100"], [1, "205 100"]], [.55, .95, 60])}
+    <circle cx="150" cy="78" r="16" fill="none" stroke-width="3" stroke-dasharray="6 5">${dA("stroke", [[0, "#ffffff"], [.4, "#ffffff"], [.41, "#3ee08f"], [.56, "#3ee08f"], [.57, "#ffffff"], [1, "#ffffff"]])}</circle>
+    <g>${dT([[0, "150 150"], [.44, "150 150"], [.5, "150 128"], [.62, "150 150"], [1, "150 150"]])}${dPlayer("#f7c548", true)}</g>
+    <g transform="translate(172 152)">${dPlayer("#ff6b6b")}</g>
+    <g><animateMotion dur="${DEMO_DUR}s" repeatCount="indefinite" path="M310 20Q230 10 150 78L100 60" keyPoints="0;0;.8;1;1" keyTimes="0;.08;.5;.62;1" calcMode="linear"/>${dBall(6)}</g>
+    ${dTap(260, 150, .46)}${dSay("BUT DE LA TÊTE !", .64, .9)}${dCap("Saute quand le ballon entre dans le cercle")}`);
+// centre dans ta surface : tu sautes le premier et tu dégages loin
+MINI_DEMO.tete_def = () => dPitch(`<path d="M14 55V125" stroke="#fff" stroke-width="5"/><path d="M14 40H70V140H14" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>
+    <circle cx="70" cy="90" r="18" fill="none" stroke-width="3" stroke-dasharray="6 5">${dA("stroke", [[0, "#ffffff"], [.42, "#ffffff"], [.43, "#3ee08f"], [.58, "#3ee08f"], [.59, "#ffffff"], [1, "#ffffff"]])}</circle>
+    <g transform="translate(86 104)">${dPlayer("#ff6b6b")}</g>
+    <g>${dT([[0, "60 96"], [.46, "60 96"], [.5, "66 88"], [.62, "60 96"], [1, "60 96"]])}${dPlayer("#f7c548", true)}</g>
+    <g><animateMotion dur="${DEMO_DUR}s" repeatCount="indefinite" path="M300 16Q190 -10 70 90L260 20" keyPoints="0;0;.62;1;1" keyTimes="0;.1;.5;.7;1" calcMode="linear"/>${dBall(6)}</g>
+    ${dTap(240, 140, .47)}${dSay("DÉGAGÉ !", .6, .88)}${dCap("Saute quand le ballon arrive dans le cercle")}`);
+// la jauge de puissance : on frappe quand l'aiguille est dans le vert, le ballon traverse le terrain
+MINI_DEMO.transversale = () => dPitch(`<g transform="translate(36 146)">${dPlayer("#f7c548", true)}</g><g transform="translate(286 36)">${dPlayer("#3ee08f")}</g>
+    <g transform="translate(150 80)">${dPlayer("#ff6b6b")}</g><g transform="translate(300 60)">${dPlayer("#ff6b6b")}</g>
+    <path d="M48 140Q170 -10 280 40" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="3" stroke-dasharray="8 7"/>
+    <rect x="100" y="150" width="120" height="12" rx="3" fill="#141633" fill-opacity=".8"/><rect x="170" y="150" width="22" height="12" fill="#3ee08f"/>
+    <rect y="146" width="5" height="20" fill="#f7c548">${dA("x", [[0, 100], [.2, 160], [.38, 180], [.39, 180], [1, 180]])}</rect>
+    <g><animateMotion dur="${DEMO_DUR}s" repeatCount="indefinite" path="M48 140Q170 -10 280 40" keyPoints="0;0;1;1" keyTimes="0;.42;.72;1" calcMode="linear"/>${dBall(5)}</g>
+    ${dTap(250, 120, .38)}${dSay("TRANSVERSALE !", .72, .92)}${dCap("Frappe quand l'aiguille est dans le vert")}`);
+// le viseur balaie le cadre : on frappe près d'un poteau, le gardien plonge trop tard
+MINI_DEMO.frappe = () => dGoalScene(`<rect x="70" y="36" width="30" height="76" fill="#3ee08f" fill-opacity=".35"/><rect x="220" y="36" width="30" height="76" fill="#3ee08f" fill-opacity=".35"/>
+    ${dKeeper("#4f6bd8", [[0, "160 108"], [.5, "160 108"], [.62, "205 100"], [1, "205 100"]], [.5, .95, 70])}
+    <rect y="30" width="5" height="88" fill="#f7c548">${dA("x", [[0, 150], [.18, 80], [.3, 200], [.4, 234], [.41, 234], [1, 234]])}</rect>
+    <g>${dT([[0, "160 160"], [.42, "160 160"], [.6, "236 50"], [.9, "236 50"], [.901, "160 160"], [1, "160 160"]])}${dBall()}</g>
+    ${dTap(60, 150, .4)}${dSay("LUCARNE !", .62, .9)}${dCap("Frappe quand le viseur est dans le vert")}`);
+
 
 function miniDemo(kind) {
   const d = MINI_DEMO[kind];

@@ -558,7 +558,13 @@ const Stade3D = (() => {
     const done = () => { R.actors.clear(); };
     return (R.renderer.compileAsync ? R.renderer.compileAsync(R.scene, R.camera) : Promise.resolve(R.renderer.compile(R.scene, R.camera))).then(done, done);
   }
+  // les couleurs des clubs arrivent souvent en hsl(h s% l%) (syntaxe moderne, sans virgules) : Three.js ne la lit pas
+  // et peignait ces maillots en blanc. On les passe en hsl(h, s%, l%), que Three.js comprend.
+  const hslComma = c => typeof c === "string" ? c.replace(/hsl\(\s*([\d.]+)(?:deg)?\s+([\d.]+)%\s+([\d.]+)%\s*\)/, "hsl($1, $2%, $3%)") : c;
+  const team3 = t => t ? { ...t, a: hslComma(t.a), b: hslComma(t.b) } : t;
+  const teams3 = o => ({ ...o, us: team3(o.us), them: team3(o.them) });
   function attach(stage, opts) {
+    opts = teams3(opts);
     if (!ok()) return null;
     try { if (!R) setup(); } catch (e) { state = "off"; return null; }
     const cv = R.renderer.domElement;
@@ -604,6 +610,7 @@ const Stade3D = (() => {
   // regarde le terrain de côté, comme à la télévision : le haut de la vue de dessus est le fond de l'image
   const DPX = 32;
   function attachDuel(stage, opts, cast) {
+    opts = teams3(opts);
     if (!ok()) return null;
     try { if (!R) setup(); } catch (e) { state = "off"; return null; }
     const cv = R.renderer.domElement;
@@ -617,15 +624,16 @@ const Stade3D = (() => {
       const a = makeActor({ ...teamLook(team, !!c.you, c.you ? opts.look : null, !!c.gk), number: c.number || (c.you ? opts.number || 10 : 2 + i * 3) }, true);
       R.actors.add(a.g); A[c.id] = a;
     });
-    const side = opts.kind === "tacle" || opts.kind === "aerien" ? 1 : -1;
+    const side = opts.kind === "tacle" || opts.kind === "aerien" || opts.kind === "tete_def" ? 1 : -1;
     const cm = R.stands.children[0].children[1].material; if (cm.map) cm.map.dispose(); cm.map = crowdTex(opts.us.a); cm.needsUpdate = true;
     if (R.crowd) R.crowd.color(opts.us.a);
     dressStadium(opts.us, opts.them); venue(opts);
     R.sun.target.position.set(0, 0, 10); R.sun.position.set(-12, 30, 30);
-    R.view = { duel: true, A, side, opts, introAt: null };
+    // la passe se joue à l'entrée de la surface, pas devant le but : la scène recule de 12 m
+    R.view = { duel: true, A, side, opts, introAt: null, zOff: { passe: 12, transversale: 23, frappe: 14 }[opts.kind] || 0 };
     return { drawDuel, toScreen: duelToScreen, detach };
   }
-  const dW = (x, y, h = 0) => { const s = R.view.side; return new T.Vector3(s * (210 - y) / DPX, h, s > 0 ? (x - 10) / DPX : (790 - x) / DPX); };
+  const dW = (x, y, h = 0) => { const s = R.view.side; return new T.Vector3(s * (210 - y) / DPX, h, (s > 0 ? (x - 10) / DPX : (790 - x) / DPX) + (R.view.zOff || 0)); };
   function duelToScreen(x, y, h = 0) { const p = dW(x, y, h); return project(p.x, p.y, p.z); }
   // v : { now, actors: { id: { x, y, h?, face: [dx, dy], anim, time, loop?, ip?, cheer? } }, ball: { x, y, h } | null, camX, shake, intro }
   function drawDuel(v) {

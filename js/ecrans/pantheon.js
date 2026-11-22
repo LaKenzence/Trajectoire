@@ -73,17 +73,19 @@ function recordCareer(){
   recordTitles(h); recordRival(h);
   saveHof(h); p.hofSaved = true; save();
 }
+const achRows = (list,h)=>list.map(a=>`<div class="ach ${h.ach[a.id]?"":"off"}"><span class="i">${a.i}</span><div><b>${a.n}</b><small>${a.d}</small></div></div>`).join("");
 function hofScreen(){
   const h = loadHof(), n = Object.keys(h.ach).length;
   p = null;
-  $("#app").innerHTML = `<div class="fade" style="padding-top:20px">
+  $("#app").innerHTML = `<div class="fade" style="padding-top:20px">${topHome()}
     <header class="cosmos"><div class="muted">Toutes tes carrières</div><h1><span class="emo" aria-hidden="true">🏛️</span> Panthéon</h1></header>
-    <div class="card"><h3>Succès · ${n}/${ACH.length}</h3>
-      ${ACH.map(a=>`<div class="ach ${h.ach[a.id]?"":"off"}"><span class="i">${a.i}</span><div><b>${a.n}</b><small>${a.d}</small></div></div>`).join("")}</div>
-    ${typeof gearCard==="function"?gearCard():""}
-    ${titlesHof(h)}
     <div class="card"><h3>Les plus grandes carrières</h3>${h.careers.length?`<div class="tablewrap"><table><tr><th>#</th><th>Joueur</th><th>Saisons</th><th>Buts</th><th>🏆</th><th>🌟</th><th>Max</th></tr>
       ${h.careers.slice(0,10).map((c,i)=>`<tr><td>${i+1}</td><td>${flag(c.country)} ${esc(c.name)}${c.hard?" 👑":""}<br><small class="muted">${POS[c.pos].n}${c.after?" · "+esc(c.after):""}</small></td><td>${c.seasons}</td><td>${c.goals}</td><td>${c.trophies}</td><td>${c.stars}</td><td>${c.peak}</td></tr>`).join("")}</table></div>`:'<p class="muted">Termine une carrière pour entrer au Panthéon.</p>'}</div>
+    <div class="card"><h3>Succès · ${n}/${ACH.length}</h3>
+      ${achRows(ACH.filter(a=>h.ach[a.id]),h)||`<p class="muted" style="margin:0 0 6px;font-size:.88rem">Aucun succès pour l'instant : ta première carrière t'attend.</p>`}
+      ${n<ACH.length?`<details class="brief-fold"><summary>Voir les ${ACH.length-n} succès à débloquer</summary>${achRows(ACH.filter(a=>!h.ach[a.id]),h)}</details>`:""}</div>
+    ${typeof gearCard==="function"?gearCard():""}
+    ${titlesHof(h)}
     ${dynHof(h)}
     <div class="card"><h3>🌍 Records de tous les joueurs</h3><div id="records" class="muted">Chargement…</div></div>
     <button class="btn primary" onclick="home()">← Accueil</button></div>`;
@@ -97,7 +99,7 @@ function shareText(){
   return [`⚽ Ma carrière dans Trajectoire${p.hard?" (mode Légende)":""}`,
     `${p.name} · ${COUNTRIES[p.country].name} · ${POS[p.pos].n}`,
     `${p.seasons.length} saisons · ${t.apps} matchs · ${p.pos==="GB"?t.cs+" clean sheets":t.g+" buts"} · ${t.a} passes décisives`,
-    `🏆 ${s.trophies} trophées${s.stars?` · 🌟 ${s.stars} Ballon(s) d'Étoile`:""} · ${p.caps} sélections · niveau max ${s.peak}`,
+    `🏆 ${s.trophies} trophées${s.stars?` · 🌟 ${nPl(s.stars,"Ballon")} d'Étoile`:""} · ${p.caps} sélections · niveau max ${s.peak}`,
     `Clubs : ${p.clubsHist.join(" → ")}`,
     p.rival?`⚔️ Rivalité contre ${p.rival.name} : ${s.rivalWon?"gagnée":"perdue"}`:"",
     p.after?`Après : ${p.after.n}`:""].filter(Boolean).join("\n");
@@ -180,7 +182,7 @@ function dailyScreen(){
   p = null; unseed();
   const o = dailyDraft(), saved = loadSlot("daily");
   const inProgress = saved&&saved.daily===o.daily&&!saved.after;
-  $("#app").innerHTML = `<div class="fade" style="padding-top:20px">
+  $("#app").innerHTML = `<div class="fade" style="padding-top:20px">${topHome()}
     <div class="muted">Défi du jour · ${o.daily}</div><h1><span class="emo" aria-hidden="true">📅</span> Même départ pour tous</h1>
     <p class="story">Aujourd'hui, tout le monde commence avec le même joueur et les mêmes coups du sort en début de saison. Tes choix feront la différence. Le meilleur score de la journée l'emporte.</p>
     <div class="card"><h3>${flag(o.country)} ${esc(o.name)}</h3>
@@ -318,7 +320,7 @@ function statsScreen(){
   const t = careerTotals(), grouped = {};
   p.trophies.forEach(x=>{ const k = x.t.replace(/ \d{4}$/,""); grouped[k] = (grouped[k]||[]).concat(x.y); });
   const avg = p.seasons.length?(p.seasons.reduce((a,s)=>a+ +s.rating,0)/p.seasons.length).toFixed(2):"–";
-  render(`<div class="muted">Mes stats · ${p.seasons.length} saison(s)</div>
+  render(`<div class="muted">Mes stats · ${nPl(p.seasons.length,"saison")}</div>
     <div class="stats"><div class="stat"><b>${t.apps}</b><span>matchs</span></div>${p.pos==="GB"?`<div class="stat"><b>${t.cs}</b><span>clean sheets</span></div>`:`<div class="stat"><b>${t.g}</b><span>buts</span></div>`}<div class="stat"><b>${t.a}</b><span>passes déc.</span></div><div class="stat"><b>${avg}</b><span>note moy.</span></div><div class="stat"><b>${p.caps}</b><span>sélections</span></div><div class="stat"><b>${p.trophies.length}</b><span>trophées</span></div></div>
     <div class="card"><h3>Palmarès</h3>${Object.keys(grouped).length?Object.entries(grouped).map(([k,ys])=>`<div class="trophy">🏆 ${ys.length>1?ys.length+"× ":""}${k} <span class="muted" style="font-weight:400">(${ys.join(", ")})</span></div>`).join(""):'<span class="muted">Pas encore de trophée.</span>'}</div>
     ${p.seasons.length?`<div class="card"><h3>Saison par saison</h3><div class="tablewrap"><table><tr><th>Saison</th><th>Club</th><th>MJ</th><th>${p.pos==="GB"?"CS":"B"}</th><th>PD</th><th>Note</th><th>Cl.</th></tr>${p.seasons.map(s=>`<tr><td>${s.y}</td><td>${crest(s.club,14)} ${esc(s.club)}</td><td>${s.apps}</td><td>${p.pos==="GB"?s.clean:s.goals}</td><td>${s.assists}</td><td>${s.rating}</td><td>${s.rank}${s.tr?" 🏆":""}</td></tr>`).join("")}</table></div></div>`:""}

@@ -60,9 +60,7 @@ function flashScore(side){
 // la dernière action d'un match serré : bandeau, cadre qui bat, cœur qui cogne
 function liveDecisive(m){
   const decide = document.querySelector(".decide");
-  if(!decide||m.pending||m.talk||m.awaitTactic||m.simDone||m.step>=m.mins.length) return;
-  const last = m.step>=m.mins.length-1||m.mins[m.step]>=80;
-  if(!last||Math.abs(m.us-m.them)>1||decide.querySelector(".decisive-k")) return;
+  if(!decide||m.pending||m.talk||m.awaitTactic||!isDecisive(m)||decide.querySelector(".decisive-k")) return;
   decide.classList.add("decisive");
   const k = document.createElement("p"); k.className = "decisive-k";
   k.textContent = m.us===m.them?"Moment décisif · le prochain but gagne le match":m.us>m.them?"Moment décisif · tiens ce résultat":"Moment décisif · il faut égaliser";

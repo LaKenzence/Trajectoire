@@ -1,6 +1,6 @@
 // Trajectoire · Coups de pied arrêtés jouables : penalty (tir ou plongeon), séance de tirs au but, coup franc (tir ou arrêt)
 // Moteur repris de Penalty de Minuit (même dessin du but, du gardien et du ballon), adapté aux matchs de carrière.
-// Penalty.play({mode, skill, pressure, title, sub, us, them, youGK, number, weather}) renvoie une promesse {success, us, them, mine}.
+// Penalty.play({mode, skill, pressure, title, sub, us, them, youGK, allRoles, number, weather}) renvoie une promesse {success, us, them, mine}.
 // mode : "shoot" (tu tires), "save" (tu plonges), "shootout" (séance), "fk" (tu tires le coup franc), "fksave" (tu l'arrêtes)
 // Images des mini-jeux (tribunes, ballon, pelouse vue du ciel), partagées avec duel.js : chargées une fois et dessinées
 // dès qu'elles sont prêtes ; sans elles (premier lancement hors ligne, tests), le dessin d'origine prend le relais.
@@ -76,7 +76,8 @@ const Penalty = (() => {
     if (o.mode === "save" || o.mode === "fksave") return { side: "them", ctl: "dive" };
     const usTurn = S.kickIndex % 2 === 0;
     if (usTurn) return { side: "us", ctl: "shoot", mine: !o.youGK && (S.us.length === (S.myRank || 0) || (S.us.length >= 5 && S.us.length % 3 === 2)) };
-    return { side: "them", ctl: "dive", mine: !!o.youGK };
+    // un joueur de champ ne plonge pas : son gardien s'en charge (sauf à l'entraînement, où on joue tous les rôles)
+    return { side: "them", ctl: o.youGK || o.allRoles ? "dive" : "auto", mine: !!o.youGK };
   }
 
   const goals = a => a.filter(Boolean).length;
@@ -287,15 +288,17 @@ const Penalty = (() => {
     if (S.state === "style") { S.style = "place"; showStyles(false); }
     // le geste est prolongé jusqu'au but, adouci (0,62) pour qu'un geste naturel vise le coin plutôt que le poteau
     const b = rest(), toGoal = (b.y - 191) / -dy * 0.62;
-    const p = cl((len / ms - 0.22) / 1.1, 0.12, 1), height = cl((len - 70) / 200, 0, 1);
+    // la puissance se mesure en pixels réels de l'écran (et non en unités du dessin) : sur un petit téléphone, un coup de
+    // pouce ordinaire ne doit pas envoyer le ballon dans les nuages. Courbe progressive : 1 px/ms donne une frappe posée
+    // (0,46), 2 une frappe franche (0,71), 3 une grosse frappe (0,85) ; seul un geste brutal (au-delà de ~5 px/ms) s'envole
+    const rr = S.cv.getBoundingClientRect(), kpx = rr.width ? rr.width / W : 1, v = Math.hypot(s.s1.x - s.s0.x, s.s1.y - s.s0.y) * kpx / ms;
+    const p = cl(1 - Math.exp(-v / 1.6), 0.15, 1), height = cl((len - 70) / 200, 0, 1);
     // le talent et la pression décident de la précision du geste
     const err = (1 - S.opts.skill) * 14 + pressureNow() * 18;
     S.aim = { x: cl(b.x + dx * toGoal, 120, 680) + rnd(-err, err), y: G.b - 12 - height * (G.b - G.t - 24) + rnd(-err, err) };
     // en 3D, le ballon va là où le doigt est lâché (prolongé au ras du sol si on lâche avant le but)
     if (S.v3) { const g = S.v3.aimFromSwipe(s.s0, s.s1); S.aim = { x: cl(g.x, 120, 680) + rnd(-err, err), y: g.y + rnd(-err, err) }; }
     S.power = p;
-    // en 3D, la puissance se mesure à l'écran : un geste franc donne une bonne frappe, seul un geste brutal s'envole
-    if (S.v3) { const sl = Math.hypot(s.s1.x - s.s0.x, s.s1.y - s.s0.y); S.power = cl((sl / ms - 0.35) / 2.4, 0.15, 1); }
     if (isFk()) {
       // l'effet : de quel côté le geste s'est courbé (écart maximal à la ligne droite)
       let dev = 0;
@@ -767,7 +770,7 @@ const Penalty = (() => {
     const shooterSide = S.kick ? S.kick.side : tr.side;
     const shooter = shooterSide === "us" ? o.us : o.them, keeper = shooterSide === "us" ? o.them : o.us;
     const youShoot = shooterSide === "us" && (tr.ctl === "shoot" || tr.ctl === "fk");
-    const youKeep = shooterSide === "them" && (o.mode === "save" || o.mode === "fksave" || o.mode === "shootout");
+    const youKeep = shooterSide === "them" && tr.ctl === "dive";
     const kp = keeperPos(S.kick, now), b = ballAt(S.kick, now), k = S.kick;
     const behindNet = k && k.outcome === "goal" && now > k.start + k.dur;
     // en coup franc, le ballon passe derrière le mur une fois qu'il l'a dépassé
@@ -835,7 +838,7 @@ const Penalty = (() => {
     const ctx = S.ctx, o = S.opts, now = S.now, d = S.dpr, k = S.kick, v3 = S.v3;
     const tr = S.turn || turn(), shooterSide = k ? k.side : tr.side;
     const youShoot = shooterSide === "us" && (tr.ctl === "shoot" || tr.ctl === "fk");
-    const youKeep = shooterSide === "them" && (o.mode === "save" || o.mode === "fksave" || o.mode === "shootout");
+    const youKeep = shooterSide === "them" && tr.ctl === "dive";
     v3.draw({ now, dt: S.dt, state: S.state, kick: k, ball: ballAt(k, now), rest: rest(), keeper: keeperPos(k, now), keeperHome: S.kHome,
       shooterSide, youShoot, youKeep, run: S.state === "prep" ? cl((now - S.prepStart) / 1500, 0, 1) : 1, tell: S.state === "prep" ? S.tell : 0,
       number: youShoot && tr.mine !== false ? (o.number || 9) : isFk() ? 10 : 7 + ((S.kickIndex - (S.state === "after" ? 1 : 0)) >> 1) % 5 * 2, wall: isFk() ? S.wall : null,
@@ -926,9 +929,30 @@ const Penalty = (() => {
 /* ============ Branchements dans la carrière ============ */
 // Niveau de difficulté des penalties : niveau du joueur, forme, moral et talent « Sang-froid »
 function penSkill(){ return clamp((p.lvl-40)/55+(has("sangfroid")?.12:0)+(p.moral-50)/400+(p.form-60)/500+(typeof qd==="function"?qd("tec")/150+qd("men")/200:0),0,1); }
+// une couleur de maillot (#rrggbb ou hsl(h s% l%)) en rouge, vert, bleu
+function kitRgb(col){
+  const s = String(col||"#000"), m = s.match(/hsl\(\s*([\d.]+)[\s,]+([\d.]+)%[\s,]+([\d.]+)%/);
+  if(m){
+    const h = +m[1]/360, sa = +m[2]/100, l = +m[3]/100, q = l<.5?l*(1+sa):l+sa-l*sa, p0 = 2*l-q;
+    const f = t=>{ t = (t+1)%1; return t<1/6?p0+(q-p0)*6*t:t<.5?q:t<2/3?p0+(q-p0)*(2/3-t)*6:p0; };
+    return [f(h+1/3),f(h),f(h-1/3)].map(v=>Math.round(v*255));
+  }
+  const n = parseInt(s.slice(1,7),16); return [n>>16&255,n>>8&255,n&255];
+}
+// écart entre deux couleurs, pondéré comme l'œil : au-dessous de ~160, deux maillots se confondent sous les projecteurs
+function kitGap(a,b){
+  const x = kitRgb(a), y = kitRgb(b), r = (x[0]+y[0])/2;
+  return Math.sqrt((2+r/256)*(x[0]-y[0])**2+4*(x[1]-y[1])**2+(2+(255-r)/256)*(x[2]-y[2])**2);
+}
+// l'adversaire passe en tenue extérieure quand les deux maillots se ressemblent (comme un vrai arbitre l'exigerait)
+function awayKit(us,them){
+  if(kitGap(us.a,them.a)>=160) return them;
+  const alt = [them.b,"#f2f2f2","#1d1f2b","#d23a3a","#2f6fe0","#f5c542","#2fa36b"].filter(Boolean).sort((x,y)=>kitGap(us.a,y)-kitGap(us.a,x))[0];
+  return {a:alt,b:kitGap(alt,"#ffffff")<200?"#1d1f2b":"#ffffff"};
+}
 function penTeams(opp){
   const usName = p.match?.type==="monde"?COUNTRIES[p.country].name:p.club.name;
-  const us = clubColors(usName), them = clubColors(opp?opp.name:"Adversaire");
+  const us = clubColors(usName), them = awayKit(us,clubColors(opp?opp.name:"Adversaire"));
   return {us:{name:usName,short:usName.split(" ").pop(),a:us.a,b:us.b},them:{name:opp?opp.name:"Adversaire",short:opp?opp.name.split(" ").pop():"Adversaire",a:them.a,b:them.b}};
 }
 const MINI_TITLES = {shoot:"Penalty décisif",save:"Penalty à arrêter",fk:"Coup franc direct",fksave:"Coup franc à arrêter"};
@@ -972,7 +996,7 @@ function miniInterrupted(kind){
 function playMini(mode,title,opp){
   if(ui.quick||typeof Penalty==="undefined"||!minisOn("pen")) return Promise.resolve(null);
   if(miniInterrupted(mode)) return Promise.resolve(false);
-  return miniBrief(mode,title||MINI_TITLES[mode],opp?`Face à ${opp.name}`:"").then(go=>!go?Math.random()<(mode==="shoot"?0.72:mode==="fk"?0.3:0.35)+penSkill()*0.15:(miniLockStart(mode),Penalty.play({mode,look:p.look,skill:penSkill(),pressure:penPressure(),title:title||MINI_TITLES[mode],sub:(miniVenue().small?SMALL_SUBS:MINI_SUBS)[mode],number:shirtNumber(),...miniVenue(),...penTeams(opp)}))
+  return miniBrief(mode,title||MINI_TITLES[mode],opp?`Face ${oppA(opp)}`:"").then(go=>!go?Math.random()<(mode==="shoot"?0.72:mode==="fk"?0.3:0.35)+penSkill()*0.15:(miniLockStart(mode),Penalty.play({mode,look:p.look,skill:penSkill(),pressure:penPressure(),title:title||MINI_TITLES[mode],sub:(miniVenue().small?SMALL_SUBS:MINI_SUBS)[mode],number:shirtNumber(),...miniVenue(),...penTeams(opp)}))
     .then(r=>{ miniLockEnd(); recordPens(mode,r.mine); if(!r.skipped) recordMini(mode,r.success); return r.success; }));
 }
 function playShootout(m){
@@ -990,9 +1014,14 @@ function tagPen(a){
     if(/Coup franc adverse à vingt mètres/.test(a.txt)&&/^Lire la frappe/.test(o.t)) o.pen = "fksave";
     // les gestes de chaque poste (duel.js)
     if(/^(Dribbler le gardien|Contrôler et accélérer|Feinte de corps et sortie balle au pied|Dribbler l'attaquant)$/.test(o.t)) o.duel = "dribble";
-    if(/^(Passe en profondeur|Décaler à droite|Amortir et servir l'attaquant|Servir l'ailier lancé)$/.test(o.t)) o.duel = "passe";
+    if(/^(Passe en profondeur|Décaler à droite|Servir l'ailier lancé)$/.test(o.t)) o.duel = "passe";
     if(/^(Tacle glissé|Fondre sur le porteur|Le serrer de près|Le presser pour récupérer)$/.test(o.t)) o.duel = "tacle";
     if(/^Sortir dans la foule$/.test(o.t)) o.duel = "aerien";
+    // un joueur de champ ne joue jamais la sortie du gardien : son duel aérien est une tête
+    if(o.duel==="aerien"&&p.pos!=="GB") o.duel = "tete_def";
+    if(/^(Plonger de la tête|Attaquer le premier poteau|Tête plongeante|Dévier de la tête)$/.test(o.t)) o.duel = "tete";
+    if(/^Frappe (de 30 mètres|lointaine|de loin|enroulée)/.test(o.t)) o.duel = "frappe";
+    if(/^Longue diagonale|^Renverser le jeu|transversale/i.test(o.t)) o.duel = "transversale";
   });
   return a;
 }

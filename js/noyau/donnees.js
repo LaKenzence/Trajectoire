@@ -48,7 +48,11 @@ const pick = a=>a[Math.floor(Math.random()*a.length)];
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 const chance = p=>Math.random()<p;
 const shuffle = a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
-const money = k=>k>=1000?(k/1000).toFixed(1).replace('.',',')+" M€":Math.round(k)+" k€";
+const money = k=>k<0?"−"+money(-k):k>=1000?(k/1000).toFixed(1).replace('.',',')+" M€":Math.round(k)+" k€";
+// lien « ← Accueil » qui reste en haut de l'écran pendant qu'on fait défiler les longues pages du menu
+const topHome = ()=>`<button class="linkbtn top-home" onclick="home()">← Accueil</button>`;
+// « 1 trophée », « 3 trophées » (et « 0 trophée », comme en français) au lieu de « trophée(s) »
+const nPl = (n,w,pl)=>`${n} ${Math.abs(n)>=2?(pl||w+"s"):w}`;
 const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 // drapeaux dessinés en CSS : les emojis de drapeaux ne s'affichent pas sous Windows
 const flag = code=>`<i class="fl fl-${code}" title="${COUNTRIES[code].name}"></i>`;
@@ -61,8 +65,21 @@ let ui = {};       // état d'écran temporaire
 // trois emplacements de carrière, plus un pour le défi du jour
 let slot = (()=>{ try{ return localStorage.getItem("trajectoire_slot")||"1"; }catch(e){ return "1"; } })();
 // les articles devant un nom de club : « au Racing » mais « à l'Olympique », « du Racing » mais « de l'Olympique »
-const elide = n=>/^[aeiouyhàâéèêîôûAEIOUYHÀÂÉÈÊÎÔÛ]/.test(String(n||""));
+// un Y suivi d'une voyelle ne s'élide pas : « du Yiğit Sivaskent », mais « d'Ypres »
+const elide = n=>/^([aeiouhàâéèêîôûAEIOUHÀÂÉÈÊÎÔÛ]|[yY][^aeiouyàâéèêîôû])/.test(String(n||""));
+// devant un nom de personne : « d'Arthur », « de Kylian »
+const deN = n=>(elide(n)?"d'":"de ")+n;
 const auC = n=>(elide(n)?"à l'":"au ")+n, duC = n=>(elide(n)?"de l'":"du ")+n, leC = n=>(elide(n)?"l'":"le ")+n, LeC = n=>(elide(n)?"L'":"Le ")+n;
+// les articles devant un pays : « avec la France », « du Brésil », « de l'Espagne », « aux États-Unis »
+const PAYS_GENRE = {PT:"m",BR:"m",SN:"m",MA:"m",JP:"m",NL:"p",US:"p"};
+function pays(code,mode){
+  const n = COUNTRIES[code].name, g = PAYS_GENRE[code]||(elide(n)?"v":"f");
+  return ({le:{f:"la ",m:"le ",v:"l'",p:"les "},de:{f:"de la ",m:"du ",v:"de l'",p:"des "},en:{f:"en ",m:"au ",v:"en ",p:"aux "}}[mode||"le"][g])+n;
+}
+// « face à la France » pour une sélection, « face au Racing » pour un club
+const oppA = o=>COUNTRIES[o.country]&&COUNTRIES[o.country].name===o.name?"à "+pays(o.country):auC(o.name);
+// « la Coupe Continentale », mais « le Championnat du Monde »
+const tLe = n=>(/^Coupe/.test(n)?"la ":"le ")+n, tDu = n=>(/^Coupe/.test(n)?"de la ":"du ")+n, tAu = n=>(/^Coupe/.test(n)?"à la ":"au ")+n;
 const slotKey = k=>"trajectoire_save_"+k;
 function loadSlot(k){ try{ return JSON.parse(localStorage.getItem(slotKey(k))); }catch(e){ return null; } }
 function save(){ if(!p) return; try{ localStorage.setItem(slotKey(slot),JSON.stringify(p)); localStorage.setItem("trajectoire_slot",slot); }catch(e){} }

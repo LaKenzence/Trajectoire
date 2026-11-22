@@ -34,13 +34,28 @@ const CF_WHO = {
   nino:{n:"Nino",r:"9 ans",col:"#e67e22"},
   ferri:{n:"Dario Ferri",r:"Capitaine de l'équipe pro",col:"#7a1f2b"}
 };
+// ce que chacun porte : l'imperméable de Vasseur, le costume trop bleu de Kessler, le gilet et les lunettes de la
+// grand-mère… Appliqué au moment de dessiner, donc aussi pour les parties commencées avant
+function cfWear(who){
+  if(who==="vasseur") return {wear:"coat",old:1};
+  if(who==="kessler") return {wear:"suit"};
+  if(who==="ferri") return {wear:"hoodie"};
+  if(who==="sacha") return {wear:"hoodie"};
+  if(who==="par") return ({gm:{wear:"cardigan",glasses:1,old:1,hairC:5},mere:{wear:"cardigan"},pere:{wear:"coat"},frere:{wear:"hoodie"},soeur:{wear:"hoodie"}})[cfC().par]||{};
+  return {};
+}
+// les portraits (img/perso/, JPEG de 320 px) : on déclare ici ceux qui existent ; les autres gardent l'avatar dessiné
+const CF_PORTRAITS = new Set(["vasseur","kessler","sacha","nino","ferri","proche-gm","proche-mere","proche-pere","proche-frere","proche-soeur"]);
+function cfPortrait(who){ const k = who==="par"?"proche-"+cfC().par:who; return CF_PORTRAITS.has(k)?`img/perso/${k}.jpg`:null; }
 function cfSay(who,text){
-  const w = CF_WHO[who], look = cfC().looks[who]||randomLook();
+  const w = CF_WHO[who], look = {...(cfC().looks[who]||randomLook()),...cfWear(who)}, pic = cfPortrait(who);
   const name = who==="par"?cfPar().appel:w.n, role = who==="par"?cfCap(cfPar().n):w.r;
-  return `<div class="cf-say cf-${who}">${avatarSvg(look,46,w.col)}<div><b>${esc(name)}<small>${esc(role)}</small></b><p>${T(text)}</p></div></div>`;
+  return `<div class="cf-say cf-${who}">${pic?`<img class="cf-portrait" src="${pic}" alt="" width="60" height="60" decoding="async">`:avatarSvg(look,46,w.col)}<div><b>${esc(name)}<small>${esc(role)}</small></b><p>${T(text)}</p></div></div>`;
 }
 const cfNar = (...ps)=>ps.filter(Boolean).map(x=>`<p class="cf-nar">${T(x)}</p>`).join("");
 const cfImg = (src,alt)=>`<div class="cf-img" role="img" aria-label="${esc(alt)}" style="background-image:url('${src}')"></div>`;
+// l'image d'une étape : fixe, ou choisie selon la partie (img:c=>…)
+const cfBeatImg = (b,c)=>typeof b.img==="function"?b.img(c):b.img;
 const cfMark = who=>`<span class="cf-mark">💭 ${T(who)} s'en souviendra.</span>`;
 // ce que le choix change, en coulisses : la confiance du coach, la relation avec Sacha, le lien avec le proche
 function cfFx(fx){ const c = cfC(); for(const k of ["conf","sacha","lien"]) if(fx[k]) c[k] += fx[k]; }
@@ -132,7 +147,7 @@ function cfMini(kind,fallback,cb){
 const CF_BEATS = [
   /* ---- Le dimanche de l'essai ---- */
   {id:"essai",k:"essai"},
-  {id:"apres",k:"scene",img:"img/terrain.webp",body:c=>({
+  {id:"apres",k:"scene",img:"img/essai-pluie.webp",body:c=>({
     but:cfNar("Le filet tremble. Tes coéquipiers d'un jour te sautent dessus. Le coup de sifflet final tombe dans la foulée : 1-0."),
     rate:cfNar(({post:"Le ballon frappe le poteau, revient dans les pieds d'un défenseur, qui dégage loin.",bar:"La barre. Le bruit du ballon sur le métal résonne dans tout le stade.",over:"Le ballon s'envole au-dessus de la barre et rebondit sur le parking.",wide:"Le ballon frôle le poteau et file à côté."})[c.mem.rateHow]||"Le gardien plonge du bon côté. Le ballon s'écrase dans ses gants.")+cfNar("Coup de sifflet final, 0-0. Tu restes au point de penalty, sans bouger."),
     laisse:cfNar("Un grand gaucher prend le ballon. Il frappe au-dessus. Coup de sifflet final, 0-0. Dans la tribune, le carnet se rouvre.")
@@ -161,7 +176,7 @@ const CF_BEATS = [
     ]},
 
   /* ---- Saison 1 : le centre ---- */
-  {id:"s1",sn:1,k:"scene",img:"img/vestiaire.webp",
+  {id:"s1",sn:1,k:"scene",img:"img/centre-exterieur.webp",
     body:()=>cfNar("Le centre du Racing, c'est un bâtiment gris au bout d'un parking, avec vue sur trois terrains et sur la mer, quand il ne pleut pas. Le premier matin, Vasseur réunit les nouveaux dans le vestiaire.")
       +cfSay("vasseur","« Une seule règle, et je ne la répéterai pas. Dans trois ans, le club signe un contrat pro. Un seul par poste. » Il désigne quelqu'un au fond du vestiaire, puis toi. « Vous deux, vous jouez au même poste. Faites le calcul. »")
       +cfNar("Sacha Lenoir. Un an de centre d'avance, des crampons usés jusqu'à la corde, et un regard qui te mesure de la tête aux pieds."),
@@ -170,7 +185,7 @@ const CF_BEATS = [
       {t:"« Le calcul est vite fait. »",go:()=>{ cfC().mem.accueil = "defi"; cfFx({sacha:-1}); return `Quelques rires dans le vestiaire. Sacha sourit. Pas gentiment.`+cfMark("Sacha"); }},
       {t:"Ne rien dire, et regarder ailleurs",go:()=>{ cfC().mem.accueil = "rien"; return `Vasseur passe à la suite. Sacha, non : tu sens son regard jusqu'à la fin de la réunion.`; }}
     ]},
-  {id:"nuit",sn:1,k:"scene",body:()=>cfNar("Première nuit à l'internat. Les murs sont fins. Dans la chambre d'à côté, quelqu'un pleure, la tête dans l'oreiller pour ne pas faire de bruit.","Tu reconnais la voix. C'est Sacha."),
+  {id:"nuit",sn:1,k:"scene",img:"img/internat-nuit.webp",body:()=>cfNar("Première nuit à l'internat. Les murs sont fins. Dans la chambre d'à côté, quelqu'un pleure, la tête dans l'oreiller pour ne pas faire de bruit.","Tu reconnais la voix. C'est Sacha."),
     ch:()=>[
       {t:"Frapper doucement à la porte",go:c=>{ c.mem.nuit = "porte"; cfFx({sacha:2}); return `Sacha ouvre, les yeux rouges. Vous parlez jusqu'à deux heures du matin, de chez vous, et de ce que Sacha a laissé là-bas il y a un an. « La mer, au début, ça console. Après, plus du tout. » Au petit déjeuner, Sacha te garde une place.`+cfMark("Sacha"); }},
       {t:"Mettre tes écouteurs et dormir",go:c=>{ c.mem.nuit = "rien"; return `Le lendemain, Sacha a les yeux gonflés et ne dit rien. Toi non plus.`; }},
@@ -196,7 +211,7 @@ const CF_BEATS = [
       {t:"Aller voir le kiné",go:c=>{ c.mem.genou = "kine"; cfFx({conf:1}); return "Trois jours de glace. Dans le carnet de Vasseur : « Connaît son corps. » Sacha termine premier des tests."; }},
       {t:"Appeler {par}",go:c=>{ c.mem.genou = "par"; cfFx({lien:1,conf:1}); return cfSay("par","« Écoute ton corps. Pas ton orgueil. »")+"Le lendemain matin, tu vas voir le kiné."; }}
     ]},
-  {id:"appel",sn:1,k:"scene",body:()=>cfNar("Un mardi soir, ton téléphone vibre. C'est {par}.")
+  {id:"appel",sn:1,k:"scene",img:c=>c.par==="gm"?"img/caisse-soir.webp":null,body:()=>cfNar("Un mardi soir, ton téléphone vibre. C'est {par}.")
       +cfSay("par","« Tout va bien, ne t'inquiète pas. J'ai trouvé un deuxième boulot, le soir, pour payer le train et tes crampons. Ça ne change rien. Toi, tu te concentres sur le foot. »")
       +cfNar("Derrière sa voix, tu entends le bip d'une caisse enregistreuse. {Pr} a l'air fatigué{e}."),
     ch:()=>[
@@ -204,9 +219,9 @@ const CF_BEATS = [
       {t:"« Je te le rendrai. Au centuple, je te le promets. »",go:c=>{ c.mem.appel = "promesse"; cfFx({lien:2}); return `Un silence au bout du fil. Puis : « D'accord. Je note. »`+cfMark("{Par}"); }},
       {t:"« Je dois y aller, il y a vidéo. » Raccrocher vite",go:c=>{ c.mem.appel = "vite"; cfFx({lien:-1}); return `Il n'y avait pas de séance vidéo, ce soir-là. Tu le sais. {Pr} aussi, sans doute.`; }}
     ]},
-  {id:"m1",sn:1,k:"match",img:"img/match.webp",title:"U17 · face au Stade Rochebrune",opp:"Stade Rochebrune U17",acts:[0,1],mins:[67,81],
+  {id:"m1",sn:1,k:"match",img:"img/match-jeunes.webp",title:"U17 · face au Stade Rochebrune",opp:"Stade Rochebrune U17",acts:[0,1],mins:[67,81],
     intro:c=>c.conf>=58?"Vasseur te titularise. Sacha est sur le banc, les bras croisés.":"Vasseur aligne Sacha d'entrée. Tu regardes la première heure depuis le banc, les mains entre les genoux. 60e minute : « Échauffe-toi. »"},
-  {id:"v1",sn:1,k:"verdict",img:"img/conference.webp",
+  {id:"v1",sn:1,k:"verdict",img:"img/bureau-vasseur.webp",
     body:c=>cfNar("Fin de la première saison. Le bureau de Vasseur sent le café froid. Le carnet est ouvert devant lui.")
       +cfSay("vasseur",({redemande:"« Tu sais pourquoi tu es ici ? Pas pour ton penalty raté. Pour ce que tu m'as dit après. Ça, je l'ai écrit en premier, avant ton nom. »",
         fair:"« Le jour de l'essai, ton premier geste après le coup de sifflet, ça a été pour quelqu'un d'autre. Je l'ai écrit. Ici, je n'oublie rien. »",
@@ -242,7 +257,7 @@ const CF_BEATS = [
       {t:"Couper ton téléphone pour la semaine",go:c=>{ c.mem.reseaux = "coupe"; cfFx({conf:2,lien:-1}); return "Sept jours sans écran. Tu dors mieux. Tu rates moins. {Par} a essayé de t'appeler quatre fois."; }},
       {t:"La reposter toi-même : « Promis, je m'entraîne »",go:c=>{ c.mem.reseaux = "rit"; cfFx({conf:1}); return c.mem.nino?"Les moqueries tournent aux encouragements. Un compte inconnu commente : « Futur pro. » Sa photo de profil : un ballon dégonflé.":"Les moqueries tournent aux encouragements. Même Sacha partage la vidéo, avec un seul mot : « Respect. »"; }}
     ]},
-  {id:"agent",sn:2,k:"scene",img:"img/argent.webp",body:()=>cfNar("Après un match de la réserve, un homme en costume trop bleu t'attend sur le parking. Il te tend une carte.")
+  {id:"agent",sn:2,k:"scene",img:"img/parking-agent.webp",body:()=>cfNar("Après un match de la réserve, un homme en costume trop bleu t'attend sur le parking. Il te tend une carte.")
       +cfSay("kessler","« Le Racing va te laisser moisir trois ans pour un seul contrat. Moi, j'ai un club en Belgique qui te veut maintenant. Signe avec moi, et demain tu as des crampons neufs. Tout le monde le fait. »"),
     ch:()=>[
       {t:"Signer avec Kessler",go:c=>{ c.mem.agent = "oui"; cfFx({conf:-6}); return `Les crampons arrivent le lendemain, dans une boîte noire. Le surlendemain, Vasseur te demande qui te les a offerts. Il connaît déjà la réponse.`; }},
@@ -258,7 +273,7 @@ const CF_BEATS = [
     ]},
   {id:"m2",sn:2,k:"match",img:"img/tribunes.webp",title:"U19 · le derby face à l'Olympique Valmont",opp:"Olympique Valmont U19",acts:[2,3],mins:[58,79],
     intro:c=>c.conf>=55?"Cette fois, c'est toi qui commences. Sacha est sur le banc et ne te regarde pas.":c.mem.couvre==="balance"?"Sacha revient de suspension, et Vasseur l'aligne d'entrée. Tu entres à l'heure de jeu.":"Sacha commence. Tu entres à l'heure de jeu, comme souvent."},
-  {id:"v2",sn:2,k:"verdict",img:"img/conference.webp",
+  {id:"v2",sn:2,k:"verdict",img:"img/bureau-vasseur.webp",
     body:c=>cfNar("Fin de la deuxième saison. Même bureau, même café froid. Cette fois, Vasseur ne te fait pas asseoir.")
       +cfSay("vasseur",c.mem.agent==="oui"?"« Tes crampons sont jolis. Kessler a bon goût. Mauvais conseils, mais bon goût. »":c.mem.poste==="oui"?"« Le week-end en réserve, à un poste qui n'est pas le tien. C'est là que j'ai compris que tu voulais vraiment être ici. »":c.mem.couvre==="balance"?"« Tu as dit la vérité sur Sacha. C'était juste. Je ne suis pas sûr que c'était bien. »":"« Une saison de plus. Il en reste une. »")
       +(cfC().conf<37?cfSay("vasseur","« Je vais être honnête avec toi, parce que personne ne l'a été avec moi à ton âge. Le club ne te garde pas pour la dernière année. »"):cfSay("vasseur",cfRanking(c))),
@@ -289,7 +304,7 @@ const CF_BEATS = [
       {t:"Le dire à Vasseur",go:c=>{ c.mem.cheville = "dit"; cfFx({conf:2,sacha:-3}); return "Vasseur envoie Sacha passer une radio. Entorse. Sacha jouera quand même, la cheville strappée. Et ne te regarde plus."+cfMark("Sacha"); }},
       {t:"Convaincre Sacha d'aller voir le kiné",go:c=>{ c.mem.cheville = "kine"; cfFx({sacha:1,conf:1}); return "Il te faut une heure. Le kiné strappe la cheville et promet de ne rien dire. Ce soir-là, Sacha te regarde autrement."; }}
     ]},
-  {id:"veille",sn:3,k:"scene",body:c=>cfNar("La veille du match, à 21 heures, ton téléphone sonne. Un numéro que tu ne connais pas. C'est l'hôpital, puis la voix de {par}.")
+  {id:"veille",sn:3,k:"scene",img:"img/hopital-nuit.webp",body:c=>cfNar("La veille du match, à 21 heures, ton téléphone sonne. Un numéro que tu ne connais pas. C'est l'hôpital, puis la voix de {par}.")
       +cfSay("par",(c.mem.appel==="promesse"?"« Ce n'est rien, je te jure. Un malaise au deuxième boulot, ils me gardent cette nuit pour voir. Surtout, tu ne viens pas. Tu m'as promis le centuple, tu te souviens ? Alors demain, tu joues. »":"« Ce n'est rien, je te jure. Un petit malaise, ils me gardent cette nuit pour voir. Surtout, tu ne viens pas. Tu as ton match. »")),
     ch:c=>[
       {t:"Prendre le dernier train, malgré le couvre-feu",go:c=>{ c.mem.veille = "train"; cfFx({lien:2,conf:-3}); return `Tu arrives à minuit. {Par} dort, un bracelet en plastique au poignet. Tu restes jusqu'à cinq heures sur la chaise à côté du lit. Le premier train du matin te ramène au centre avec trois heures de sommeil.`; }},
@@ -303,7 +318,7 @@ const CF_BEATS = [
       c.mem.veille==="train"?"Tes jambes pèsent trois heures de sommeil.":"",
       c.mem.cheville==="cache"?"À l'échauffement, Sacha boite légèrement. Personne ne le remarque, à part toi.":""
     ].filter(Boolean).join(" ")},
-  {id:"v3",sn:3,k:"verdict",img:"img/conference.webp",
+  {id:"v3",sn:3,k:"verdict",img:"img/bureau-vasseur.webp",
     body:c=>{ cfDecide(c); return cfNar(c.out==="valmont"?"Le samedi du match, tu regardes depuis la tribune, une écharpe de Valmont pliée dans ton sac. Le lundi, tu viens rendre ton badge. Vasseur t'attend dans son bureau.":"Le lendemain matin, Vasseur te convoque. Le président est là, debout près de la fenêtre. Le carnet est fermé.")+cfVerdictHtml(c); },
     ch:()=>[{t:"Voir le film de ces trois ans",primary:true,go:()=>""}]},
   {id:"fin",k:"fin"}
@@ -403,11 +418,13 @@ function cfRecordEnd(k){ const s = cfEndsSeen(); if(!s[k]){ s[k] = cfPrenom(); t
 
 /* ============ Les écrans ============ */
 function centreRender(html,label){
-  $("#app").innerHTML = `<div class="cf"><div class="cf-top"><button class="linkbtn" onclick="home()">← Accueil</button><span>${label||"Le centre de formation"}</span></div><div class="fade" tabindex="-1">${typeof takeToast==="function"?takeToast():""}${html}</div></div>`;
+  // le jour de l'essai, il pleut aussi sur les écrans de texte
+  const rain = label==="Le jour de l'essai";
+  $("#app").innerHTML = `<div class="cf${rain?" cf-rain":""}"><div class="cf-top"><button class="linkbtn" onclick="home()">← Accueil</button><span>${label||"Le centre de formation"}</span></div><div class="fade" tabindex="-1">${typeof takeToast==="function"?takeToast():""}${html}</div></div>`;
   window.scrollTo(0,0);
   /** @type {HTMLElement} */ (document.querySelector("#app .fade"))?.focus?.({preventScroll:true});
 }
-const cfBtns = (chs,fn)=>chs.map((x,i)=>`<button class="btn${x.primary?" primary":""}" onclick="${fn}(${i})">${x.primary?T(x.t):`<kbd>${i+1}</kbd><span class="cf-bt">${T(x.t)}${x.kind?' <span class="chip">À jouer</span>':""}</span>`}${x.sub?`<small>${x.sub}</small>`:""}</button>`).join("");
+const cfBtns = (chs,fn)=>chs.map((x,i)=>`<button class="btn${x.primary?" primary":""}" onclick="${fn}(${i})">${x.primary?T(x.t):`${choiceLead(T(x.t),i)}<span class="cf-bt">${T(x.t)}${x.kind?' <span class="chip">À jouer</span>':""}</span>`}${x.sub?`<small>${x.sub}</small>`:""}</button>`).join("");
 const cfRes = c=>c.res?`<div class="cf-res">${T(c.res)}</div>`:"";
 function centreRoute(){
   const c = cfC(); cfMigrate(c);
@@ -417,13 +434,13 @@ function centreRoute(){
   const label = c.head?"Le centre de formation":c.season?`Saison ${c.season} · ${p.age} ans`:"Le jour de l'essai";
   if(b.k==="essai") return cfEssaiScreen();
   if(b.k==="nom") return cfNomScreen();
-  if(b.k==="proche") return centreRender(cfRes(c)+cfSay("vasseur","« Et la personne sous le parapluie, là-haut, c'est qui ? »")+`<div class="decide">${Object.values(CF_PARENTS).map((x,i)=>`<button class="btn" onclick="cfPickPar('${Object.keys(CF_PARENTS)[i]}')"><kbd>${i+1}</kbd><span class="cf-bt">${x.l}</span></button>`).join("")}</div>`,label);
-  if(b.k==="poste") return centreRender(cfRes(c)+cfSay("vasseur","« Lundi, huit heures. Dernière chose : tu joues où, d'habitude ? »")+`<div class="decide">${Object.keys(CF_POSTE).map((k,i)=>`<button class="btn" onclick="cfPickPoste('${k}')"><kbd>${i+1}</kbd><span class="cf-bt">${cfCap(CF_POSTE[k])}</span></button>`).join("")}</div>`,label);
+  if(b.k==="proche") return centreRender(cfRes(c)+cfSay("vasseur","« Et la personne sous le parapluie, là-haut, c'est qui ? »")+`<div class="decide">${Object.values(CF_PARENTS).map((x,i)=>`<button class="btn" onclick="cfPickPar('${Object.keys(CF_PARENTS)[i]}')">${choiceLead(x.l,i)}<span class="cf-bt">${x.l}</span></button>`).join("")}</div>`,label);
+  if(b.k==="poste") return centreRender(cfRes(c)+cfSay("vasseur","« Lundi, huit heures. Dernière chose : tu joues où, d'habitude ? »")+`<div class="decide">${Object.keys(CF_POSTE).map((k,i)=>`<button class="btn" onclick="cfPickPoste('${k}')">${choiceLead(CF_POSTE[k],i,{GB:"glove",DEF:"shield",MIL:"brain",ATT:"ball"}[k])}<span class="cf-bt">${cfCap(CF_POSTE[k])}</span></button>`).join("")}</div>`,label);
   if(b.k==="match") return cfMatchScreen(b,label);
   ambient(false);
   if(b.k==="fin") return cfFilmScreen();
   const chs = b.ch(c);
-  centreRender(cfRes(c)+head+(b.img?cfImg(b.img,""):"")+b.body(c)+`<div class="decide">${cfBtns(chs,"cfChoose")}</div>`,label);
+  centreRender(cfRes(c)+head+(cfBeatImg(b,c)?cfImg(cfBeatImg(b,c),""):"")+b.body(c)+`<div class="decide">${cfBtns(chs,"cfChoose")}</div>`,label);
 }
 // une étape tirée au sort (pool) n'arrive que si elle fait partie du tirage de cette partie
 const cfActive = (b,c)=>!b.pool||(c.pool||[]).includes(b.id);
@@ -470,9 +487,9 @@ function cfChoose(i){
 
 /* --- L'essai --- */
 function cfEssaiScreen(){
-  centreRender(cfImg("img/terrain.webp","Un joueur frappe le ballon sous la pluie")
-    +`<div class="cf-title"><span>16 ans</span><h1>Le jour de l'essai</h1></div>`
-    +cfNar("Un dimanche de pluie, sur le synthétique du stade municipal. Quarante gamins pour trois places au centre de formation du Racing Port-Marée.",
+  centreRender(cfImg("img/essai-pluie.webp","Un terrain synthétique sous la pluie, un homme en imperméable note dans son carnet")
+    +`<div class="cf-title"><span>16 ans · un dimanche de pluie</span><h1>Quarante gamins, trois places</h1></div>`
+    +cfNar("Sur le synthétique du stade municipal, quarante gamins se disputent trois places au centre de formation du Racing Port-Marée.",
       "Dans la petite tribune, un homme en imperméable n'a pas levé les yeux de son carnet depuis une heure. Juste à côté, sous un parapluie, il y a quelqu'un qui est venu pour toi.",
       "88e minute, 0-0. Tu entres dans la surface, un défenseur te fauche. L'arbitre siffle. Penalty.",
       "L'homme en imperméable referme son carnet. Il regarde.")
@@ -551,7 +568,7 @@ function cfMatchScreen(b,label){
     body += `<p class="cf-min">${b.mins[m.a]}'</p><p class="story">${a.txt}</p><div class="decide">${cfBtns(a.o,"cfPlay")}</div>`;
   }
   // la suite du dernier choix (avant le coup d'envoi) reste affichée en tête, comme pour une scène
-  centreRender((m.a===0&&!m.last?cfRes(c):"")+(b.img&&m.a===0&&!m.last?cfImg(b.img,""):"")+`<h2 class="cf-mtitle">${esc(b.title)}</h2>`+board+(m.log.length?`<ul class="mlog">${m.log.map(l=>`<li>${l}</li>`).join("")}</ul>`:"")+body,label);
+  centreRender((m.a===0&&!m.last?cfRes(c):"")+(cfBeatImg(b,c)&&m.a===0&&!m.last?cfImg(cfBeatImg(b,c),""):"")+`<h2 class="cf-mtitle">${esc(b.title)}</h2>`+board+(m.log.length?`<ul class="mlog">${m.log.map(l=>`<li>${l}</li>`).join("")}</ul>`:"")+body,label);
 }
 function cfPlay(i){
   const c = cfC(), b = CF_BEATS[c.i], m = c.m, a = cfAct(b,b.acts[m.a]), o = a&&a.o[i];
@@ -711,12 +728,13 @@ function cfToCareer(){
     apps:0,goals:0,assists:0,clean:0,trophies:0,stars:0,caps:0,best:0,h2h:{w:0,d:0,l:0},retired:false,cf:true};
   p.moments = [`2026 · Essai au Racing Port-Marée${c.mem.essai==="but"?" : penalty marqué":c.mem.essai==="rate"?" : penalty raté":""}`];
   if(c.out==="renvoye") p.moments.push(`${p.year} · Le centre du Racing ne le garde pas`);
-  p.moments.push(pro?`${p.year} · Premier contrat pro à ${club.name}${c.out==="double"?", le même jour que Sacha Lenoir":c.out==="valmont"?", avant même la fin du centre":""}`:`${p.year} · Premier contrat à ${club.name}`);
+  p.moments.push(pro?`${p.year} · Premier contrat pro ${auC(club.name)}${c.out==="double"?", le même jour que Sacha Lenoir":c.out==="valmont"?", avant même la fin du centre":""}`:`${p.year} · Premier contrat à ${club.name}`);
   c.s0 = p.seasons.length; // repère du fil des premières saisons pro (cfArcNext)
   p.cf = c; delete p.centre;
   p.phase = "goal"; p.evIdx = 0; p.tmp = {play:0}; p.goalOpts = null; p.match = null; p.rel = newRel();
   ui = {};
   ui.toast = `<div class="tchoice">Saison ${p.year}-${String(p.year+1).slice(2)} · ${esc(club.name)}</div><div>${pro?"Le vestiaire des pros. Ton nom est sur un casier, à côté de joueurs que tu regardais à la télé.":"Un petit stade, des vestiaires qui sentent la peinture fraîche. Personne ne te connaît ici. Tout est à refaire."}</div>`;
+  if(pro&&typeof setUne==="function") setUne("Formation",c.out==="valmont"?`VALMONT RAFLE LA PÉPITE DU RACING`:`${esc(club.name.toUpperCase())} : ${uneName()}, ${p.age} ANS, SIGNE PRO`,c.out==="valmont"?`À ${p.age} ans, il quitte le centre de formation du Racing avant même le match du contrat. Rémi Vasseur refuse de commenter.`:`Trois ans de centre de formation, et un premier contrat professionnel. Interrogé, le directeur du centre, Rémi Vasseur, n'a dit qu'un mot : « Bon. »`,c.out==="valmont"?"capot":"vestiaire");
   save(); route();
 }
 
@@ -726,7 +744,7 @@ const cfOnce = id=>!!p.cf&&!(p.used||{})[id];
 const cfM = ()=>(p.cf&&p.cf.mem)||{};
 /** @type {any[]} */
 const CF_EVENTS = [
-  {id:"cfStade",scene:"perso",weight:4,arc:[0,1],cond:()=>cfOnce("cfStade")&&p.age<=21,
+  {id:"cfStade",scene:"perso",weight:4,arc:[0,1],img:()=>p.cf?.par==="gm"?"img/gare-pluie.webp":null,cond:()=>cfOnce("cfStade")&&p.age<=21,
     txt:()=>T("{Par} vient te voir jouer pour la première fois depuis ton premier contrat. Au téléphone, {pr} fait comme si ce n'était rien. Tu entends bien que si."),
     ch:[{get t(){ return T("Aller chercher {par} à la gare toi-même"); },fx:{moral:6,form:-2},get why(){ return T("Sur le quai, {par} tient le vieux parapluie du jour de l'essai."); }},
         {t:"Réserver une place en tribune d'honneur",fx:{moral:4,money:-8},why:"Pendant tout le match, tu sais exactement où regarder."},
@@ -765,7 +783,7 @@ const CF_EVENTS = [
 const cfOut = ()=>(p.cf&&p.cf.out)||"";
 const cfSameClubSacha = ()=>!!p.rival?.cf&&p.rival.club.name===p.club.name;
 CF_EVENTS.push(
-  {id:"cfCasier",scene:"vestiaire",weight:4,arc:[0,0],cond:()=>cfOnce("cfCasier"),
+  {id:"cfCasier",scene:"vestiaire",weight:4,arc:[0,0],img:()=>cfPro(p.cf)&&cfOut()!=="valmont"?"img/vestiaire-pros.webp":null,cond:()=>cfOnce("cfCasier"),
     txt:()=>cfOut()==="valmont"
       ?"Premier jour à Valmont. Dans ton casier, entre les crampons neufs, une enveloppe. Tu reconnais l'écriture penchée du carnet."+cfSay("vasseur","« Tu as choisi de ne jamais savoir ce que tu valais au Racing. Alors fais en sorte que ça en vaille la peine. R. V. »")
       :cfPro(p.cf)
@@ -841,7 +859,7 @@ function cfPhoneSeason(L){
       {t:"« Merci. Et pardon, pour le centre. »",fx:{moral:()=>{ c.sacha += 2; return 5; }},r:"Trois points de suspension. Puis : « Il était temps. On se boit un café un de ces jours. »"},
       {t:"« Toi aussi. »",fx:{},r:"Rien d'autre. Jamais rien d'autre."}]);
   } else {
-    msg("dm",`Rémi Vasseur : « ${pick(["Je l'ai regardé à la télé. J'ai noté.","Ton placement sur les phases arrêtées a progressé. Le reste aussi. Bon.","Un de mes gamins porte ton numéro. Je lui ai dit de choisir le sien."])} »`);
+    msg("vasseur",`${pick(["Je l'ai regardé à la télé. J'ai noté.","Ton placement sur les phases arrêtées a progressé. Le reste aussi. Bon.","Un de mes gamins porte ton numéro. Je lui ai dit de choisir le sien."])}`);
   }
 }
 // le choc face à Sacha : un message qui sait d'où vous venez

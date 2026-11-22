@@ -14,7 +14,7 @@ function __offseason(){
   const avail = Object.keys(TALENTS).filter(k=>!has(k)&&TALENTS[k].pos.includes(p.pos));
   if(avail.length&&(p.tp||0)>=talentCost()&&chance(.8)){ learn(pick(avail)); return "talent"; }
   if(p.rehab&&!p.rehab.done&&chance(.8)){ rehabWeek(pick(Object.keys(REHAB))); return "rééducation"; }
-  if(chance(.12)){ phoneScreen(pick(["msgs","fil"])); const m = phone().msgs.find(x=>x.replies&&x.answered==null); if(m) reply(m.id,RI(0,m.replies.length-1)); return "téléphone"; }
+  if(chance(.12)){ phoneScreen(pick(["home","msgs","fil","photos",...(phone().msgs[0]?["thread:"+convKey(phone().msgs[0])]:[])])); const m = phone().msgs.find(x=>x.replies&&x.answered==null); if(m) reply(m.id,RI(0,m.replies.length-1)); return "téléphone"; }
   if(chance(.06)){ const ok = Object.keys(POSTS).filter(k=>!POSTS[k].ok||POSTS[k].ok()); publish(pick(ok)); return "publication"; }
   if(chance(.05)){ vestiaireScreen(); vieScreen(); return "vestiaire"; }
   if(typeof SUMMERS!=="undefined"&&!p.summer&&chance(.85)){ summerChoose(pick(Object.keys(SUMMERS).filter(k=>SUMMERS[k].ok()))); return "été"; }
@@ -51,7 +51,9 @@ function __after(){
 function __coach(){
   const k = p.coach;
   if(k.step==="event"){ if(k.ev===null) coachEventScreen(); coachChoose(RI(0,COACH_EVENTS[k.ev].ch.length-1)); return "coach"; }
-  if(k.step==="style"){ coachPlay(pick(["att","eq","def"])); return "coach"; }
+  if(k.step==="mercato"){ coachRecruit(pick(Object.keys(COACH_REC))); return "coach"; }
+  if(k.step==="style"){ coachPickStyle(pick(["att","eq","def"])); return "coach"; }
+  if(k.step==="match"){ coachMatch(RI(0,COACH_MATCH[k.mi||0].o.length-1)); return "coach"; }
   if(k.hist.length>=6||k.age>=70){ endCoach(); return "coach"; }
   if(!k.res.sacked&&chance(.6)) coachStay(); else if(k.offers.length) coachSign(RI(0,k.offers.length-1)); else endCoach();
   return "coach";
@@ -148,7 +150,7 @@ function playCareer(seed, opts = {}) {
     return {pos:p.pos,seasons:p.seasons.length,age:p.age,peak:s.peak,pot:p.pot,trT:p.trophies.map(t=>t.t.split(" – ")[0].split(" (")[0]),rat:p.seasons.reduce((a,x)=>a+ +x.rating,0)/Math.max(1,p.seasons.length),l23:(p.seasons.find(x=>x.age===23)||{lvl:0}).lvl,potC:${potC},stars:s.stars,trophies:s.trophies,goals:s.goals,clean:s.clean,caps:p.caps,money:p.money,
       echoes:p.echoes||0,after:p.after?.k||null,coach:(p.coachHist||[]).length,events:u.reduce((a,b)=>a+b,0),distinct:u.length,maxRepeat:Math.max(0,...u),
       pens:p.pens||null,defi:p.defi||null,intl:p.trophies.filter(t=>/^(Championnat du Monde|Coupe Continentale)/.test(t.t)).length,
-      tourneys:p.moments.filter(m=>/Convoqué pour le/.test(m)).length,cdc:p.trophies.filter(t=>t.t==="Coupe des Champions").length,calm:p.calmN||0,ordWins:(p.ordinaires||[]).filter(o=>o.r==="w").length,ord:(p.ordinaires||[]).length,urg:p.urgentsN||0,story:p.story?p.story.ch:null,weekly:p.weekly||null,title:careerTitles()[0].id,ids:Object.keys(p.used||{}),acts:p.acts||{},danse:p.flags.danse||null,danseOk:typeof danseOk==="function"?danseOk():null,trTypes:p.trophies.map(t=>t.t.split(" (")[0].split(" – ")[0].replace(/ [0-9]{4}.*$/,""))}; })():null`);
+      tourneys:p.moments.filter(m=>/Convoqué pour (le|la) /.test(m)).length,cdc:p.trophies.filter(t=>t.t==="Coupe des Champions").length,calm:p.calmN||0,ordWins:(p.ordinaires||[]).filter(o=>o.r==="w").length,ord:(p.ordinaires||[]).length,urg:p.urgentsN||0,story:p.story?p.story.ch:null,weekly:p.weekly||null,title:careerTitles()[0].id,ids:Object.keys(p.used||{}),acts:p.acts||{},danse:p.flags.danse||null,danseOk:typeof danseOk==="function"?danseOk():null,trTypes:p.trophies.map(t=>t.t.split(" (")[0].split(" – ")[0].replace(/ [0-9]{4}.*$/,""))}; })():null`);
   if (opts.carry) for (const k of CARRY) if (game.store.has(k)) opts.carry[k] = game.store.get(k);
   // les écrans déjà analysés ne servent plus : sans ça, des centaines de carrières saturent la mémoire
   game.renders.length = 0; game.store.clear();

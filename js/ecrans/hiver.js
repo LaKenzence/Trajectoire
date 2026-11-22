@@ -21,9 +21,10 @@ function winterScreen(){
   render(`<div class="muted">Saison ${p.year}-${String(p.year+1).slice(2)} · janvier</div>
     <div class="card"><h2>❄️ Mercato d'hiver</h2>
     <p class="story">${W.why==="bench"?"La moitié de la saison est passée et tu cires le banc. Ton téléphone sonne : des clubs te proposent de jouer tout de suite.":"Tu survoles le championnat. Le mercato d'hiver s'ouvre, et un club plus ambitieux veut te faire signer sans attendre l'été."}</p>
+    <p class="muted" style="margin:0 0 4px;font-size:.88rem">Aujourd'hui : ${crest(p.club,16)} ${esc(p.club.name)} · force ${p.club.str} · ${money(p.salary)}/an, encore ${nPl(p.contract,"an")}.</p>
     ${W.offers.map((x,i)=>`<button class="btn offer" onclick="winterSign(${i})">${crest(x.club,40)}<span class="of-main"><b>${x.loan?"🔁 Prêt · ":""}${esc(x.club.name)}</b>
       <small>${flag(x.club.country)} ${COUNTRIES[x.club.country].league} · force ${x.club.str}</small>
-      <span class="of-tags"><span class="tag">${x.loan?"jusqu'à la fin de la saison":x.years+" an(s)"}</span>${x.loan?"":`<span class="tag">${money(x.salary)}/an</span>`}</span></span></button>`).join("")}
+      <span class="of-tags"><span class="tag">${x.loan?"jusqu'à la fin de la saison":nPl(x.years,"an")}</span>${x.loan?"":`<span class="tag">${money(x.salary)}/an</span>`}</span></span></button>`).join("")}
     <button class="btn" onclick="winterStay()">${W.why==="bench"?"Rester et te battre pour ta place":"Rester et finir la saison ici"}<small>${W.why==="bench"?"Le coach apprécie ta loyauté… s'il te fait jouer":"Les supporters t'adorent un peu plus"}</small></button></div>`);
 }
 function winterSign(i){
@@ -36,7 +37,7 @@ function winterSign(i){
   p.flags.cap = false; delete p.flags.forceDepart; p.rel = newRel();
   // nouveau départ : le temps de jeu repart de zéro, avec l'envie de prouver
   p.tmp.play = x.club.str<=p.lvl?6:-2; p.moral = clamp(p.moral+4,0,100);
-  msg("agent",`C'est signé avec ${x.club.name} ! Bienvenue dans ton nouveau club.`);
+  msg("agent",`C'est signé avec ${leC(x.club.name)} ! Bienvenue dans ton nouveau club.`);
   post("journal",journo(),`🔁 MERCATO : ${p.name} quitte ${from} pour ${x.club.name}${x.loan?" (prêt)":""}.`);
   p.winter = null; p.phase = "event"; save(); route();
 }

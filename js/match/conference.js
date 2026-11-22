@@ -30,7 +30,7 @@ const Conference = (() => {
       <p class="conf-eyebrow">🎙️ ${esc(C.title)} · question ${C.i + 1}/${C.questions.length}</p>
       <div class="conf-q"><span class="conf-mic" aria-hidden="true">📰</span><p aria-live="polite"><b>${esc(q.who)} :</b> « ${esc(q.q)} »</p></div>
       ${reduceMotion ? "" : `<div class="conf-timer" aria-hidden="true"><i style="animation-duration:${TIME}ms"></i></div>`}
-      <div class="conf-answers">${q.a.map((a, j) => `<button class="btn conf-a" type="button" data-j="${j}"><kbd>${j + 1}</kbd>${esc(a.t)}</button>`).join("")}</div>
+      <div class="conf-answers">${q.a.map((a, j) => `<button class="btn conf-a" type="button" data-j="${j}">${choiceLead(a.t, j)}<span class="ctext">${esc(a.t)}</span></button>`).join("")}</div>
       <p class="conf-help">${reduceMotion ? "Prends ton temps." : "Sans réponse avant la fin du chrono : « Pas de commentaire. »"}</p></div>`;
     C.el.querySelectorAll(".conf-a").forEach(b => b.addEventListener("click", () => answer(+/** @type {HTMLElement} */ (b).dataset.j)));
     /** @type {HTMLElement} */ (C.el.querySelector(".conf-a")).focus({ preventScroll: true });

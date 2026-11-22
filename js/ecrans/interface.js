@@ -27,7 +27,7 @@ function newPlayer(o){
   const home = CLUBS.filter(c=>c.country===o.country).sort((a,b)=>a.str-b.str);
   const c = pick(home.slice(0,4));
   p.club = {...c}; p.contract = 3; p.salary = 15;
-  p.moments.push(`${p.year} · Premier contrat pro à ${c.name}`);
+  p.moments.push(`${p.year} · Premier contrat pro ${auC(c.name)}`);
   p.clubsHist = [c.name];
   p.rival = makeRival();
   p.rel = newRel();
@@ -41,12 +41,19 @@ function newPlayer(o){
 
 /* ============ Rendu ============ */
 // risque d'un choix : une jauge de trois crans, de vert à rouge, et le mot pour les lecteurs d'écran
+// quand toutes les options portent la même étiquette (tout « Très risqué » face à plus fort), on signale la moins risquée
+function bestOpt(os){
+  const qs = os.map(o=>o.p+talentBonus(o.t)), lv = q=>q>=.6?1:q>=.4?2:3;
+  if(qs.length<2||new Set(qs.map(lv)).size>1) return -1;
+  const mx = Math.max(...qs); return qs.filter(q=>q===mx).length>1?-1:qs.indexOf(mx);
+}
+const bestTag = (i,b)=>i===b?' · <span class="best-opt">meilleur pari</span>':"";
 function riskHtml(q){ const r = q>=.6?1:q>=.4?2:3; return `<span class="risk r${r}"><i aria-hidden="true"><b></b><b></b><b></b></i>${["Plutôt sûr","Risqué","Très risqué"][r-1]}</span>`; }
 function bar(label,v,col){return `<div class="bar">${label} <b style="color:var(--text)">${Math.round(v)}</b><div class="t"><div class="f" style="width:${clamp(v,0,100)}%;background:${col}"></div></div></div>`}
 function hud(){
   if(!p) return "";
   return `<div class="hud"><div class="hud-row">
-    <button class="hud-id" onclick="showCard()" aria-label="Voir ma carte de joueur">${avatarSvg(p.look,42,clubColors(p.club).a)}<span class="hud-who"><b>${esc(p.name)} ${flag(p.country)}</b><small>Saison ${p.seasons.length+(p.retired||p.phase==="season"||p.phase==="tournoi"?0:1)||1} · ${p.age} ans · ${crest(p.club,14)} ${esc(p.club.name)}</small></span></button>
+    <button class="hud-id" onclick="showCard()" aria-label="Voir ma carte de joueur">${avatarSvg(p.look,42,clubColors(p.club).a)}<span class="hud-who"><b>${esc(p.name)} ${flag(p.country)}</b><small>Saison ${p.seasons.length+(p.retired||p.phase==="season"||p.phase==="tournoi"?0:1)||1} · ${POS[p.pos].n} · ${p.age} ans · ${crest(p.club,14)} ${esc(p.club.name)}</small></span></button>
     <div class="hud-kpi"><span class="kpi money" title="Fortune">${ic("coins")}${money(p.money)}</span><span class="kpi lvl" title="Niveau">${ic("star")}${p.lvl}</span></div></div>
   <div class="bars">${bar("Niveau",p.lvl,"var(--accent)")}${bar("Forme",p.form,"var(--good)")}${bar("Moral",p.moral,"var(--blue)")}${bar("Réputation",p.rep,"#c08bff")}${bar("Coach",p.rel?.trust??50,"#ff9f5a")}</div>${seasonSteps()}</div>`;
 }
@@ -163,6 +170,7 @@ function showCard(){
       <div style="text-align:right">${shirt(p.club,shirtNumber(),64)}<div style="font-size:1.4rem">${flag(p.country)}</div></div>
     </div>
     <h2 style="margin:10px 0 0;display:flex;align-items:center;gap:8px">${avatarSvg(p.look,44,clubColors(p.club).a)}${esc(p.name)}</h2>
+    <div class="pc-role"><b>${POS[p.pos].n}</b>${TRAITS[p.trait]?` · ${TRAITS[p.trait].n}`:""}</div>
     <div>${flag(p.club.country)} ${esc(p.club.name)} · ${p.age} ans</div>
     <div class="attrs">
       <span>Forme <b>${Math.round(p.form)}</b></span><span>Moral <b>${Math.round(p.moral)}</b></span>
@@ -176,14 +184,14 @@ function showCard(){
     ${pn.tir+pn.face+pn.cf?`<p style="margin:12px 0 4px"><b>Coups de pied arrêtés joués :</b> ${[pn.tir?`penalties ${pn.but}/${pn.tir}`:"",pn.face?`arrêts ${pn.arret}/${pn.face}`:"",pn.cf?`coups francs ${pn.cfBut}/${pn.cf}`:""].filter(Boolean).join(" · ")}</p>`:""}
     ${r?`<p style="margin:12px 0 4px"><b>Rival :</b> ${esc(r.name)} ${flag(r.country)} ${r.retired?"(retraité)":`· ${esc(r.club.name)} · niveau ${r.lvl}`}</p>`:""}
     ${pending?`<p style="margin:4px 0">⏳ ${pending} choix passé${pending>1?"s pourraient":" pourrait"} encore avoir des suites…</p>`:""}
-    <button class="btn" onclick="this.closest('.overlay').remove();statsScreen()">📊 Toutes mes stats</button><button class="btn" onclick="exportCard(this)">🖼️ Télécharger ma carte</button><button class="btn" onclick="closeOverlay(this.closest('.overlay'))">Fermer</button></div>`,"Carte joueur");
+    <button class="btn" onclick="this.closest('.overlay').remove();albumScreen()">📖 Mon album de carrière</button><button class="btn" onclick="this.closest('.overlay').remove();statsScreen()">📊 Toutes mes stats</button><button class="btn" onclick="exportCard(this)">🖼️ Télécharger ma carte</button><button class="btn" onclick="closeOverlay(this.closest('.overlay'))">Fermer</button></div>`,"Carte joueur");
 }
 
 /* --- Accueil --- */
 // les réglages, regroupés pour alléger l'écran d'accueil
 function settingsScreen(){
   $("#app").innerHTML = `<div class="fade" style="padding-top:20px">
-    <div class="muted">⚙️ Réglages</div><h1>Réglages</h1>
+    <div class="muted">⚙️ Options du jeu</div><h1>Réglages</h1>
     <div class="card">
       <button class="btn" onclick="cycleFont(this)">${fontLabel()}</button>
       <button class="btn" onclick="cycleMinis(this)">${MINIS_LABELS[minisMode]}</button>
@@ -221,7 +229,7 @@ function home(){
     <section class="home-sec"><h3>Mes carrières</h3><div class="slots">${slots.map(card).join("")}</div></section>
     <section class="home-sec"><h3>Jouer</h3><div class="menu-list">
       ${row("calendar","Défi du jour","Le même départ pour tout le monde, et un classement","dailyScreen()")}
-      ${row("target","Défi de la semaine",`${weeklyOf(weekKey()).n} : ${weeklyOf(weekKey()).d}`,"weeklyScreen()")}
+      ${row("target","Défi de la semaine",`${weeklyOf(weekKey()).n} · ${weeklyOf(weekKey()).d}`,"weeklyScreen()")}
       ${row("edit","Mode Histoire",storyBest()?`Une carrière en 5 chapitres · meilleur : chapitre ${Math.min(storyBest()+1,STORY.length)}`:"Une carrière racontée en 5 chapitres","storyHome()")}
       ${row("users","Défi entre amis","Un code à partager, les scores à comparer","friendsScreen()")}
       ${row("trophy","Panthéon",`${ach}/${ACH.length} succès · records`,"hofScreen()")}
@@ -262,6 +270,8 @@ function migrate(){
 
 /* --- Création --- */
 let draft = {};
+// une icône par réponse de la création, pour qu'elles se distinguent d'un coup d'œil
+const CREATE_IC = {GB:"glove",DEF:"shield",MIL:"brain",ATT:"ball",tech:"target",athl:"run",lead:"armband",inst:"bolt",quartier:"fire",fils:"crown",village:"tree",academie:"book",parent:"heart",ami:"handshake",coach:"whistle",seul:"moon",pro:"dumbbell",fete:"fire",discret:"eye",star:"phone"};
 const STEPS = [null,{k:"pos",src:POS,h:"Ton poste"},{k:"trait",src:TRAITS,h:"Ton profil"},{k:"origin",src:ORIGINS,h:"D'où viens-tu ?"},{k:"ent",src:ENTOURAGES,h:"Qui t'entoure ?"},{k:"life",src:LIFESTYLES,h:"Ton mode de vie"}];
 function createStep(s){
   if(s===0&&!draft.keep) draft = {name:"",country:null,look:randomLook()};
@@ -285,7 +295,7 @@ function createStep(s){
       <button class="btn primary" onclick="nextFrom0()">Continuer</button>`;
   } else {
     const st = STEPS[s];
-    h += `<h2>${st.h}</h2>${Object.entries(st.src).map(([k,v],n)=>`<button class="btn ${draft[st.k]===k?"sel":""}" onclick="setD('${st.k}','${k}',${s+1})"><kbd>${n+1}</kbd>${v.n}${v.d?`<small>${v.d}</small>`:""}</button>`).join("")}
+    h += `<h2>${st.h}</h2>${Object.entries(st.src).map(([k,v],n)=>`<button class="btn ${draft[st.k]===k?"sel":""}" onclick="setD('${st.k}','${k}',${s+1})">${choiceLead(v.n,n,CREATE_IC[k])}<span class="ctext">${v.n}</span>${v.d?`<small>${v.d}</small>`:""}</button>`).join("")}
       <button class="btn ghost" onclick="rollDraft('${st.k}')">🎲 Au hasard</button>`;
   }
   if(s>0) h += `<button class="btn ghost" onclick="draft.keep=true;createStep(${s-1})">← Retour</button>`;
@@ -326,6 +336,7 @@ function route(){
 }
 function routeScreen(){
   save();
+  if(typeof uneFlush==="function") uneFlush();
   if(p.centre) return centreRoute();
   if(p.phase!=="match") ambient(false);
   if(p.retired) return p.after?(!p.filmSeen&&!p.daily&&!p.friend&&!ui.quick?careerFilm():endScreen()):p.coach?coachRoute():afterScreen();
@@ -362,7 +373,7 @@ function eventScreen(){
   const e = EVENTS.find(x=>x.id===p.curEv);
   const opts = e.ch.map((c,i)=>({c,i})).filter(o=>!o.c.cond||o.c.cond());
   render(`${tip("event")}${e.seedOnly?"":raceBanner()}<div class="card event-card">${sceneHtml(e)}<div class="bubble"><p class="story">${evText(e)}</p></div>${e.rare?'<span class="chip rare">⭐ Histoire rare</span>':""}${isNewStory(e)?'<span class="chip new">✨ Nouvelle histoire</span>':""}<div class="decide"><h3 class="ask">Que fais-tu ?</h3>
-    ${opts.map((o,n)=>`<button class="btn" onclick="choose(${o.i})">${choiceLead(o.c.t,n)}<span class="ctext">${o.c.t}</span>${o.c.mini&&minisOn("pen")?'<span class="chip">🎮 À jouer</span>':o.c.risk?'<span class="chip">🎲 Risqué</span>':""}${tagChip(o.c,e)}</button>`).join("")}</div></div>${e.seedOnly?"":quickBtn()}`);
+    ${opts.map((o,n)=>`<button class="btn" onclick="choose(${o.i})">${choiceLead(o.c.t,n)}<span class="ctext">${o.c.t}</span>${o.c.mini&&minisOn("pen")?'<span class="chip">🎮 À jouer</span>':o.c.risk?'<span class="chip">🎲 Risqué</span>':""}${tagChip(o.c,e)}</button>`).join("")}</div></div>${e.seedOnly||typeof actuHtml!=="function"?"":actuHtml()}${e.seedOnly?"":quickBtn()}`);
 }
 // scène illustrée en tête de chaque événement : une catégorie, sa couleur et son pictogramme
 const SCENES = {
@@ -384,8 +395,8 @@ function sceneOf(e){
   return "terrain";
 }
 function sceneHtml(e){
-  const s = SCENES[sceneOf(e)];
-  return `<div class="scene-pic">${sceneArt(sceneOf(e))}</div><div class="scene" style="--sc:${s.c}"><span class="scene-i" aria-hidden="true">${ic(SCENE_IC[sceneOf(e)]||"bolt")}</span><span class="scene-l">${ic(SCENE_IC[sceneOf(e)]||"bolt")} ${s.n}</span><span class="scene-m">Saison ${p.year}-${String(p.year+1).slice(2)} · moment ${p.evIdx+1}/${p.evCount}</span></div>`;
+  const s = SCENES[sceneOf(e)], own = typeof e.img==="function"?e.img():e.img; // une photo propre à l'événement, sinon celle de sa catégorie
+  return `<div class="scene-pic">${own?`<img class="scene-photo" src="${own}" alt="" decoding="async">`:sceneArt(sceneOf(e))}</div><div class="scene" style="--sc:${s.c}"><span class="scene-i" aria-hidden="true">${ic(SCENE_IC[sceneOf(e)]||"bolt")}</span><span class="scene-l">${ic(SCENE_IC[sceneOf(e)]||"bolt")} ${s.n}</span><span class="scene-m">Saison ${p.year}-${String(p.year+1).slice(2)} · moment ${p.evIdx+1}/${p.evCount}</span></div>`;
 }
 const LABELS = {lvl:"Niveau",pot:"Potentiel",form:"Forme",moral:"Moral",rep:"Réputation",money:"Argent",play:"Temps de jeu",nat:"Chances en sélection",trust:"Confiance du coach"};
 function applyFx(fx){
@@ -414,12 +425,19 @@ function applyFx(fx){
     else if(k==="money"){ p.money = Math.max(0,p.money+v); }
     else if(k==="pot"){ p.pot = clamp(p.pot+v,40,99); }
     else if(k==="lvl"){ p.lvl = clamp(p.lvl+v,20,Math.max(p.pot,p.lvl)); }
+    else if(typeof p[k]==="number"&&["form","moral","rep"].includes(k)){
+      // on affiche ce qui a vraiment bougé : une jauge déjà pleine (ou vide) le dit, au lieu d'un faux « +4 »
+      const was = p[k]; p[k] = clamp(p[k]+v,0,100);
+      const real = Math.round(p[k]-was);
+      if(v&&!real){ out.push({k:LABELS[k]+(v>0?" au max":" au plus bas"),v:0,cap:true}); continue; }
+      v = real;
+    }
     else p[k] = clamp(p[k]+v,0,100);
     if(v) out.push({k:LABELS[k],v,money:k==="money"});
   }
   return out;
 }
-function deltaHtml(deltas){ return deltas.map(d=>`<span class="${d.v>0?"up":"down"}">${d.k} ${d.v>0?"+":""}${d.money?money(d.v):d.v}</span>`).join("")||'<span class="muted">Aucun changement immédiat</span>'; }
+function deltaHtml(deltas){ return deltas.map(d=>d.cap?`<span class="muted">${d.k}</span>`:`<span class="${d.v>0?"up":"down"}">${d.k} ${d.v>0?"+":""}${d.money?money(d.v):d.v}</span>`).join("")||'<span class="muted">Aucun changement immédiat</span>'; }
 function choose(i){
   const e = EVENTS.find(x=>x.id===p.curEv), c = e.ch[i];
   let txt, deltas;
@@ -574,7 +592,7 @@ function resetTips(){ tipsSeen = {}; try{ localStorage.removeItem("trajectoire_t
 /* ============ Taille du texte ============ */
 let fontScale = (()=>{ try{ return +localStorage.getItem("trajectoire_font")||1; }catch(e){ return 1; } })();
 function applyFont(){ document.documentElement.style.fontSize = Math.round(fontScale*100)+"%"; }
-const fontLabel = ()=>`Aa · Taille du texte : ${Math.round(fontScale*100)} %`;
+const fontLabel = ()=>`👀 Taille du texte : ${Math.round(fontScale*100)} %`;
 function cycleFont(btn){
   fontScale = fontScale>=1.3?1:fontScale>=1.15?1.3:1.15;
   try{ localStorage.setItem("trajectoire_font",String(fontScale)); }catch(e){}

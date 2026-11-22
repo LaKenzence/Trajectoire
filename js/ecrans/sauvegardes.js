@@ -31,12 +31,12 @@ function savesScreen(msg){
   p = null; unseed();
   const slots = ["1","2","3"].map(k=>loadSlot(k)), hof = loadHof();
   const fileName = `trajectoire-sauvegarde-${today()}.txt`;
-  $("#app").innerHTML = `<div class="fade" tabindex="-1" style="padding-top:20px">
+  $("#app").innerHTML = `<div class="fade" tabindex="-1" style="padding-top:20px">${topHome()}
     <div class="muted">Tes données restent dans ce navigateur</div><h1><span class="emo" aria-hidden="true">💾</span> Sauvegardes</h1>
     ${msg?`<div class="toast" role="status">${msg}</div>`:""}
     <div class="card"><h3>Ce qui est sauvegardé ici</h3>
       <ul class="log">${slots.map((s,i)=>`<li>Emplacement ${i+1} : ${s?`${esc(s.name)} · ${s.retired?"carrière terminée":`${s.age} ans, ${esc(s.club.name)}`}`:"vide"}</li>`).join("")}
-      <li>Panthéon : ${Object.keys(hof.ach).length} succès, ${hof.careers.length} carrière(s) au classement</li></ul></div>
+      <li>Panthéon : ${Object.keys(hof.ach).length} succès, ${nPl(hof.careers.length,"carrière")} au classement</li></ul></div>
     <div class="card"><h3>Exporter</h3>
       <p class="muted" style="margin-top:0;font-size:.9rem">Garde ce code quelque part (notes, e-mail…) ou télécharge-le en fichier. Il contient tout ce qui est listé au-dessus.</p>
       <label class="sr-only" for="exportBox">Code de sauvegarde</label>

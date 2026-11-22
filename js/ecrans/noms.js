@@ -19,7 +19,7 @@ const cleanName = s=>String(s||"").replace(/[<>"&]/g,"").replace(/\s+/g," ").tri
 function namesScreen(note){
   p = null; unseed();
   const N = loadNames();
-  $("#app").innerHTML = `<div class="fade" tabindex="-1" style="padding-top:20px">
+  $("#app").innerHTML = `<div class="fade" tabindex="-1" style="padding-top:20px">${topHome()}
     <div class="muted">Uniquement dans ce navigateur</div><h1><span class="emo" aria-hidden="true">✏️</span> Noms des clubs</h1>
     ${note?`<div class="toast" role="status">${note}</div>`:""}
     <p class="story">Renomme les clubs et les championnats comme tu veux. Ces noms restent sur ton appareil : le jeu publié, lui, reste fictif pour tout le monde. Les carrières en cours prennent les nouveaux noms.</p>
@@ -37,7 +37,7 @@ function saveNames(){
   document.querySelectorAll("input[data-league]").forEach((/** @type {HTMLInputElement} */ el)=>{ const v = cleanName(el.value); if(v) N.leagues[el.dataset.league] = v; });
   try{ localStorage.setItem("trajectoire_noms",JSON.stringify(N)); }catch(e){}
   applyNames();
-  namesScreen(`✅ ${Object.keys(N.clubs).length} club(s) et ${Object.keys(N.leagues).length} championnat(s) renommés.`);
+  namesScreen(`✅ ${nPl(Object.keys(N.clubs).length,"club")} et ${nPl(Object.keys(N.leagues).length,"championnat")} renommés.`);
 }
 function resetNames(btn){
   if(!btn.dataset.sure){ btn.dataset.sure = "1"; btn.textContent = "Effacer tous tes noms ? Clique encore pour confirmer"; return; }

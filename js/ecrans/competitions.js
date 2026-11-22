@@ -94,14 +94,18 @@ function tirageDone(){
 function cdcPath(c,impact,finalRes){
   const T = p.cdc, str = c.str+impact*2;
   const avg = T.group.reduce((a,g)=>a+g.str,0)/T.group.length;
-  const forced = finalRes!==undefined;
-  const qual = forced||chance(clamp(.5+(str-avg)*.035,.12,.9));
+  const forced = finalRes!==undefined, t = p.tmp||{};
+  // les soirées jouées décident : sortie des groupes, puis huitième de finale
+  const qual = forced||(t.cdcQual!=null?t.cdcQual:chance(clamp(.5+(str-avg)*.035,.12,.9)));
   const out = {group:T.group,pos:qual?(chance(.55)?1:2):(chance(.6)?3:4),steps:[],won:false};
   if(!qual) return out;
   const pool = CLUBS.filter(x=>x.country!==c.country&&!T.group.some(g=>g.name===x.name));
+  const n8 = (t.cdcN||[]).find(x=>x.k==="8e");
+  if(n8){ out.steps.push({r:"Huitième de finale",opp:n8.opp,cc:n8.cc,w:forced||!!t.cdc8}); if(!forced&&!t.cdc8) return out; }
   for(const [r,min] of [["Quart de finale",78],["Demi-finale",82],["Finale",85]]){
     const opp = pick(pool.filter(x=>x.str>=min))||pick(pool);
-    const w = forced?(r==="Finale"?!!finalRes:true):chance(clamp(.44+(str-opp.str)*.025,.12,.7));
+    // un huitième de finale gagné sur le terrain donne de l'élan pour la suite
+    const w = forced?(r==="Finale"?!!finalRes:true):chance(clamp(.44+(str-opp.str)*.025+(n8&&t.cdc8?.1:0),.12,.8));
     out.steps.push({r,opp:opp.name,cc:opp.country,w});
     if(!w) return out;
   }

@@ -12,7 +12,7 @@ function friendsScreen(note){
   p = null; unseed();
   const saved = loadSlot("ami"), inProgress = saved&&saved.friend&&!(saved.retired&&saved.after);
   const fresh = ui.friendSeed = ui.friendSeed||newFriendSeed(), o = friendDraft(fresh);
-  $("#app").innerHTML = `<div class="fade" tabindex="-1" style="padding-top:20px">
+  $("#app").innerHTML = `<div class="fade" tabindex="-1" style="padding-top:20px">${topHome()}
     <div class="muted">Même joueur, mêmes coups du sort</div><h1><span class="emo" aria-hidden="true">🤝</span> Défi entre amis</h1>
     ${note?`<div class="toast" role="status">${note}</div>`:""}
     <p class="story">Envoie un code à tes amis : vous démarrez avec le même joueur et les mêmes débuts de saison. Tes choix font la différence. À la fin, comparez vos scores.</p>

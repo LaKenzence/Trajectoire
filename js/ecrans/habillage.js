@@ -62,21 +62,23 @@ const CHOICE_ICONS = [
   [/coach|staff|vestiaire|coéquipier|capitaine|équipe/i,"users"],
   [/rester|fidèle|prolong|ici/i,"home"],
   [/excuse|pardon|désolé|assumer|reconna/i,"megaphone"],
-  [/discret|silence|ne rien|rien dire|te taire|garder pour|calme|ignorer|laisser couler|sans répondre/i,"lock"],
+  [/discret|silence|ne rien|rien dire|te taire|garder pour|calme|ignorer|laisser couler|sans répondre/i,"moon"],
   [/répondre|critique|clash|pique|provoc|regarde le tableau|démolir|sèchement|vivement|protester|engueul/i,"angry"],
   [/argent|payer|salaire|augmentation|négoci|sponsor|contrat|placement|prix|€|signer avec|fonce/i,"coins"],
-  [/famille|parent|mère|père|enfant|fils|fille|frère|maison|rentrer|cœur|amour|couple|mari/i,"heart"],
+  [/famille|parent|mère|père|enfant|fils|fille|frère|sœur|maison|rentrer|cœur|amour|couple|mari/i,"heart"],
   [/entraîn|séance|travail|bosser|effort|humble|progresser|apprendre|conseils/i,"dumbbell"],
   [/ambiti|viser|titulaire|exiger|brassard|capitaine|place|légende|meilleur/i,"trophy"],
   [/partir|transfert|quitter|prêt|étranger|valise|avion|signe à|départ/i,"plane"],
   [/presse|interview|journal|média|publier|post|vidéo|réseaux|live|selfie|story/i,"chat"],
   [/repos|soign|kiné|médec|opération|blessure|genou|guérir|rééducation/i,"cross"],
   [/frapp|tir|dribbl|lob|reprise|tête|volée|centre|penalty|coup franc|but/i,"ball"],
-  [/tacle|défend|bloquer|couvrir|serrer|mur|sauver|dégager|plonger|arrêt/i,"shield"],
+  [/tacle|défend|bloquer|couvrir|serrer|mur|sauver|dégager|plonger|arrêt(?!er)/i,"shield"],
+  [/pichenette|piqu|enroul|crochet|feinte|petit pont|contrôle|remise|passe|déviation/i,"ball"],
+  [/devancer|vitesse|accélér|déborder|course|sprint|lancé|appel|pied le premier|duel|épaule|presser|pressing|jaillir/i,"run"],
   [/fête|soirée|boîte|sortir|vacances|plage/i,"fire"],
   [/temps|attendre|patien|plus tard|réfléchi|on verra/i,"clock"],
-  [/accepter|oui|promis|bien sûr|j'arrive|d'accord|merci/i,"check"],
-  [/refuser|non|jamais|décliner|pas maintenant/i,"x"],
+  [/accepter|oui|pourquoi pas|promis|bien sûr|j'arrive|d'accord|merci/i,"check"],
+  [/refuser|(?:^|[ «])non(?:$|[ ,.!…»])|jamais|décliner|pas maintenant|arrêter/i,"x"],
   [/études|cours|programme|inscri|livre|dévorer|table de nuit/i,"edit"],
   [/psycholog|préparateur|spécialiste|infiltration|traitement|ménager|corps|yoga|sommeil|nutrition/i,"cross"],
   [/avocat|contester|régularis|accuser|nier|avouer|veto|signaler|recours/i,"shield"],
@@ -93,7 +95,7 @@ const CHOICE_ICONS = [
 ];
 function choiceIcon(t){ const hit = CHOICE_ICONS.find(([re])=>re.test(t)); return hit?hit[1]:"bolt"; }
 // la pastille d'icône d'un choix, avec son numéro de raccourci clavier
-function choiceLead(t,n){ return `<span class="cic t${n%3}">${ic(choiceIcon(t))}<kbd>${n+1}</kbd></span>`; }
+function choiceLead(t,n,icon){ return `<span class="cic t${n%3}">${ic(icon||choiceIcon(t))}<kbd>${n+1}</kbd></span>`; }
 
 /* ============ Illustrations des scènes ============ */
 // une petite scène dessinée par catégorie d'événement (400 × 170), en aplats et lumières
@@ -182,8 +184,8 @@ function menuSheet(){
   document.querySelector(".overlay")?.remove();
   const row = (icn,label,sub,fn)=>`<button class="mrow" onclick="${fn}">${ic(icn)}<span><b>${label}</b><small>${sub}</small></span>${ic("chev","chev")}</button>`;
   openOverlay(`<div class="sheet menu" role="document"><h2>Menu</h2>
-    ${row("heart","Ma vie","Agent, famille, logement, placements","closeOverlay(this.closest('.overlay'));vieScreen()")}
-    ${row("users","Vestiaire","Coéquipiers, humeurs, capitaine","closeOverlay(this.closest('.overlay'));vestiaireScreen()")}
+    ${p&&!p.retired?row("heart","Ma vie","Agent, famille, logement, placements","closeOverlay(this.closest('.overlay'));vieScreen()"):""}
+    ${p&&!p.retired?row("users","Vestiaire","Coéquipiers, humeurs, capitaine","closeOverlay(this.closest('.overlay'));vestiaireScreen()"):""}
     ${row(soundOn?"vol":"volx","Son",soundOn?"Activé":"Coupé","toggleSound(null);menuSheet()")}
     ${row("mic","Commentateur vocal",voiceOn?"Activé":"Coupé","toggleVoice(null);menuSheet()")}
     ${row("home","Retour à l'accueil","Ta partie est sauvegardée","closeOverlay(this.closest('.overlay'));home()")}
@@ -279,6 +281,12 @@ const EMOJI_IC = {
 const EMO_RE = /(?:[\u{1F1E6}-\u{1F1FF}]{2}|\p{Extended_Pictographic}(?:️|[\u{1F3FB}-\u{1F3FF}]|‍\p{Extended_Pictographic}️?)*|[#*0-9]️?⃣)/u;
 const EMO_RE_G = new RegExp(EMO_RE.source,"gu");
 const emojiKey = e=>EMOJI_IC[e]?e:e.replace(/[️\u{1F3FB}-\u{1F3FF}]/gu,"");
+// un texte nu juste après une icône, directement dans un bouton
+function btnLabelAfterIcon(n){
+  const par = n.parentElement, prev = n.previousSibling;
+  return par.classList.contains("btn")&&n.nodeValue.trim()&&prev&&prev.nodeType===1&&prev.matches("svg.ic,.emo,.cic");
+}
+function wrapBtnLabel(n){ const l = document.createElement("span"); l.className = "btxt"; l.textContent = n.nodeValue; n.replaceWith(l); }
 function deEmoji(root){
   if(!root) return;
   const nodes = [];
@@ -288,7 +296,15 @@ function deEmoji(root){
     for(let n = w.nextNode(); n; n = w.nextNode()) nodes.push(n);
   }
   for(const n of nodes){
-    const t = n.nodeValue, par = n.parentElement;
+    const par = n.parentElement;
+    // typographie française : les guillemets et la ponctuation haute ne restent jamais seuls en bout de ligne
+    if(n.nodeValue&&par&&!par.closest("script,style,textarea,input,svg,canvas")){
+      // espaces insécables (U+00A0, U+202F) et virgule décimale : « note 6,49 »
+      const fixed = n.nodeValue.replace(/« /g,"«\u00A0").replace(/ »/g,"\u00A0»").replace(/ ([:;!?])(?=\s|$|[»)])/g,"\u202F$1").replace(/(\d)\.(\d)/g,"$1,$2");
+      if(fixed!==n.nodeValue) n.nodeValue = fixed;
+    }
+    const t = n.nodeValue;
+    if(t&&par&&!EMO_RE.test(t)&&btnLabelAfterIcon(n)){ wrapBtnLabel(n); continue; }
     if(!t||!EMO_RE.test(t)||!par||par.closest("script,style,textarea,input,svg,canvas,.keep-emoji")) continue;
     const frag = document.createDocumentFragment();
     let last = 0;
@@ -298,7 +314,10 @@ function deEmoji(root){
       if(name){ const s = document.createElement("span"); s.className = "emo"; s.innerHTML = ic(name); frag.append(s); }
       last = m.index+m[0].length;
     }
-    frag.append(t.slice(last).replace(/^\s+(?=\S)/,last===0?"":" "));
+    const rest = t.slice(last).replace(/^\s+(?=\S)/,last===0?"":" ");
+    // dans un bouton, le libellé qui suit l'icône reste à côté d'elle au lieu de passer à la ligne
+    if(last>0&&par.classList.contains("btn")&&rest.trim()){ const l = document.createElement("span"); l.className = "btxt"; l.textContent = rest.trimStart(); frag.append(l); }
+    else frag.append(rest);
     n.replaceWith(frag);
   }
 }
@@ -316,12 +335,19 @@ const MINI_BRIEF = {
   shootout:{icon:"ball",title:"Tirs au but",steps:["Tu tires tous les penalties de ton équipe, et tu plonges sur tous ceux d'en face.","Choisis d'abord TON rang : le premier, ou le cinquième, celui qui peut tout décider.","Pour tirer, glisse du ballon vers le coin ; dans les cages, touche là où part le ballon."]},
   dribble:{icon:"run",title:"Dribble",steps:["Tu fonces balle au pied vers deux défenseurs.","Une flèche apparaît au-dessus de chacun et un cercle se referme.","Quand le cercle devient vert, glisse le doigt dans le sens de la flèche (ou flèche du clavier, ou touche le haut ou le bas du terrain)."]},
   tacle:{icon:"shield",title:"Tacle",steps:["L'attaquant fonce sur toi, et il peut feinter.","Attends qu'il entre dans l'anneau jaune devant toi.","Alors tacle : Espace ou clic. Trop tôt il t'efface, trop tard c'est la faute."]},
+  tete:{icon:"ball",title:"Coup de tête",steps:["Corner ou centre pour ton équipe : tu fonces vers le point de chute.","Suis le ballon jusqu'au cercle, à hauteur de tête.","Saute (Espace ou clic) quand il y entre, avant ton défenseur. Trop tôt, il passe au-dessus."]},
+  tete_def:{icon:"shield",title:"Duel aérien",steps:["Un centre arrive dans ta surface, leur attaquant est collé à toi.","Suis le ballon jusqu'au cercle.","Saute (Espace ou clic) quand il y entre : tu dégages loin. Trop tard, c'est lui qui la met."]},
+  transversale:{icon:"target",title:"Longue transversale",steps:["Ton ailier file de l'autre côté du terrain.","Une jauge de puissance monte et redescend sous le terrain.","Frappe (Espace ou clic) quand elle est dans la zone verte. Trop court, c'est intercepté ; trop long, c'est en touche."]},
+  frappe:{icon:"bolt",title:"Frappe de loin",steps:["Tu as de l'espace à 25 mètres du but.","Un viseur balaie le cadre : le gardien couvre le centre.","Frappe (Espace ou clic) quand le viseur passe dans une zone verte, près d'un poteau. Un défenseur arrive pour contrer."]},
   aerien:{icon:"shield",title:"Sortie aérienne",steps:["Un centre arrive dans ta surface.","Suis le ballon jusqu'au cercle devant ton but.","Sors (Espace ou clic) quand le cercle devient vert, avant que l'attaquant ne saute."]},
   passe:{icon:"target",title:"La passe qui tue",steps:["Trois défenseurs bougent entre toi et ton attaquant.","La ligne de passe est rouge quand elle est coupée, verte quand elle est libre.","Passe (Espace ou clic) quand elle est verte. Le pressing arrive : ne traîne pas."]}
 };
 // renvoie une promesse : true pour jouer, false pour laisser le jeu simuler
+// en carrière, un joueur de champ tire mais ne plonge pas : son gardien garde les cages
+const SHOOTOUT_CHAMP = ["Tu tires les penalties de ton équipe. Ton gardien, lui, s'occupe de ceux d'en face.","Choisis d'abord TON rang : le premier, ou le cinquième, celui qui peut tout décider.","Pour tirer, glisse du ballon vers le coin visé."];
 function miniBrief(kind,title,sub,opts){
-  const b = MINI_BRIEF[kind];
+  const b0 = MINI_BRIEF[kind];
+  const b = b0&&kind==="shootout"&&typeof p!=="undefined"&&p&&p.pos!=="GB"?{...b0,steps:SHOOTOUT_CHAMP}:b0;
   if(!b||typeof document==="undefined"||!document.body) return Promise.resolve(true);
   // le stade 3D se charge pendant qu’on lit la consigne
   if(typeof Stade3D!=="undefined"&&["shoot","save","fk","fksave","shootout"].includes(kind)) Stade3D.load();
@@ -331,7 +357,7 @@ function miniBrief(kind,title,sub,opts){
     // déjà joué trois fois : la consigne se replie (on la rouvre d'un clic) et le compte à rebours est plus court
     const known = typeof loadMiniStats==="function"&&(loadMiniStats()[kind]?.n||0)>=3;
     const howto = `${typeof miniDemo==="function"?miniDemo(kind):""}<ol class="brief-steps">${b.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`;
-    el.innerHTML = `<div class="brief-card"><span class="brief-ic">${ic(b.icon)}</span><p class="brief-eyebrow">Mini-jeu</p><h2>${esc(title||b.title)}</h2>${sub?`<p class="muted">${esc(sub)}</p>`:""}
+    el.innerHTML = `<div class="brief-card"><span class="brief-ic">${ic(b.icon)}</span><p class="brief-eyebrow">${esc(opts?.eyebrow||"Mini-jeu")}</p><h2>${esc(title||b.title)}</h2>${sub?`<p class="muted">${esc(sub)}</p>`:""}
       ${known?`<details class="brief-fold"><summary>Revoir la consigne</summary>${howto}</details>`:howto}
       <button class="btn primary brief-go" type="button">Je suis prêt</button><button class="btn ghost brief-sim" type="button">${esc(opts?.simLabel||"Laisser le jeu simuler")}</button>
       <div class="brief-count" aria-live="assertive"></div></div>`;
@@ -351,4 +377,43 @@ function miniBrief(kind,title,sub,opts){
     el.querySelector(".brief-sim").addEventListener("click",()=>done(false));
     /** @type {HTMLElement} */ (el.querySelector(".brief-go")).focus({preventScroll:true});
   });
+}
+
+/* ============ La une du journal, aux grands moments ============ */
+// Premier contrat pro, premier trophée, Coupe des Champions, Ballon d'Étoile, gros transfert, titre international :
+// le Quotidien du Ballon arrive en tournoyant, plein écran. On pose ui.une ; elle s'affiche au prochain écran.
+const uneName = ()=>esc(String(p.name||"").split(" ").slice(-1)[0].toUpperCase());
+// photos de une dédiées (img/une-*.webp), déclarées quand elles existent ; sinon la photo générique passée en argument
+const UNE_PHOTOS = new Set(["une-signature","une-capot","une-trophee","une-coupe-champions","une-ballon","une-transfert","une-pays"]);
+// la liesse dans la rue se passe à Paris (on voit l'Arc de Triomphe) : seulement pour la France
+const UNE_OF = {vestiaire:"une-signature",capot:"une-capot",tribunes:"une-trophee","ballon-etoile":"une-ballon",mercato:"une-transfert","coupe-champions":"une-coupe-champions","coupe-monde":()=>p.country==="FR"?"une-pays":null,selection:()=>p.country==="FR"?"une-pays":null};
+function setUne(k,h,s,img,date){
+  if(!p) return;
+  const m = UNE_OF[img], own = typeof m==="function"?m():m;
+  const u = {k,h,s,img:own&&UNE_PHOTOS.has(own)?own:img==="capot"?"vestiaire":img,date:String(date||p.year)};
+  // chaque une rejoint l'album de carrière, même en saison rapide
+  p.album = [...(p.album||[]),u].slice(-40);
+  if(ui.quick) return;
+  ui.une = u;
+}
+function uneFlush(){
+  if(!ui.une) return;
+  const u = ui.une; ui.une = null;
+  if(ui.quick||typeof document==="undefined"||!document.body||typeof setTimeout!=="function") return;
+  setTimeout(()=>showUne(u),450);
+}
+function showUne(u){
+  document.querySelector(".une-ov")?.remove();
+  const el = document.createElement("div");
+  el.className = "une-ov"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); el.setAttribute("aria-label","La une du Quotidien du Ballon");
+  el.innerHTML = `<div class="une"><div class="une-mast"><span>Le Quotidien du Ballon</span><span>${esc(u.date)}</span></div>
+    <p class="une-k">${esc(u.k)}</p><h2>${u.h}</h2><div class="une-img" style="background-image:url('img/${u.img}.webp')"></div>
+    <p class="une-s">${u.s}</p><button class="btn primary une-go" type="button">Tourner la page</button></div>`;
+  document.body.appendChild(el);
+  if(typeof sfx==="function") sfx("click");
+  const close = ()=>{ removeEventListener("keydown",key,true); el.remove(); };
+  const key = e=>{ if(e.key==="Enter"||e.key==="Escape"||e.code==="Space"){ e.preventDefault(); e.stopPropagation(); close(); } };
+  addEventListener("keydown",key,true);
+  el.querySelector(".une-go").addEventListener("click",close);
+  /** @type {HTMLElement} */ (el.querySelector(".une-go")).focus({preventScroll:true});
 }

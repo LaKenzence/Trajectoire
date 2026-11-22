@@ -31,7 +31,7 @@ function familyMoral(){
 }
 function familyLine(){
   const v = p.vie||newVie();
-  const c = v.couple==="marie"?"Marié·e":v.couple==="relation"?"En couple":"Célibataire";
+  const c = v.couple==="marie"?"Marié":v.couple==="relation"?"En couple":"Célibataire";
   return `${c}${v.kids?` · ${v.kids} enfant${v.kids>1?"s":""}`:""}`;
 }
 
@@ -92,7 +92,7 @@ function vieScreen(){
   const agentBody = `<p style="margin:0 0 6px"><b>${a.i} ${a.n}</b><br><small class="muted">${a.d}</small></p>
     ${locked?`<p class="muted" style="margin:0">Défi « Sans filet » : pas d'agent pour toi.</p>`:summer?Object.entries(AGENTS).filter(([k])=>k!==p.agent).map(([k,x])=>`<button class="btn" onclick="vieAct('agent','${k}')">${x.i} Passer à : ${x.n}<small>${x.d}${p.agent==="requin"?` · indemnité de départ ${money(Math.round(p.salary*.3))}`:""}</small></button>`).join(""):`<p class="muted" style="margin:0;font-size:.85rem">Tu pourras changer d'agent à l'intersaison.</p>`}`;
   const familyBody = `<p style="margin:0">${familyLine()}${p.ent?` · ${ENTOURAGES[p.ent].n}`:""}</p>
-    <p class="muted" style="margin:4px 0 0;font-size:.85rem">Ta vie de famille et ton logement t'apportent <b style="color:var(--text)">+${familyMoral()}</b> de moral par saison.</p>`;
+    <p class="muted" style="margin:4px 0 0;font-size:.85rem">${familyMoral()>0?`Ta vie de famille et ton logement t'apportent <b style="color:var(--text)">+${familyMoral()}</b> de moral par saison.`:"Pour l'instant, ni famille ni logement ne te remontent le moral entre les saisons."}</p>`;
   const home = HOMES[v.home];
   const homeBody = `<p style="margin:0 0 6px">${home?`${home.i} ${home.n}`:"Tu loues encore un petit appartement."}</p>
     ${Object.entries(HOMES).filter(([k,h])=>!home||h.cost>home.cost).map(([k,h])=>`<button class="btn" ${p.money<h.cost?"disabled":""} onclick="vieAct('home','${k}')">${h.i} Acheter : ${h.n}<small>${money(h.cost)} · moral +${h.moral} par saison${p.money<h.cost?" · pas assez d'argent":""}</small></button>`).join("")}`;
@@ -128,7 +128,7 @@ EVENTS.push(
  {id:"coupDeFoudre",cond:()=>p.age>=23&&!p.vie.couple&&!p.flags.coupDeFoudre,txt:()=>"Lors d'un gala de charité, tu passes la soirée à parler avec quelqu'un qui ne connaît rien au football. Et ça te fait un bien fou.",
   ch:[{t:"Demander son numéro",fx:{couple:"relation",moral:8,flag:"coupDeFoudre",seed:{ev:"demande",d:[2,4]}},why:"Premier rendez-vous loin des stades. Puis un deuxième."},
       {t:"Rester concentré sur ta carrière",fx:{lvl:1,moral:-2,flag:"coupDeFoudre"},why:"Tu y repenses souvent, les soirs de match."}]},
- {id:"expatFamille",cond:()=>p.vie.couple&&p.club.country!==p.country&&p.age>=21,txt:()=>`La personne qui partage ta vie a du mal à se faire à la vie en ${COUNTRIES[p.club.country].name}. Ni travail ni amis ici : le quotidien est dur.`,
+ {id:"expatFamille",cond:()=>p.vie.couple&&p.club.country!==p.country&&p.age>=21,txt:()=>`La personne qui partage ta vie a du mal à se faire à la vie ${pays(p.club.country,"en")}. Ni travail ni amis ici : le quotidien est dur.`,
   ch:[{t:"Tout faire pour l'aider à s'intégrer",fx:{money:-40,moral:4},why:"Cours de langue, nouvelle maison, nouveaux amis : le sourire revient."},
       {t:"Demander un transfert dans ton pays",fx:{flag:"forceDepart",moral:2,trust:-4},why:"Ton agent prospecte du côté de chez toi."},
       {t:"Lui proposer de rentrer, et vivre à distance",fx:{moral:-6,form:2},why:"Les appels du soir remplacent les dîners."}]},

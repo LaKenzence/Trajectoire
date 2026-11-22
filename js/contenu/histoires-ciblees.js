@@ -12,7 +12,7 @@ EVENTS.push(
   ch:[{t:"Partir défendre ton pays",fx:{nat:10,rep:4,play:-8,trust:-4,moral:5},why:"Tout le pays te remercie. Ton club compte les jours."},
       {t:"Rester au club",fx:{nat:-12,trust:5,play:6,rep:-4},why:"La presse de ton pays te traite de mercenaire."}]},
  {id:"pionnier",scene:"medias",hint:"Être le premier de ton pays à réussir là-bas…",cond:()=>LOIN.includes(p.country)&&expat()&&p.age<=26,
-  txt:()=>`Tu es le premier joueur de ${COUNTRIES[p.country].name} à briller dans ce championnat. Des millions de compatriotes regardent tes matchs en pleine nuit.`,
+  txt:()=>`Tu es le premier joueur ${pays(p.country,"de")} à briller dans ce championnat. Des millions de compatriotes regardent tes matchs en pleine nuit.`,
   ch:[{t:"Accepter le rôle d'ambassadeur",fx:{rep:5,money:150,form:-3},why:"Interviews, pubs, émissions : tu deviens un symbole."},
       {t:"Demander qu'on te laisse jouer",fx:{form:3,moral:2},why:"Tu te protèges, la ferveur continue sans toi."}]},
  {id:"malDuPays",scene:"perso",cond:()=>expat()&&p.age<=23,txt:()=>"Loin de chez toi, les soirées sont longues. Tu manges seul, tu ne comprends pas toutes les blagues du vestiaire.",
@@ -28,10 +28,10 @@ EVENTS.push(
       {t:"Rester avec le groupe au centre du terrain",fx:{form:1},why:"Le match finit par reprendre."}]},
 
  /* --- Selon le niveau du club --- */
- {id:"maintien",scene:"terrain",hint:"Une dernière journée pour sauver ton club…",cond:()=>p.club.str<=62&&p.age>=19,
-  txt:()=>`Dernière journée. ${LeC(p.club.name)} doit gagner pour se maintenir. Le stade est plein, la ville retient son souffle.`,
-  ch:[{t:"Tout donner, même blessé",risk:{p:.5,good:{rep:6,moral:8,moment:()=>`Sauve ${leC(p.club.name)} de la relégation lors de la dernière journée`,txt:"Victoire 1-0. Les supporters envahissent le terrain en larmes."},bad:{moral:-8,form:-6,txt:"Défaite. Relégation. Le silence du stade te hante."}}},
-      {t:"Jouer prudemment",fx:{form:2},why:"Match nul. Le maintien se joue sur un autre terrain… et passe."}]},
+ {id:"maintien",scene:"terrain",hint:"Une dernière journée pour sauver ton club…",cond:()=>p.club.str<=62&&p.age>=19&&p.evIdx>=2&&(()=>{ const rows = raceTable(28), me = rows.find(r=>r.me); return !!me&&me.pos>=rows.length-2; })(),
+  txt:()=>`Fin de saison. ${LeC(p.club.name)} est dans la zone rouge et doit gagner pour garder l'espoir du maintien. Le stade est plein, la ville retient son souffle.`,
+  ch:[{t:"Tout donner, même blessé",risk:{p:.5,good:{rep:6,moral:8,moment:()=>`Arrache une victoire vitale pour le maintien ${duC(p.club.name)}`,txt:"Victoire 1-0. Les supporters envahissent le terrain en larmes."},bad:{moral:-8,form:-6,txt:"Défaite. Le silence du stade te hante. Le maintien ne tient plus qu'à un fil."}}},
+      {t:"Jouer prudemment",fx:{form:2},why:"Match nul. Un point, arraché à l'expérience. Tout se jouera dans les dernières journées."}]},
  {id:"venteDirigeant",scene:"argent",cond:()=>p.club.str<=66&&p.age>=20,txt:()=>"Le président vend tes trois meilleurs coéquipiers le dernier jour du mercato. Le vestiaire est sonné.",
   ch:[{t:"Prendre la parole pour remobiliser le groupe",fx:{trust:4,rep:2,moral:-1},why:"Tu deviens le patron d'une équipe en reconstruction."},
       {t:"Demander à partir toi aussi",fx:{flag:"forceDepart",trust:-5},why:"Ton agent prospecte pour cet été."}]},
@@ -80,15 +80,15 @@ EVENTS.push(
 
  /* --- Légendes des carrières passées --- */
  {id:"legendeCoach",scene:"vestiaire",hint:"Une légende d'une autre génération…",cond:()=>!!p.legend&&p.age>=19&&!p.flags.legendeCoach,
-  txt:()=>`Ton nouvel entraîneur ? ${p.legend.name}, une légende d'une autre génération : ${p.legend.trophies} trophées${p.legend.stars?`, ${p.legend.stars} Ballon(s) d'Étoile`:""}. Il te regarde à l'entraînement comme s'il se revoyait.`,
+  txt:()=>`Ton nouvel entraîneur ? ${p.legend.name}, une légende d'une autre génération : ${p.legend.trophies} trophées${p.legend.stars?`, ${nPl(p.legend.stars,"Ballon")} d'Étoile`:""}. Il te regarde à l'entraînement comme s'il se revoyait.`,
   ch:[{t:"Lui demander de t'apprendre",fx:{flag:"legendeCoach",lvl:1,pot:1,trust:5},why:"Il te prend sous son aile. Ses conseils valent de l'or."},
       {t:"Lui prouver que tu peux faire mieux que lui",risk:{p:.5,good:{flag:"legendeCoach",lvl:2,trust:3,txt:"Il sourit : « Enfin quelqu'un qui a faim. »"},bad:{flag:"legendeCoach",trust:-6,txt:"Il n'aime pas ton arrogance."}}}]},
  {id:"legendeRecord",scene:"medias",cond:()=>!!p.legend&&p.rep>=40&&p.legend.goals>50,
-  txt:()=>`Les journaux comptent : tu pourrais battre le record de ${p.legend.name}, ${p.legend.goals} ${p.legend.pos==="GB"?"clean sheets":"buts"} en carrière.`,
+  txt:()=>`Les journaux comptent : tu pourrais battre le record ${deN(p.legend.name)}, ${p.legend.goals} ${p.legend.pos==="GB"?"clean sheets":"buts"} en carrière.`,
   ch:[{t:"Dire que tu vas le battre",fx:{rep:3,moral:2,form:-2},why:"Le défi est lancé, la presse adore."},
       {t:"Dire ton respect pour lui",fx:{rep:2},why:"Il te remercie par message."}]},
  {id:"filsDuRival",scene:"rival",hint:"Le fils d'un vieil ennemi…",cond:()=>!!p.oldRival&&p.age>=21,
-  txt:()=>`Le fils de ${p.oldRival.name} — l'ennemi intime de ${p.oldRival.by} — vient de signer dans ton club. Il a le même regard que son père.`,
+  txt:()=>`Le fils ${deN(p.oldRival.name)} — l'ennemi intime ${deN(p.oldRival.by)} — vient de signer dans ton club. Il a le même regard que son père.`,
   ch:[{t:"L'accueillir comme un frère",fx:{moral:3,trust:2,rep:2},why:"Une vieille rivalité devient une amitié."},
       {t:"Raviver la rivalité à l'entraînement",fx:{lvl:1,moral:-2},why:"Chaque séance devient un duel. Vous progressez tous les deux."}]},
 
@@ -114,8 +114,8 @@ EVENTS.push(
   ch:[{t:"Y aller",fx:{rep:4,moral:5},why:"Le virage déploie une banderole géante pour toi au match suivant."},
       {t:"Décliner poliment",fx:{},why:"Il comprend. Les chants pour toi continuent."}]},
  {id:"starRancune",seedOnly:true,cond:()=>true,txt:()=>"La star à qui tu avais repris le ballon du penalty joue désormais dans un club rival. En conférence, il parle encore de toi.",
-  ch:[{t:"L'inviter à boire un café",fx:{moral:3,rep:2},why:"Vous riez de cette histoire. Une photo de vous deux fait le buzz."},
-      {t:"Lui répondre en conférence",fx:{rep:2,moral:-1},why:"Le match suivant entre vos clubs devient le plus regardé de l'année."}]},
+  ch:[{t:"L'inviter à boire un café",fx:{moral:5,rep:3},why:"Vous riez de cette histoire. Une photo de vous deux fait le buzz."},
+      {t:"Lui répondre en conférence",fx:{rep:5,moral:-2},why:"Le match suivant entre vos clubs devient le plus regardé de l'année."}]},
  {id:"provocSuite",seedOnly:true,cond:()=>p.caps>=1,txt:()=>"Le défenseur qui t'avait fait exclure en finale vient d'être naturalisé : il rejoint ta sélection.",
   ch:[{t:"Faire la paix",fx:{nat:4,moral:2},why:"Sur le terrain, vous devenez complémentaires."},
       {t:"Refuser de lui serrer la main",fx:{nat:-6,rep:-2},why:"Le sélectionneur est furieux."}]}

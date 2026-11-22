@@ -47,7 +47,7 @@ function avatarSvg(look,size,shirtColor){
     <path d="M4 53c1-8.6 7.8-12.7 15-13.7l7 4.2 7-4.2c7.2 1 14 5.1 15 13.7z" fill="url(#${id}s)"/>
     <path d="M21.4 31h9.2v6.8c-1.5 1.5-3 2.1-4.6 2.1s-3.1-.6-4.6-2.1z" fill="${s}"/>
     <path d="M21.4 33.5c1.6 1.4 3 2 4.6 2s3-.6 4.6-2v1.8c-1.6 1.4-3 2-4.6 2s-3-.6-4.6-2z" fill="#000" opacity=".16"/>
-    <path d="M18.8 38.8l7.2 5.4 7.2-5.4-1.6-.9-5.6 4.1-5.6-4.1z" fill="#fff" opacity=".85"/>
+    ${wearSvg(l.wear)}
     <ellipse cx="15.7" cy="24.2" rx="1.9" ry="2.9" fill="${s}"/><ellipse cx="36.3" cy="24.2" rx="1.9" ry="2.9" fill="${s}"/>
     <path d="M16.1 21c0-7.2 4.4-12 9.9-12s9.9 4.8 9.9 12v3c0 6.6-4.4 11.6-9.9 11.6S16.1 30.6 16.1 24z" fill="${s}"/>
     <path d="M29.8 10c4 2.1 6.1 6 6.1 11v3c0 6.6-4.4 11.6-9.9 11.6 3.3-2.2 5.6-6.2 5.6-11.6v-3c0-4.6-.6-8.2-1.8-11z" fill="#000" opacity=".1"/>
@@ -58,13 +58,31 @@ function avatarSvg(look,size,shirtColor){
     <circle cx="22.6" cy="23.4" r=".3" fill="#fff"/><circle cx="30.4" cy="23.4" r=".3" fill="#fff"/>
     <path d="M26.2 24.6v3.1q-.2.9-1.5.7" stroke="#000" stroke-opacity=".28" stroke-width=".9" fill="none" stroke-linecap="round"/>
     <path d="M23.1 30.1q2.9 1.9 5.8 0" stroke="#7a3b2e" stroke-width="1.15" fill="none" stroke-linecap="round"/>
+    ${l.old?OLD_SVG:""}${l.glasses?GLASSES_SVG:""}
     </g></svg>`;
 }
+// la tenue sous le visage (le corps garde la couleur donnée) : maillot à col, imperméable au col relevé, costume et
+// cravate, gilet sur un chemisier, sweat à capuche. Les personnages du centre en ont une (cfWear, centre.js).
+function wearSvg(w){
+  const dark = `fill="#000" opacity=".28"`;
+  if(w==="coat") return `<path d="M21 36l-4.2-2.4 1.8 7.6 4.6 3.2zM31 36l4.2-2.4-1.8 7.6-4.6 3.2z" ${dark}/>
+    <path d="M22.4 39.6L26 45l3.6-5.4z" fill="#e4dccb"/><path d="M23.2 44.2L26 50.5l2.8-6.3" stroke="#000" stroke-opacity=".35" stroke-width=".9" fill="none"/>
+    <circle cx="26" cy="48.6" r=".7" fill="#000" opacity=".4"/>`;
+  if(w==="suit") return `<path d="M21.3 39L26 46.5l4.7-7.5z" fill="#f2f2f2"/><path d="M25 40.6h2l.8 2.2-1.8 6.4-1.8-6.4z" fill="#f5c542"/>
+    <path d="M20.8 39.2l3.8 8.6M31.2 39.2l-3.8 8.6" stroke="#000" stroke-opacity=".38" stroke-width="1.3" fill="none"/>`;
+  if(w==="cardigan") return `<path d="M21.2 39L26 47.4l4.8-8.4z" fill="#ece1d0"/><path d="M21.2 39L26 47.4l4.8-8.4" stroke="#fff" stroke-opacity=".35" stroke-width="1.4" fill="none"/>
+    <circle cx="26" cy="49.6" r=".75" fill="#fff" opacity=".7"/><circle cx="26" cy="52.2" r=".75" fill="#fff" opacity=".7"/>`;
+  if(w==="hoodie") return `<path d="M16.6 41c.6-3.4 4-5.2 9.4-5.2s8.8 1.8 9.4 5.2c-2.6-1.3-5.6-1.8-9.4-1.8s-6.8.5-9.4 1.8z" ${dark}/>
+    <path d="M24 41.2v6M28 41.2v6" stroke="#fff" stroke-opacity=".75" stroke-width=".8" stroke-linecap="round"/>`;
+  return `<path d="M18.8 38.8l7.2 5.4 7.2-5.4-1.6-.9-5.6 4.1-5.6-4.1z" fill="#fff" opacity=".85"/>`;
+}
+const GLASSES_SVG = `<g fill="none" stroke="#2b2420" stroke-width=".75"><circle cx="22.1" cy="23.7" r="2.7"/><circle cx="29.9" cy="23.7" r="2.7"/><path d="M24.8 23.4q1.2-.7 2.4 0M19.4 23.2l-3 -.6M32.6 23.2l3-.6"/></g>`;
+const OLD_SVG = `<g fill="none" stroke="#000" stroke-opacity=".22" stroke-width=".6" stroke-linecap="round"><path d="M21 17.4q5-1.1 10 0M22 15.6q4-.8 8 0"/><path d="M18.9 24.6l-1.1.6M33.1 24.6l1.1.6"/><path d="M23 27.6q-1 1.6.1 3M29 27.6q1 1.6-.1 3"/></g>`;
 // éditeur : une ligne « ◀ valeur ▶ » par trait ; fn est le nom de la fonction appelée avec (trait, ±1)
 function lookEditor(look,fn){
   const row = k=>{ const L = LOOKS[k], v = L.v[look[k]], swatch = v.startsWith("#");
-    return `<div class="look-row"><span>${L.n}</span><button type="button" class="hudbtn" onclick="${fn}('${k}',-1)" aria-label="${L.n} précédent">◀</button>
-      <b>${swatch?`<i class="sw" style="background:${v}"></i>`:v}</b><button type="button" class="hudbtn" onclick="${fn}('${k}',1)" aria-label="${L.n} suivant">▶</button></div>`; };
+    return `<div class="look-row"><span>${L.n}</span><button type="button" class="hudbtn" onclick="${fn}('${k}',-1)" aria-label="${L.n} précédent">${ic("back")}</button>
+      <b>${swatch?`<i class="sw" style="background:${v}"></i>`:v}</b><button type="button" class="hudbtn" onclick="${fn}('${k}',1)" aria-label="${L.n} suivant">${ic("chev")}</button></div>`; };
   return `<div class="look"><div class="look-prev">${avatarSvg(look,88)}</div><div>${Object.keys(LOOKS).map(row).join("")}</div></div>`;
 }
 const cycle = (look,k,d)=>{ const n = LOOKS[k].v.length; look[k] = (look[k]+d+n)%n; };

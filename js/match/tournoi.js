@@ -23,7 +23,7 @@ function tourneyGoals(share,opp){
 function startTourney(){
   const T = p.tourney;
   p.phase = "tournoi";
-  p.moments.push(`${T.year} · Convoqué pour le ${T.name}${T.role==="remplaçant"?" (remplaçant)":""}`);
+  p.moments.push(`${T.year} · Convoqué pour ${tLe(T.name)}${T.role==="remplaçant"?" (remplaçant)":""}`);
   save(); route();
 }
 // prépare le match en cours : score avant le moment décisif et action à jouer
@@ -46,11 +46,11 @@ function tourneyScreen(){
   if(T.done) return tourneyEndScreen();
   if(!T.cur) tourneyPrepare();
   const opp = tourneyOpp(T), C = T.cur, a = tourneyAct();
-  const board = `<div class="broadcast" aria-label="Score : ${esc(COUNTRIES[p.country].name)} ${C.us}, ${esc(opp.name)} ${C.them}"><div class="bc-team">${flag(p.country)}<span>${esc(COUNTRIES[p.country].name)}</span></div><div class="bc-score"><b>${C.us}</b><i>–</i><b>${C.them}</b><span class="bc-clock">${C.post?"FIN":C.min+"'"}</span></div><div class="bc-team r"><span>${esc(opp.name)}</span>${flag(opp.country)}</div></div>`;
+  const board = `<div class="broadcast${C.post?" done":""}" aria-label="Score : ${esc(COUNTRIES[p.country].name)} ${C.us}, ${esc(opp.name)} ${C.them}"><div class="bc-team">${flag(p.country)}<span>${esc(COUNTRIES[p.country].name)}</span></div><div class="bc-score"><b>${C.us}</b><i>–</i><b>${C.them}</b><span class="bc-clock">${C.post?"FIN":C.min+"'"}</span></div><div class="bc-team r"><span>${esc(opp.name)}</span>${flag(opp.country)}</div></div>`;
   const body = C.post
     ? `<p class="story">${C.post}</p><button class="btn primary" onclick="tourneyNext()">Suite →</button>`
     : `<p class="story">${T.role==="remplaçant"&&T.stage<3?`Tu entres en jeu à la ${C.min-10}e minute. `:""}${a.txt}</p>
-      ${a.o.map((o,i)=>{ const q = o.p+talentBonus(o.t); return `<button class="btn" onclick="tourneyPick(${i})">${choiceLead(o.t,i)}<span class="ctext">${o.t}</span><small>${riskHtml(q)}${miniChip(o)?" · 🎮 à jouer":""}</small></button>`; }).join("")}`;
+      ${(()=>{ const best = bestOpt(a.o); return a.o.map((o,i)=>{ const q = o.p+talentBonus(o.t); return `<button class="btn" onclick="tourneyPick(${i})">${choiceLead(o.t,i)}<span class="ctext">${o.t}</span><small>${riskHtml(q)}${bestTag(i,best)}${miniChip(o)?" · 🎮 à jouer":""}</small></button>`; }).join(""); })()}`;
   render(`<div class="world-banner" aria-hidden="true"></div><div class="muted">${flag(p.country)} ${esc(T.name)} · ${STAGES[T.stage]}${T.stage<3?` · ${T.pts} pt${T.pts>1?"s":""}`:""}</div>
     <div class="card"><h2 style="text-align:center">${esc(COUNTRIES[p.country].name)} – ${esc(opp.name)}</h2>${board}
     ${T.res.length?`<ul class="mlog">${T.res.map(r=>`<li>${r}</li>`).join("")}</ul>`:""}${body}</div>
@@ -101,9 +101,9 @@ function finishTourneyMatch(txt){
   T.gf += C.us; T.ga += C.them; T.myG += C.myG; T.myA += C.myA;
   p.caps++; p.intlGoals += C.myG;
   if(T.stage<3) T.pts += res==="w"?3:res==="d"?1:0;
-  const score = `${C.us}-${C.them}${C.tab!=null?` (${C.tab?"victoire":"défaite"} aux tirs au but)`:""}`;
-  T.res.push(`${res==="w"?"✅":res==="d"?"➖":"❌"} ${STAGES[T.stage]} : ${esc(COUNTRIES[p.country].name)} ${score} ${esc(opp.name)}${C.myG?` · ⚽×${C.myG}`:""}${C.myA?` · 🅰️×${C.myA}`:""}`);
-  if(C.myG>=2) p.moments.push(`${T.year} · ${C.myG>=3?"Triplé":"Doublé"} face à ${opp.name} au ${T.name}`);
+  const tab = C.tab!=null?` (${C.tab?"victoire":"défaite"} aux tirs au but)`:"", score = `${C.us}-${C.them}${tab}`;
+  T.res.push(`${res==="w"?"✅":res==="d"?"➖":"❌"} ${STAGES[T.stage]} : ${esc(COUNTRIES[p.country].name)} ${C.us}-${C.them} ${esc(opp.name)}${tab}${C.myG?` · ⚽×${C.myG}`:""}${C.myA?` · 🅰️×${C.myA}`:""}`);
+  if(C.myG>=2) p.moments.push(`${T.year} · ${C.myG>=3?"Triplé":"Doublé"} face à ${pays(opp.country)} ${tAu(T.name)}`);
   C.post = `${txt}<br><b>Coup de sifflet final : ${score}.</b>`;
   C.res = res;
   save();
@@ -125,23 +125,24 @@ function endTourney(out){
   T.done = true; T.out = out; T.cur = null; p.match = null;
   const won = !out;
   if(won){
-    const t = `${T.name} ${T.year}`;
+    const t = `${T.name} ${T.year}`, top = /Monde/.test(T.name)?"SUR LE TOIT DU MONDE":"SUR LE TOIT DU CONTINENT";
     p.trophies.push({t,y:T.year}); if(p.seasons.length) p.seasons.at(-1).tr++;
-    p.moments.push(`${T.year} · Vainqueur du ${T.name} avec ${COUNTRIES[p.country].name}`);
+    p.moments.push(`${T.year} · Vainqueur ${tDu(T.name)} avec ${pays(p.country)}`);
     p.rep = clamp(p.rep+8,0,100); p.moral = clamp(p.moral+10,0,100); p.tp = (p.tp||0)+1;
-    post("journal",journo(),`🏆 ${COUNTRIES[p.country].name.toUpperCase()} SUR LE TOIT DU MONDE ! ${p.name} et les siens remportent le ${T.name}.`);
+    post("journal",journo(),`🏆 ${COUNTRIES[p.country].name.toUpperCase()} ${top} ! ${p.name} et les siens remportent ${tLe(T.name)}.`);
     msg("famille","On a pleuré devant la télé. Tout le pays est dehors !! 🏆");
-  } else if(out==="finale"){ p.rep = clamp(p.rep+3,0,100); p.moral = clamp(p.moral-3,0,100); p.moments.push(`${T.year} · Finaliste du ${T.name}`); }
+    if(typeof setUne==="function") setUne(`${T.name} ${T.year}`,`${esc(COUNTRIES[p.country].name.toUpperCase())} ${top}`,`${esc(p.name)} et les siens remportent ${esc(tLe(T.name))}. Tout le pays est descendu dans la rue.`,/Monde/.test(T.name)?"coupe-monde":"selection");
+  } else if(out==="finale"){ p.rep = clamp(p.rep+3,0,100); p.moral = clamp(p.moral-3,0,100); p.moments.push(`${T.year} · Finaliste ${tDu(T.name)}`); }
   else p.moral = clamp(p.moral-(out==="groupes"?6:3),0,100);
   liveAch(); save();
   if(!ui.quick){ route(); if(won){ confetti(); sfx("trophy"); } }
 }
 function tourneyEndScreen(){
   const T = p.tourney, won = !T.out;
-  render(`<div class="card ${won?"celebrate":""}">${T.name.startsWith("Championnat du Monde")?`<img class="trophy-img dark${won?"":" lost"}" src="img/coupe-monde.webp" alt="" width="520" height="520">`:""}<h2>${won?`🏆 ${esc(COUNTRIES[p.country].name)} remporte le ${esc(T.name)} !`:`${esc(T.name)} : ${T.out==="groupes"?"éliminés en phase de groupes":T.out==="finale"?"battus en finale":`éliminés en ${T.out}`}`}</h2>
+  render(`<div class="card ${won?"celebrate":""}">${T.name.startsWith("Championnat du Monde")?`<img class="trophy-img dark${won?"":" lost"}" src="img/coupe-monde.webp" alt="" width="520" height="520">`:""}<h2>${won?`🏆 ${esc(cap1(pays(p.country)))} remporte ${esc(tLe(T.name))} !`:`${esc(T.name)} : ${T.out==="groupes"?"éliminés en phase de groupes":T.out==="finale"?"battus en finale":`éliminés en ${T.out}`}`}</h2>
     <p class="story">${won?"Tout un pays dans la rue. Ton nom restera associé à cet été pour toujours.":T.out==="finale"?"Si près du but… La médaille d'argent a un goût amer, mais le pays est fier de vous.":"Le retour au pays est silencieux. Il faudra attendre le prochain tournoi."}</p>
     <ul class="mlog">${T.res.map(r=>`<li>${r}</li>`).join("")}</ul>
-    <div class="stats"><div class="stat"><b>${T.res.filter(r=>!r.startsWith("🎉")).length}</b><span>matchs</span></div><div class="stat"><b>${T.myG}</b><span>but(s)</span></div><div class="stat"><b>${T.myA}</b><span>passe(s) déc.</span></div></div>
+    <div class="stats"><div class="stat"><b>${T.res.filter(r=>!r.startsWith("🎉")).length}</b><span>matchs</span></div><div class="stat"><b>${T.myG}</b><span>${T.myG>1?"buts":"but"}</span></div><div class="stat"><b>${T.myA}</b><span>${T.myA>1?"passes déc.":"passe déc."}</span></div></div>
     <button class="btn primary" onclick="toOffseason()">Passer à l'intersaison →</button></div>`);
 }
 // mode rapide : le jeu joue chaque moment avec le meilleur choix
